@@ -126,7 +126,30 @@ class CollectorConfig(BaseModel):
 
 class PublisherConfig(BaseModel):
     publish_interval_seconds: float = 60
-    max_publish_attempts: int = 8
+    max_publish_attempts: int = Field(default=8, ge=1)
+    # A new job waits this long before publishing: a fuller copy from another channel may come.
+    hold_minutes: float = Field(default=20, ge=0)
+    # Publish posts taken from a channel's history when the source was added (initial_backfill)?
+    publish_backfill: bool = False
+    # Network / server error: wait retry_base * 2^(attempt-1) seconds, at most retry_max.
+    retry_base_seconds: float = Field(default=30, gt=0)
+    retry_max_seconds: float = Field(default=3600, gt=0)
+    # Bad token / bot not admin / no channel: nothing is sent for this long (no attempt used).
+    config_error_pause_seconds: float = Field(default=300, gt=0)
+    # Publisher checks the queue this often when it is empty.
+    idle_poll_seconds: float = Field(default=5, gt=0)
+
+
+class WorkerConfig(BaseModel):
+    """The processing pipeline (apps/worker.py)."""
+
+    poll_interval_seconds: float = Field(default=15, gt=0)
+    # Album parts arrive one by one: a post is processed only this long after it was fetched.
+    album_wait_seconds: float = Field(default=60, ge=0)
+    batch_size: int = Field(default=50, ge=1)
+    heartbeat_interval_seconds: float = Field(default=60, gt=0)
+    # The in-memory dedup index is rebuilt from the DB this often (drops entries > 14 days old).
+    dedup_reload_hours: float = Field(default=6, gt=0)
 
 
 class BrandingConfig(BaseModel):
@@ -161,6 +184,7 @@ class AppConfig(BaseModel):
     sources: list[SourceConfig] = Field(default_factory=list)
     collector: CollectorConfig = Field(default_factory=CollectorConfig)
     publisher: PublisherConfig = Field(default_factory=PublisherConfig)
+    worker: WorkerConfig = Field(default_factory=WorkerConfig)
     branding: BrandingConfig = Field(default_factory=BrandingConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)

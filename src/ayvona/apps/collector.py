@@ -15,13 +15,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
-import signal
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.apps.runtime import SleepFn, install_signal_handlers, stop_aware_sleep
 from ayvona.config import CollectorConfig, Settings, get_settings
 from ayvona.db.models import SourceType
 from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
@@ -36,7 +36,6 @@ PROCESS_NAME = "collector"
 LAST_CYCLE_KEY = "collector:last_cycle_at"
 
 SessionFactory = async_sessionmaker[AsyncSession]
-SleepFn = Callable[[float], Awaitable[bool]]  # returns True if we should stop
 
 
 @dataclass(slots=True)
@@ -78,17 +77,6 @@ async def _record_error(sf: SessionFactory, source_id: int, error: str) -> None:
             await sources_repo.mark_error(s, source_id, error, utcnow())
     except Exception:
         logger.exception("could not record error for source {}", source_id)
-
-
-def stop_aware_sleep(stop: asyncio.Event) -> SleepFn:
-    async def _sleep(seconds: float) -> bool:
-        if seconds <= 0:
-            return stop.is_set()
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(stop.wait(), timeout=seconds)
-        return stop.is_set()
-
-    return _sleep
 
 
 # ------------------------------------------------------------------ one source
@@ -134,8 +122,9 @@ async def poll_source(
     #    the same posts are fetched again next cycle (and UNIQUE stops duplicates).
     try:
         async with sf() as s, s.begin():
+            # First poll of a source (no cursor yet): these are old posts from its history.
             out.inserted = await raw_posts_repo.insert_ignore_duplicates(
-                s, source_id, result.items, utcnow()
+                s, source_id, result.items, utcnow(), is_backfill=since is None
             )
             await sources_repo.mark_success(s, source_id, new_cursor, utcnow())
     except Exception as e:
@@ -259,14 +248,6 @@ async def run_collector(
                 await active.source.close()
 
 
-def _install_signal_handlers(stop: asyncio.Event) -> None:
-    """SIGTERM (systemd stop) -> clean shutdown. Windows has only Ctrl+C (KeyboardInterrupt)."""
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        with contextlib.suppress(NotImplementedError, RuntimeError, ValueError):
-            loop.add_signal_handler(sig, stop.set)
-
-
 async def main(once: bool = False) -> int:
     settings = get_settings()
     setup_logging(settings.env.log_level, settings.log_dir, PROCESS_NAME)
@@ -299,7 +280,7 @@ async def main(once: bool = False) -> int:
         logger.info("Faol manbalar: {}", [a.source.identifier for a in sources] or "yo'q")
 
         stop = asyncio.Event()
-        _install_signal_handlers(stop)
+        install_signal_handlers(stop)
         await run_collector(
             sf, sources, settings.app.collector, stop, max_cycles=1 if once else None
         )

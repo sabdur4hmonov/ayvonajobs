@@ -11,6 +11,7 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-29 | 4 — Normalize, classify, dedup | 41 fixture (`tests/fixtures/posts/`, bazadan aynan) + 10 dedup fixture; `processing/`: `normalize`, `language`, `keywords`, `contacts`, `boilerplate`, `classify`, `dedup`; `scripts/export_fixtures.py`, `scripts/dedup_report.py` | 251 test ✅ + 24 xfail (extract — Bosqich 5), ruff ✅. **41/41** kind to'g'ri. 377 postda: 27 dublikat guruh (14 kunlik oyna) |
 | 2026-09-29 | 5 — Extractor, kategoriya | `processing/`: `extract`, `salary`, `location`, `categorize` (+ `contacts` kengaytirildi); `config/extract.yaml` (yangi), `regions.yaml` (14 hudud, tumanlar, mo'ljallar), `categories.yaml` kalit so'zlari; `jobs.profession` + `jobs.salary_period` (migratsiya `b5e1a7c3d9f2`); `low_quality` statusi; `scripts/extract_report.py`; 735/742 qoida tuzatildi | 370 test ✅ (0 xfail — **24/24 o'tdi**), ruff ✅. 313 job'dan: 2 tasi aloqasiz, 3 tasi low_quality, 309 tasi kanalga chiqadi |
 | 2026-09-29 | 6 — Tozalash, shablon, rasmlar | `processing/`: `clean`, `formatter`, `images`; `db/repositories/images_repo.py`; `images` jadvali (migratsiya `c7a4e2d8f1b6`, `category_images` o'rniga); `settings.yaml`: `branding`, `formatter`, `images`; `Extraction.address`; `scripts/make_placeholder_images.py` (Pillow), `scripts/preview_posts.py`; 43 ta snapshot `tests/snapshots/` | 524 test ✅, ruff ✅. Bazadagi 309 e'lon: 285 to'liq shablon, 24 fallback, eng uzuni 1022/1024 |
+| 2026-09-29 | 7 — Worker: pipeline + publisher | 5450 filtri (`not_job_strong_markers`); `processing/pipeline.py`, `publisher/outbox.py`, `services/notifier.py`, `botapi.py`, `apps/worker.py`, `apps/runtime.py`, `db/repositories/jobs_repo.py`; migratsiya `d3f8b1c6a2e4` (raw_posts: backfill, dedup, job_id; jobs.buttons); `settings.yaml`: `worker:`, `publisher:` kengaydi; Bot API mock (`tests/fake_bot.py`) | 582 test ✅, ruff ✅. Bazaning NUSXASIDA: 374 post → 284 job navbatga, 24 dublikat, 2 aloqasiz, 2 past sifat. Haqiqiy Telegram'ga **hech narsa yuborilmadi** |
 
 ---
 
@@ -323,6 +324,74 @@ fallback matni), eng uzuni 1022/1024.
 5. ℹ️ `vakansiya` belgisi 5450 da `@Reklama_vakansiyaa` username'i ichidan topilgan — username ichidagi so'zlar job ball
    qo'shmasligi kerak edi. Tuzatmadim (boshqa e'lonlarning balli o'zgarib ketishi mumkin); kerak bo'lsa alohida ko'ramiz.
 
+### Bosqich 7 — Worker: pipeline + publisher
+Sardor reja tasdig'ini kutmaslikni aytdi — qarorlar va sabablari:
+
+1. **0-band (eski postlar chiqmasin):** worker **birinchi marta** ishga tushganda bazadagi hamma `new` postlar
+   `skipped_backfill` bo'ladi (`kv_store`: `worker:backfill_skipped_at` = vaqt + soni; ikkinchi marta ishlamaydi).
+   Keyin: collector yangi kanalning **birinchi** o'qishida olgan tarixiy postlar `raw_posts.is_backfill=1` bo'ladi va
+   `publisher.publish_backfill: false` (standart) bo'lsa kanalga chiqmaydi. ⚠️ Collector uzoq o'chib qolib, keyin
+   qolganlarini olsa — bu backfill EMAS, ular chiqadi ("hech bir e'lon yo'qolmasin").
+   Sizning bazangizdagi 377 post worker birinchi yonganda `skipped_backfill` bo'ladi — siz aytgandek.
+2. **Tartib: classify → extract → dedup → clean → format** (ROADMAP'da dedup extract'dan oldin). Sabab: dedup'ga extract
+   bergan lavozim kerak (Bosqich 5 eslatmasi) va dedup indeksiga **faqat kanalga chiqadigan** e'lonlar kiradi. Aks holda
+   birinchi kelgan ALOQASIZ nusxa keyingi aloqali nusxani "dublikat" qilib qo'yardi va e'lon umuman chiqmasdi.
+3. **Statuslar:** `done` (job bo'ldi), `duplicate`, `not_job`, `resume`, `closed`, `opportunity`, `suspicious`, `no_text`,
+   `no_contact`, `low_quality`, `skipped_backfill`, `error`. Status ustuni oddiy VARCHAR — yangi statuslar migratsiyasiz.
+   E'lon bo'lmaganlarning sababi (`job:kerak, ad:chegirma` ...) `raw_posts.error` ustuniga yoziladi (tekshirish uchun).
+   Admin chatga: `suspicious` (sabab + matn boshi), `no_text` (albomning kechikkan rasmi — yuborilmaydi) va xatolar.
+4. **Albomlar:** post kelganidan 60 s o'tgach ishlanadi; albomning **bitta qismi** ham yangi bo'lsa — butun albom kutadi.
+   Albom ishlangandan keyin kelgan qism — alohida post (matnsiz bo'lsa `no_text`, admin'ga xabarsiz).
+5. **Ishonchlilik:** bitta post natijasi (statuslar + job + dedup ma'lumoti) — **bitta tranzaksiya**. Kod xatosi → faqat
+   o'sha post `error` + admin'ga xabar, qolganlari davom etadi. Baza band (`OperationalError`) → post `new` bo'lib qoladi,
+   keyingi aylanishda qayta. `processing` / `sending` da qolganlar ishga tushganda qayta navbatga.
+6. **Dublikat indeksi** xotirada (tez), lekin bazada ham saqlanadi (`raw_posts.dedup_text/title/contacts/fingerprint`) —
+   restart'dan keyin oxirgi 14 kunlik e'lonlardan qayta quriladi, har 6 soatda yangilanadi (eskilari tushib ketadi).
+   Har bir guruh postida `raw_posts.job_id` (qaysi job) va `duplicate_of` (qaysi postni takrorlaydi).
+7. **1b — yig'ish oynasi:** yangi job `next_retry_at = e'lon qilingan vaqt + 20 daqiqa` dan oldin chiqmaydi (collector
+   kechikib olgan eski post uchun — darhol). Shu vaqt ichida dublikat kelsa va u **to'liqroq** bo'lsa: to'liqlik bali =
+   telefon/@username 2 (faqat email/havola 1) + maosh soni 1 (faqat matn 0.5) + hudud 0.5 + manzil/tuman 0.5 + lavozim 0.5 +
+   confidence. Ball **qat'iy katta** bo'lsa — job maydonlari, matni, tugmalari va **manba havolasi** yangi postniki bo'ladi,
+   eski post `duplicate`. Kutish vaqti uzaymaydi. `sending`/`published`/urinish bo'lgan job'ga tegilmaydi (shartli UPDATE —
+   publisher bilan poyga bo'lmaydi). 14 kundan keyin — yangi e'lon.
+8. **Publisher:** navbatdan eng oldin "vaqti kelgan" job (`next_retry_at` bo'yicha) → `sending` (shartli UPDATE) → rasm
+   (`pick_image`) → `sendPhoto` (kesh `file_id` yoki fayl) + HTML caption + tugmalar; rasm yo'q → `sendMessage`, link preview
+   o'chiq. Postlar orasida 60 s. Xatolar:
+   - `TelegramRetryAfter` → urinish sanalmaydi, aytilgan vaqt + 1 s hamma narsa kutadi;
+   - HTML xatosi → oddiy matn bilan qayta (havolalar `matn (url)` bo'lib); eskirgan `file_id` → fayl qayta yuklanadi;
+     caption uzun → matnli xabar;
+   - **sozlama xatosi** (token rad etildi, bot kanalda admin emas, kanal topilmadi) → urinish sanalMAYDI, job navbatda
+     qoladi, admin'ga xabar, 5 daqiqa hech narsa yuborilmaydi. Sabab: bot kanaldan chiqarilsa, 8 urinishda hamma e'lon
+     `failed` bo'lib ketardi;
+   - tarmoq/server/boshqa xato → urinish +1, kutish 30 s, 60 s, 120 s ... (1 soatgacha); 8-urinishdan keyin `failed` +
+     admin'ga xabar (`/retry <id>` — Bosqich 8). Tarmoq xatosidan keyin publisher o'sha vaqtcha to'xtaydi (aks holda
+     internet yo'qligida har bir job urinishini birin-ketin yeb qo'yardi).
+9. **Tokensiz ishlash:** `BOT_TOKEN` yo'q/noto'g'ri yoki `CHANNEL_ID` yo'q → worker yiqilmaydi, o'zbekcha tushuntirish logga
+   yoziladi, pipeline ishlayveradi, e'lonlar `queued` bo'lib kutadi (token qo'shilgach chiqadi). `ADMIN_CHAT_ID` yo'q →
+   admin xabarlari faqat logda. `--no-publish` bayrog'i — token bo'lsa ham kanalga tegmaslik.
+10. **Admin xabarlari (`services/notifier.py`)** — Bosqich 8 ning 1-bandi shu yerda qilindi (worker'ga kerak edi): bir xil
+    xabar 10 daqiqada 1 marta; oxirgi yuborilgan vaqt `kv_store` da (`notify:<hash>`) — restart va 3 jarayon uchun umumiy.
+    Xabar yuborish hech qachon xato tashlamaydi.
+11. **`.env.example`: `CHANNEL_ID` endi bo'sh** (avval `@ayvona` edi) — token qo'shilgan zahoti haqiqiy kanalga tasodifan
+    chiqib ketmasin. Sizning `.env` ingizda `CHANNEL_ID` to'ldirilgan — unga tegmadim, "Sardor uchun" ga qarang.
+12. **Kod tuzilishi:** collector'dagi `stop_aware_sleep` va signal handler `apps/runtime.py` ga ko'chirildi (worker va bot
+    ham ishlatadi). `botapi.py` — token/kanal tekshiruvi va o'zbekcha xato matnlari bir joyda.
+13. **Testlar — Bot API mock:** `tests/fake_bot.py` — haqiqiy aiogram `Bot`, lekin HTTP session soxta: tarmoqqa umuman
+    chiqmaydi, har so'rovni yozib oladi, xatolarni Telegram'ning haqiqiy JSON javobi ko'rinishida qaytaradi (aiogram o'zi
+    `TelegramRetryAfter`, `TelegramForbiddenError` ... ga aylantiradi). 54 ta yangi test: pipeline (statuslar, albom,
+    backfill, dedup, yig'ish oynasi, restart), publisher (rasm + file_id kesh, flood, tarmoq, HTML, sozlama xatosi, pauza,
+    `sending` dan tiklanish), worker (to'liq aylanish, tokensiz, toza to'xtash), notifier.
+
+**Natija (bazaning NUSXASIDA, asl `data/ayvona.db` ga tegilmadi):** 374 post (377 raw) → **284 ta job navbatga**
+(22 tasi fallback shablon), 24 dublikat, 2 `no_contact` (734, 6745), 2 `low_quality` (Crafers), not_job 35, closed 11,
+opportunity 8, no_text 4, suspicious 2, resume 2 — 14 soniyada. Yig'ish oynasida almashish 0 (qayta postlar asosan aynan
+bir xil matn). Haqiqiy baza hali eski migratsiyada — `alembic upgrade head` kerak.
+
+**Ma'lum cheklovlar:**
+- Kanaldagi post chiqqandan keyin manbada tahrirlansa/o'chirilsa — bilmaymiz (Bosqich 3 dagi kabi).
+- `error` statusidagi postlarni qayta ishlash buyrug'i hali yo'q. Kerak bo'lsa: bazada `status='new'` qilish.
+- `expires_at` hali qo'yilmaydi — Bosqich 14 (21/30 kun).
+
 ---
 
 ## Sardor uchun
@@ -348,6 +417,10 @@ Kompyuter yoniga qaytganingizda qilishingiz kerak bo'lgan narsalar (batafsil —
       249 ta rasm `assets\images\` da; git'ga tushmaydi).
 - [ ] **Postlar ko'rinishini ko'ring:** `uv run python scripts/preview_posts.py` → `start data\preview.html`
       (309 ta e'lon kanaldagidek). Yoki `tests\snapshots\*.html`. Yoqmagan 3–4 tasini chatdagi Claude'ga tashlang.
+- [ ] **Bosqich 7 migratsiyasi:** `uv run alembic upgrade head` (raw_posts ga backfill/dedup ustunlari, jobs.buttons).
+- [ ] ⚠️ **`.env` dagi `CHANNEL_ID` ni tekshiring:** hozir to'ldirilgan (ehtimol `@ayvona`). Token qo'shishdan OLDIN uni
+      **test kanal**ga almashtiring yoki bo'sh qoldiring — aks holda worker haqiqiy kanalga yoza boshlaydi.
+- [ ] **Bot, test kanal, admin guruh** — fayl oxiridagi "YAKUNIY XULOSA (Bosqich 7–8)" da qadam-baqadam.
 
 ---
 

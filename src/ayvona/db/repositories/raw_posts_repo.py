@@ -16,7 +16,9 @@ from ayvona.sources.base import RawItem
 INSERT_CHUNK = 200
 
 
-def _row(source_id: int, item: RawItem, fetched_at: datetime) -> dict[str, Any]:
+def _row(
+    source_id: int, item: RawItem, fetched_at: datetime, is_backfill: bool = False
+) -> dict[str, Any]:
     return {
         "source_id": source_id,
         "external_id": item.external_id,
@@ -28,14 +30,21 @@ def _row(source_id: int, item: RawItem, fetched_at: datetime) -> dict[str, Any]:
         "posted_at": item.posted_at,
         "fetched_at": fetched_at,
         "status": RawPostStatus.NEW,
+        "is_backfill": is_backfill,
     }
 
 
 async def insert_ignore_duplicates(
-    session: AsyncSession, source_id: int, items: Sequence[RawItem], fetched_at: datetime
+    session: AsyncSession,
+    source_id: int,
+    items: Sequence[RawItem],
+    fetched_at: datetime,
+    *,
+    is_backfill: bool = False,
 ) -> int:
     """``INSERT ... ON CONFLICT(source_id, external_id) DO NOTHING``; returns rows inserted.
 
+    ``is_backfill``: the posts come from the channel's history (first poll of a new source).
     Does not commit — the caller commits together with the source cursor (one transaction).
     """
     inserted = 0
@@ -44,7 +53,7 @@ async def insert_ignore_duplicates(
         chunk = items[start : start + INSERT_CHUNK]
         stmt = (
             sqlite_insert(RawPost)
-            .values([_row(source_id, it, fetched_at) for it in chunk])
+            .values([_row(source_id, it, fetched_at, is_backfill) for it in chunk])
             .on_conflict_do_nothing(index_elements=["source_id", "external_id"])
             .returning(RawPost.id)
         )
@@ -97,3 +106,36 @@ async def reset_stuck_processing(session: AsyncSession) -> int:
         .values(status=RawPostStatus.NEW)
     )
     return result.rowcount or 0
+
+
+async def album_parts(session: AsyncSession, source_id: int, grouped_id: int) -> list[RawPost]:
+    """Every stored part of one album (any status), in id order."""
+    stmt = (
+        select(RawPost)
+        .where(RawPost.source_id == source_id, RawPost.grouped_id == grouped_id)
+        .order_by(RawPost.id)
+    )
+    return list((await session.scalars(stmt)).all())
+
+
+async def skip_existing_new(session: AsyncSession, fetched_up_to: datetime) -> int:
+    """One-time (worker's first start): every ``new`` post fetched so far -> ``skipped_backfill``.
+    Does not commit."""
+    result = await session.execute(
+        update(RawPost)
+        .where(RawPost.status == RawPostStatus.NEW, RawPost.fetched_at <= fetched_up_to)
+        .values(status=RawPostStatus.SKIPPED_BACKFILL)
+    )
+    return result.rowcount or 0
+
+
+async def dedup_entries_since(session: AsyncSession, since: datetime) -> list[RawPost]:
+    """Posts that are in the dedup index (have ``dedup_text``), posted after ``since``,
+    oldest first."""
+    when = func.coalesce(RawPost.posted_at, RawPost.fetched_at)
+    stmt = (
+        select(RawPost)
+        .where(RawPost.dedup_text.is_not(None), when >= since)
+        .order_by(when, RawPost.id)
+    )
+    return list((await session.scalars(stmt)).all())

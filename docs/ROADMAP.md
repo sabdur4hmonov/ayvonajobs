@@ -276,6 +276,9 @@ Test: 41 fixture uchun natijani tests/snapshots/<kanal>_<id>.html ga yoz.
 
 ## BOSQICH 7 — Worker: pipeline + publisher ⏱ 2 soat · Model: `opus`
 
+- [x] Kod + testlar bajarildi — 2026-09-29 (Bot API mock bilan; tafsilot: `docs/PROGRESS.md`)
+- [ ] Test kanalda tekshirish (Sardor: bot + test kanal + `.env`, pastdagi "Tekshirish")
+
 ```text
 apps/worker.py ni yoz, ichida 2 ta asyncio vazifa:
 0) MUHIM: bazadagi hozirgi raw_posts (initial_backfill bilan olingan test postlari, fetched_at <= worker

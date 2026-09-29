@@ -67,7 +67,15 @@ uv run python -m ayvona.apps.collector          # doimiy ishlaydi (to'xtatish: C
 uv run python scripts/show_status.py            # bazada nima bor: manbalar, heartbeat, oxirgi postlar
 ```
 
-Keyingi bosqichlarda: `uv run python -m ayvona.apps.worker` va `uv run python -m ayvona.apps.bot`.
+**Worker** (Bosqich 7) — yangi postlarni qayta ishlaydi va kanalga joylaydi:
+```powershell
+uv run python -m ayvona.apps.worker --no-publish   # faqat qayta ishlash, kanalga hech narsa ketmaydi
+uv run python -m ayvona.apps.worker --once         # tayyorlarini ishlab + vaqti kelganlarini joylab, chiqadi
+uv run python -m ayvona.apps.worker                # doimiy ishlaydi (to'xtatish: Ctrl+C)
+```
+`BOT_TOKEN` / `CHANNEL_ID` bo'lmasa worker yiqilmaydi: e'lonlar navbatda (`queued`) kutadi.
+⚠️ Birinchi ishga tushishda bazadagi hamma eski postlar `skipped_backfill` bo'ladi (kanalga chiqmaydi).
+Sinovni albatta **test kanal**da qiling: `.env` da `CHANNEL_ID=@sizning_test_kanalingiz`.
 
 **Post rasmlari va ko'rinishi** (Bosqich 6):
 ```powershell

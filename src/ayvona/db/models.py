@@ -61,13 +61,24 @@ class SourceType(StrEnum):
 class RawPostStatus(StrEnum):
     NEW = "new"
     PROCESSING = "processing"
+    # A job ad that became (or replaced the source of) a row in ``jobs`` (``raw_posts.job_id``).
     DONE = "done"
     DUPLICATE = "duplicate"
     NOT_JOB = "not_job"
+    RESUME = "resume"
+    CLOSED = "closed"
+    OPPORTUNITY = "opportunity"
+    SUSPICIOUS = "suspicious"
     NO_TEXT = "no_text"
+    # A job ad without any phone / @username / email / apply link: never published.
+    NO_CONTACT = "no_contact"
     # A job ad with neither a title nor a salary found (extract.py): not published,
     # listed in the admin report.
     LOW_QUALITY = "low_quality"
+    # Old posts that must not reach the channel (ROADMAP Bosqich 7, step 0): everything in the DB
+    # before the worker's first start, and history taken when a source is added
+    # (unless ``publisher.publish_backfill``).
+    SKIPPED_BACKFILL = "skipped_backfill"
     ERROR = "error"
 
 
@@ -148,6 +159,16 @@ class RawPost(Base):
     )
     error: Mapped[str | None] = mapped_column(Text)
     content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    # Taken from the channel's history when the source was added (not a fresh post).
+    is_backfill: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("0"))
+    # Worker (Bosqich 7): the job this post became or repeats; the post it repeats (dedup root).
+    job_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    duplicate_of: Mapped[int | None] = mapped_column(Integer)
+    # Dedup index entry (processing/dedup.py), kept so the index is rebuilt after a restart.
+    dedup_text: Mapped[str | None] = mapped_column(Text)
+    dedup_title: Mapped[str | None] = mapped_column(String(255))
+    dedup_contacts: Mapped[list[Any] | None]
+    fingerprint: Mapped[str | None] = mapped_column(String(64))
 
 
 class Job(Base):
@@ -202,9 +223,14 @@ class Job(Base):
     formatted_text: Mapped[str | None] = mapped_column(Text)
     fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
 
+    # Inline keyboard of the channel post: [[{"text": ..., "url": ...}, ...], ...]
+    buttons: Mapped[list[Any] | None]
+
     # outbox
     status: Mapped[JobStatus] = mapped_column(str_enum(JobStatus), default=JobStatus.QUEUED)
     attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
+    # Earliest time the publisher may send it: the collecting window (publisher.hold_minutes)
+    # for a new job, the backoff time after a failed attempt.
     next_retry_at: Mapped[datetime | None]
     last_error: Mapped[str | None] = mapped_column(Text)
 

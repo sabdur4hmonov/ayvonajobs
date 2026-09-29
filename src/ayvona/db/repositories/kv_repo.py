@@ -11,6 +11,9 @@ from ayvona.db.models import KVStore
 from ayvona.timeutil import ensure_utc, utcnow
 
 HEARTBEAT_PREFIX = "heartbeat:"
+# "1" = the publisher sends nothing (admin /pause); the queue keeps growing.
+PUBLISHER_PAUSED = "publisher_paused"
+_TRUE = frozenset({"1", "true", "yes", "on"})
 
 
 async def get(session: AsyncSession, key: str) -> str | None:
@@ -36,3 +39,12 @@ async def write_heartbeat(session: AsyncSession, process: str, now: datetime | N
 async def read_heartbeat(session: AsyncSession, process: str) -> datetime | None:
     raw = await get(session, HEARTBEAT_PREFIX + process)
     return datetime.fromisoformat(raw) if raw else None
+
+
+async def get_bool(session: AsyncSession, key: str) -> bool:
+    return (await get(session, key) or "").strip().lower() in _TRUE
+
+
+async def set_bool(session: AsyncSession, key: str, value: bool) -> None:
+    """Does not commit."""
+    await set_value(session, key, "1" if value else "0")
