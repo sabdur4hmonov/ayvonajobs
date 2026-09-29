@@ -174,6 +174,8 @@ collector'ni o'chiring, 10 daqiqa kuting, yoqing → oradagi postlar ham kelgan 
 
 ## BOSQICH 4 — Real misollar → testlar, normalize, klassifikator, dedup ⏱ 1–2 soat · Model: `opusplan`
 
+- [x] Bajarildi — 2026-09-29 (tafsilot: `docs/PROGRESS.md`; extract testlari xfail — Bosqich 5)
+
 > ✅ Tayyor: `docs/POST_EXAMPLES.md` (41 ta real misol + kutilgan natija), `docs/SOURCE_ANALYSIS.md`,
 > `config/source_rules.yaml`, `config/filters.yaml` — 19 kanaldan 377 post tahlili asosida.
 

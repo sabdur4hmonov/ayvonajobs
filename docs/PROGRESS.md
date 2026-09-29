@@ -8,6 +8,7 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-29 | 1 — Skelet | pyproject (uv, src layout), papkalar, `config.py`, `config/*.yaml`, `.env.example`, `.gitignore`, loguru, README, ruff, testlar | 6 test ✅, ruff ✅ |
 | 2026-09-29 | 2 — Baza | 12 ta jadval modeli (`db/models.py`), `db/session.py` (WAL, busy_timeout, foreign_keys), Alembic (async) + birinchi migratsiya + `jobs_fts` (FTS5) triggerlari, repository'lar: sources, raw_posts, kv | 25 test ✅, ruff ✅, `alembic check` ✅ |
 | 2026-09-29 | 3 — Collector | `sources/base.py`, `telegram_source.py`, `registry.py`, `apps/collector.py` (`--once` rejimi bilan), `scripts/login_telethon.py`, `scripts/show_status.py`; soxta manba + soxta Telethon client bilan testlar | 66 test ✅ (5 marta ketma-ket), ruff ✅. Haqiqiy Telegram'da **tekshirilmagan** (session yo'q) |
+| 2026-09-29 | 4 — Normalize, classify, dedup | 41 fixture (`tests/fixtures/posts/`, bazadan aynan) + 10 dedup fixture; `processing/`: `normalize`, `language`, `keywords`, `contacts`, `boilerplate`, `classify`, `dedup`; `scripts/export_fixtures.py`, `scripts/dedup_report.py` | 251 test ✅ + 24 xfail (extract — Bosqich 5), ruff ✅. **41/41** kind to'g'ri. 377 postda: 27 dublikat guruh (14 kunlik oyna) |
 
 ---
 
@@ -111,6 +112,52 @@ Birortasi yoqmasa — ayting, o'zgartiramiz.
 - Haqiqiy Telegram bilan hali sinalmagan — `iter_messages(min_id, reverse=True)` xatti-harakati Telethon
   hujjatiga ko'ra yozilgan va soxta client bilan test qilingan.
 - Windows'da faqat Ctrl+C ishlaydi; serverda (Linux) SIGTERM ham toza to'xtatadi.
+
+### Bosqich 4
+Sardor tasdiqlagan qarorlar: aloqasiz job → `has_contact=False` (`no_contact` statusini Bosqich 7 qo'yadi);
+`no_text` turi (matnsiz albom qismlari birlashtiriladi, yolg'iz rasm → `no_text`).
+
+1. **Ikki xil matn shakli.** `normalize()` — o'zbek kirill → lotin, ruscha o'zgarmaydi (har qator alohida
+   hal qilinadi). `fold()` — hamma kirill → lotin, faqat kalit so'z qidirish uchun (config so'zlari ham
+   `fold` qilinadi, shuning uchun "иш излаяпман" lotincha postda ham topiladi).
+2. **So'z chegarasi faqat boshida:** "grant" ≠ "emigrant", lekin "vakansiya" → "vakansiyalar",
+   "forum" → "forumga" topiladi (o'zbek tilidagi qo'shimchalar uchun).
+3. **Kanal "imzosi" tasnifdan oldin olib tashlanadi** (`boilerplate.py`, `source_rules.yaml` dagi
+   `cut_from/strip_lines/...`). Aks holda "Agar vakansiya sizga mos bo'lmasa..." footeri har reklamaga
+   job ball qo'shardi. 40% xavfsizlik qoidasi ham shu yerda. Bosqich 6 dagi `clean.py` shu qoidalarni
+   asl matnga qo'llaydi.
+4. **Tasnif tartibi:** no_text → closed (marker yoki `Ariza muddati` o'tgan) → resume → suspicious →
+   haq to'lanmaydigan amaliyot → kanal teglari → opportunity/reklama (job ball < 4 bo'lsa) → job (ball ≥ 2).
+   Reklama uchun **reklama belgilari soni ≥ job ball** bo'lishi kerak ("xodimlarga 50% chegirma" haqiqiy
+   e'lonni reklamaga aylantirmasin).
+5. **Config o'zgarishlari** (`filters.yaml`): job markerlar qo'shildi (kk, oklad, vazifalar, tajriba shart
+   emas, we're hiring, в поисках, ...); `"исмим:"` ikki nuqta bilan (maslahat postidagi "Mening ismim Ali"
+   rezyume emas); `scam_exceptions` ("mijozlardan oldindan to'lovlarni qabul qilib" — ish vazifasi, scam emas);
+   `opportunity_strong_markers` (haq to'lanmaydigan amaliyot — ball qancha bo'lsa ham); maosh jadvali /
+   yangilik markerlari (edustaffs/6799). `source_rules.yaml`: @kasbdoruz uchun `require_job_hashtag: true`
+   (`#vakansiya` siz post — maslahat).
+6. **Dedup** (`dedup.py`), 14 kun: `hash` (aynan bir xil tozalangan matn) → `fingerprint` (lavozim + birinchi
+   aloqa, matn ≥ 70%) → `fuzzy` (≥ 90% + lavozim ≥ 85 YOKI umumiy aloqa). Xavfsizlik: lavozimlar aniq har xil
+   (< 50) bo'lsa umumiy aloqa hisobga olinmaydi (@jobs_fba da admin kontakti hamma e'londa); 85–90% oralig'ida
+   IKKALASI ham shart (lavozim ≥ 85 VA umumiy aloqa). Dublikatlar ham indeksga qo'shiladi — qayta postlar
+   zanjiri birinchi postga bog'lanadi. Lavozim hozircha taxminiy (`guess_title`), Bosqich 5 da extract'dan.
+7. **Aloqa topish** (`contacts.py`) — yengil versiya (telefon, @username, t.me, email, yashirin havola,
+   tugma, `t.me/+998...` = telefon, bot `?start=` = ariza havolasi). Bosqich 5 kengaytiradi.
+8. **Fixture'lar bazadan** `scripts/export_fixtures.py` bilan (LF, UTF-8). Yangi misol:
+   `uv run python scripts/export_fixtures.py @kanal 123`. `expected` qo'lda to'ldiriladi.
+9. `tests/test_config.py` dagi `sources == []` tekshiruvi olib tashlandi — settings.yaml da endi 19 kanal bor.
+
+**Natija:** 41/41 misolda kind to'g'ri, til 40/40 (#18 kanal menyusi aralash — til belgilanmadi).
+Butun baza (377 → 374 post, albomlar birlashtirildi): job 311, not_job 35, closed 11, opportunity 9,
+no_text 4, suspicious 2, resume 2. Dedup: **27 guruh, 33 dublikat post** (1 kunlik oynada 18 guruh;
+SOURCE_ANALYSIS 22 degan edi — farq ehtiyotkorlikdan: shubhali juftlar dublikat deyilmaydi).
+
+**Ma'lum cheklovlar:**
+- `digitalitvacancy/735` (Anorbank vakansiyalar ro'yxati, faqat "havola" lar) → not_job (ball 1) — o'tkazib yuboriladi.
+- `digitalitvacancy/734` (intervyu maslahati) va `Ish_Toshkent/6745` (kanallar papkasi reklamasi) → job,
+  lekin aloqasiz → Bosqich 7 da `no_contact`, kanalga chiqmaydi.
+- Ko'rib chiqish uchun: `uv run python scripts/dedup_report.py --review` (ball ≤ 2 yoki aloqasiz job'lar),
+  `--kinds` (hamma e'lon bo'lmaganlar va sababi).
 
 ---
 
