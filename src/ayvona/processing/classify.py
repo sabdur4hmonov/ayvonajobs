@@ -133,6 +133,7 @@ class Classifier:
         self.source_rules = source_rules
         self.job = KeywordSet(filters.job_markers)
         self.not_job = KeywordSet(filters.not_job_markers)
+        self.not_job_strong = KeywordSet(filters.not_job_strong_markers)
         self.resume = KeywordSet(filters.resume_markers)
         self.closed = KeywordSet(filters.closed_markers)
         self.opportunity = KeywordSet(filters.opportunity_markers)
@@ -211,6 +212,12 @@ class Classifier:
             self.opportunity_strong_exceptions.find(folded)
         ):
             return result(PostKind.OPPORTUNITY, *sorted(f"opportunity:{h}" for h in hits))
+
+        # 4b. a course / video-lesson topic list — decisive: lesson names ("oylik ish haqini
+        # hisoblash", "ish grafigini to'ldirish") look like job evidence
+        # (@Buxgalteriyaishorinlarii/5450)
+        if hits := self.not_job_strong.find(folded):
+            return result(PostKind.NOT_JOB, *sorted(f"ad_strong:{h}" for h in hits))
 
         # 5. the channel's own tags
         tags = set(_HASHTAG_RE.findall(folded))

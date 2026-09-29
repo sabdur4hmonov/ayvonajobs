@@ -167,6 +167,25 @@ not_job_markers:
   - qo'lga tegishi
   - ish haqlari miqdori
   - toifalar bo'yicha
+  # Kurs / video darslik reklamasi (Bosqich 7, @Buxgalteriyaishorinlarii/5450)
+  - videoqo'llanma
+  - video qo'llanma
+  - videodarslik
+  - видеоурок
+
+# HAL QILUVCHI reklama belgilari — job ball qancha bo'lsa ham not_job (kurs mavzulari ro'yxati).
+# Nega kerak: @Buxgalteriyaishorinlarii/5450 ("Video darsliklar mavzusi", 74 ta 1C darsi) ichida "oylik",
+# "ish grafigi", "daromad" so'zlari dars nomlarida uchraydi -> job ball 4, oddiy reklama qoidasi esa faqat
+# ball < 4 da ishlaydi. Shuning uchun faqat KURS SARLAVHASIGA xos iboralar (ish e'lonida uchramaydigan).
+# ⚠️ "kurs dasturi", "dars mavzulari" ataylab YO'Q: "kurs dasturini bilish" o'qituvchi e'lonida uchraydi.
+not_job_strong_markers:
+  - video darsliklar mavzusi
+  - videodarsliklar mavzusi
+  - video darslar mavzusi
+  - darsliklar ro'yxati
+  - bo'yicha videoqo'llanma
+  - темы видеоуроков
+  - программа видеокурса
 
 # REZYUME — ish qidiruvchining e'loni (v1 da chiqarilmaydi; keyin "Rezyumelar" bo'limi uchun saqlanadi)
 resume_markers:

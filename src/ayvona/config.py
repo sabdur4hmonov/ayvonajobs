@@ -253,6 +253,8 @@ class FiltersConfig(BaseModel):
     # Post kind detection (processing/classify.py)
     job_markers: list[str] = Field(default_factory=list)
     not_job_markers: list[str] = Field(default_factory=list)
+    # decisive ad markers (a course topic list) -> not_job whatever the job score
+    not_job_strong_markers: list[str] = Field(default_factory=list)
     resume_markers: list[str] = Field(default_factory=list)
     closed_markers: list[str] = Field(default_factory=list)
     opportunity_markers: list[str] = Field(default_factory=list)

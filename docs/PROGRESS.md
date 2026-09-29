@@ -305,6 +305,24 @@ fallback matni), eng uzuni 1022/1024.
 - ru/en e'lonning talablari ko'rsatilmaydi (Bosqich 15 Gemini tarjima qiladi).
 - Fallback'da manbaning emojilari va KATTA HARFLI sarlavhalari saqlanadi (asl matn shunday).
 
+### Bosqich 7 oldidan — kurs reklamasi (@Buxgalteriyaishorinlarii/5450)
+1. **Nega oddiy filtr so'zi yetmadi:** 5450 da "video darslik" reklama belgisi allaqachon bor edi, lekin 74 ta 1C dars
+   nomi ichida "oylik ish haqini hisoblash", "ish grafigini to'ldirish", "daromad solig'i" bor → job ball **4**.
+   Reklama qoidasi esa faqat ball < 4 bo'lsa ishlaydi (haqiqiy e'londagi "chegirma" so'zi uni buzmasligi uchun).
+2. **Yechim:** `filters.yaml` ga yangi ro'yxat **`not_job_strong_markers`** — hal qiluvchi reklama belgilari (ball qancha
+   bo'lsa ham `not_job`), xuddi `opportunity_strong_markers` kabi. `classify.py` da bitta qoida (4b-qadam, scam va
+   haq to'lanmaydigan amaliyotdan keyin). Ichida faqat **kurs sarlavhasiga xos** iboralar: "video darsliklar mavzusi",
+   "bo'yicha videoqo'llanma", "темы видеоуроков" ... "kurs dasturi", "dars mavzulari" ataylab qo'shilmadi — "kurs dasturini
+   bilish" o'qituvchi e'lonida uchraydi (so'z faqat boshidan solishtiriladi). Oddiy `not_job_markers` ga ham
+   "videoqo'llanma", "videodarslik", "видеоурок" qo'shildi (kuchsiz e'lonlar uchun).
+3. **Bazani tekshirdim:** 374 postdagi 313 job'dan **113 tasida** "dars/kurs/video/o'quv/trening/sertifikat" so'zlari
+   bor — hammasini bittalab ko'rdim: o'qituvchi, o'quv markazga administrator/sotuv menejeri, videograf, mentor, trener
+   e'lonlari — **hammasi haqiqiy ish**. Kurs reklamasi faqat **5450** edi. Eski va yangi `filters.yaml` bilan butun bazani
+   solishtirdim: **faqat 5450 o'zgardi** (job → not_job). Endi: job 312, not_job 35 (+ boshqalar o'sha).
+4. 5450 `tests/fixtures/regressions/` ga qo'shildi (41 asosiy misol o'zgarmadi, 41/41 o'tadi) + snapshot.
+5. ℹ️ `vakansiya` belgisi 5450 da `@Reklama_vakansiyaa` username'i ichidan topilgan — username ichidagi so'zlar job ball
+   qo'shmasligi kerak edi. Tuzatmadim (boshqa e'lonlarning balli o'zgarib ketishi mumkin); kerak bo'lsa alohida ko'ramiz.
+
 ---
 
 ## Sardor uchun
