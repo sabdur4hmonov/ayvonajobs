@@ -1,0 +1,63 @@
+# =====================================================================
+#  Kategoriyalar. Kalit so'zlar: o'zbek lotin, o'zbek kirill va rus tilida.
+#  Hozircha namunaviy 4 ta + "boshqa". To'liq ro'yxat — Bosqich 5 da.
+#  Kalit so'zlar kichik harfda yoziladi (matn solishtirishdan oldin normalize qilinadi).
+# =====================================================================
+categories:
+  sotuvchi:
+    title: "Sotuv"
+    hashtag: "sotuvchi"
+    image: "sotuvchi.jpg"
+    keywords:
+      - sotuvchi
+      - sotuv konsultanti
+      - konsultant
+      - сотувчи
+      - продавец
+      - продавец-консультант
+      - консультант
+
+  haydovchi:
+    title: "Haydovchi"
+    hashtag: "haydovchi"
+    image: "haydovchi.jpg"
+    keywords:
+      - haydovchi
+      - shofyor
+      - ҳайдовчи
+      - водитель
+      - шофер
+
+  dasturchi:
+    title: "IT / Dasturlash"
+    hashtag: "dasturchi"
+    image: "dasturchi.jpg"
+    keywords:
+      - dasturchi
+      - programmist
+      - developer
+      - frontend
+      - backend
+      - дастурчи
+      - программист
+      - разработчик
+
+  oqituvchi:
+    title: "Ta'lim"
+    hashtag: "oqituvchi"
+    image: "oqituvchi.jpg"
+    keywords:
+      - o'qituvchi
+      - ustoz
+      - repetitor
+      - ўқитувчи
+      - учитель
+      - преподаватель
+      - репетитор
+
+  # Hech qaysi kategoriyaga tushmasa — shu. O'chirmang!
+  boshqa:
+    title: "Boshqa"
+    hashtag: "boshqa"
+    image: "boshqa.jpg"
+    keywords: []

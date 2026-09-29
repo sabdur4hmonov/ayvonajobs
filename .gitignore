@@ -1,0 +1,29 @@
+# --- Secrets: HECH QACHON git'ga tushmasin ---
+.env
+.env.*
+!.env.example
+*.session
+*.session-journal
+
+# --- Runtime data (baza, loglar, backup'lar) ---
+data/
+
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Tools ---
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

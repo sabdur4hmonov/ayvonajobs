@@ -1,0 +1,52 @@
+# =====================================================================
+#  Hududlar. Hozircha namunaviy 4 ta. To'liq ro'yxat (14 hudud + Toshkent tumanlari) — Bosqich 5 da.
+# =====================================================================
+regions:
+  toshkent_sh:
+    title: "Toshkent sh."
+    hashtag: "toshkent"
+    keywords:
+      - toshkent shahri
+      - toshkent sh
+      - tashkent
+      - тошкент
+      - ташкент
+
+  samarqand:
+    title: "Samarqand viloyati"
+    hashtag: "samarqand"
+    keywords:
+      - samarqand
+      - samarkand
+      - самарқанд
+      - самарканд
+
+  fargona:
+    title: "Farg'ona viloyati"
+    hashtag: "fargona"
+    keywords:
+      - farg'ona
+      - fergana
+      - фарғона
+      - фергана
+
+  andijon:
+    title: "Andijon viloyati"
+    hashtag: "andijon"
+    keywords:
+      - andijon
+      - andijan
+      - андижон
+      - андижан
+
+# Bu so'zlar bo'lsa — masofaviy ish (is_remote = true)
+remote_keywords:
+  - masofaviy
+  - masofadan
+  - online
+  - onlayn
+  - remote
+  - масофавий
+  - удаленно
+  - удалённо
+  - удаленная работа

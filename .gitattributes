@@ -1,0 +1,5 @@
+# Always LF in the repo and working copy: the code runs on a Linux server (shell scripts break with CRLF).
+* text=auto eol=lf
+*.jpg binary
+*.png binary
+*.db binary

@@ -1,0 +1,66 @@
+[project]
+name = "ayvona"
+version = "0.1.0"
+description = "Ayvona Jobs — Telegram job aggregator and public job-board bot for Uzbekistan"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "telethon>=1.36,<2",
+    "aiogram>=3.13,<4",
+    "sqlalchemy[asyncio]>=2.0.36,<3",
+    "aiosqlite>=0.20",
+    "alembic>=1.14",
+    "pydantic-settings>=2.7",
+    "pyyaml>=6.0",
+    "rapidfuzz>=3.10",
+    "loguru>=0.7",
+    "tzdata>=2026.4",  # IANA timezones on Windows (Asia/Tashkent)
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+# Project (D:) and uv cache (C:) are on different drives -> hardlinks impossible; copy silently.
+link-mode = "copy"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ayvona"]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+# docs/*.md are hand-written; don't let `ruff format` touch their code blocks.
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "UP",    # pyupgrade
+    "B",     # bugbear
+    "SIM",   # simplify
+    "ASYNC", # async pitfalls
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-q"

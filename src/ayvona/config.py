@@ -1,0 +1,234 @@
+"""Application settings.
+
+Two sources:
+* ``.env``          — secrets and per-machine values (API keys, tokens, paths).
+* ``config/*.yaml`` — behaviour (sources, intervals, keywords). Safe to commit.
+
+Use :func:`get_settings` everywhere; it loads once and caches.
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+from typing import Annotated, Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+import yaml
+from pydantic import BaseModel, Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+# src/ayvona/config.py -> parents[2] is the repository root.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_CONFIG_DIR = PROJECT_ROOT / "config"
+DEFAULT_ENV_FILE = PROJECT_ROOT / ".env"
+
+
+def resolve_path(path: Path | str, base: Path = PROJECT_ROOT) -> Path:
+    """Return ``path`` as absolute; relative paths are taken relative to ``base``."""
+    p = Path(path)
+    return p if p.is_absolute() else (base / p)
+
+
+# --------------------------------------------------------------------------- .env
+class EnvSettings(BaseSettings):
+    """Values from environment / ``.env``. All optional, so tests and tooling work without it."""
+
+    model_config = SettingsConfigDict(
+        env_file=DEFAULT_ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    api_id: int | None = None
+    api_hash: SecretStr | None = None
+    telethon_session: str = "data/ayvona"
+    bot_token: SecretStr | None = None
+    channel_id: str | None = None
+    admin_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
+    admin_chat_id: int | None = None
+    db_path: str = "data/ayvona.db"
+    log_level: str = "INFO"
+    tz: str = "Asia/Tashkent"
+
+    @field_validator(
+        "api_id", "admin_chat_id", "api_hash", "bot_token", "channel_id", mode="before"
+    )
+    @classmethod
+    def _empty_to_none(cls, v: Any) -> Any:
+        """``API_ID=`` (left blank in .env) means "not set", not a validation error."""
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("admin_ids", mode="before")
+    @classmethod
+    def _split_ids(cls, v: Any) -> Any:
+        """Accept ``"1, 2,3"`` (comma separated) as well as a real list."""
+        if v is None:
+            return []
+        if isinstance(v, int):
+            return [v]
+        if isinstance(v, str):
+            return [int(x) for x in v.replace(";", ",").split(",") if x.strip()]
+        return v
+
+    @field_validator("log_level")
+    @classmethod
+    def _upper(cls, v: str) -> str:
+        return v.strip().upper()
+
+    @field_validator("tz")
+    @classmethod
+    def _valid_tz(cls, v: str) -> str:
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise ValueError(f"unknown timezone: {v!r}") from e
+        return v
+
+
+# --------------------------------------------------------------------------- YAML models
+class SourceConfig(BaseModel):
+    """One entry of ``sources:`` in settings.yaml."""
+
+    type: str = "telegram"
+    identifier: str
+    title: str | None = None
+    enabled: bool = True
+    own_usernames: list[str] = Field(default_factory=list)
+
+    @field_validator("identifier")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("identifier must not be empty")
+        return v
+
+
+class CollectorConfig(BaseModel):
+    poll_interval_seconds: float = 90
+    initial_backfill: int = Field(default=0, ge=0)
+    fetch_limit: int = Field(default=200, ge=1)
+    delay_between_sources_seconds: float = 2.5
+    fetch_timeout_seconds: float = 120
+    heartbeat_interval_seconds: float = 60
+
+
+class PublisherConfig(BaseModel):
+    publish_interval_seconds: float = 60
+    max_publish_attempts: int = 8
+
+
+class AppConfig(BaseModel):
+    """Content of ``config/settings.yaml``."""
+
+    sources: list[SourceConfig] = Field(default_factory=list)
+    collector: CollectorConfig = Field(default_factory=CollectorConfig)
+    publisher: PublisherConfig = Field(default_factory=PublisherConfig)
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _none_is_empty(cls, v: Any) -> Any:
+        return v or []
+
+
+class CategoryConfig(BaseModel):
+    title: str
+    hashtag: str
+    image: str | None = None
+    keywords: list[str] = Field(default_factory=list)
+
+
+class RegionConfig(BaseModel):
+    title: str
+    hashtag: str
+    keywords: list[str] = Field(default_factory=list)
+
+
+class RegionsConfig(BaseModel):
+    regions: dict[str, RegionConfig] = Field(default_factory=dict)
+    remote_keywords: list[str] = Field(default_factory=list)
+
+
+class FiltersConfig(BaseModel):
+    ban: list[str] = Field(default_factory=list)
+    spam: list[str] = Field(default_factory=list)
+    scam: list[str] = Field(default_factory=list)
+    ad_patterns: list[str] = Field(default_factory=list)
+
+
+FALLBACK_CATEGORY = "boshqa"
+
+
+# --------------------------------------------------------------------------- combined
+class Settings(BaseModel):
+    """Everything the app needs, in one object."""
+
+    env: EnvSettings
+    app: AppConfig
+    categories: dict[str, CategoryConfig]
+    regions: RegionsConfig
+    filters: FiltersConfig
+    config_dir: Path
+
+    @property
+    def db_file(self) -> Path:
+        return resolve_path(self.env.db_path)
+
+    @property
+    def db_url(self) -> str:
+        return f"sqlite+aiosqlite:///{self.db_file.as_posix()}"
+
+    @property
+    def session_file(self) -> Path:
+        """Telethon session path without the ``.session`` suffix (Telethon adds it)."""
+        return resolve_path(self.env.telethon_session)
+
+    @property
+    def data_dir(self) -> Path:
+        return self.db_file.parent
+
+    @property
+    def log_dir(self) -> Path:
+        return self.data_dir / "logs"
+
+    @property
+    def timezone(self) -> ZoneInfo:
+        return ZoneInfo(self.env.tz)
+
+
+def _read_yaml(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data or {}
+
+
+def load_settings(
+    config_dir: Path | str = DEFAULT_CONFIG_DIR,
+    env_file: Path | str | None = DEFAULT_ENV_FILE,
+) -> Settings:
+    """Load ``.env`` + ``config/*.yaml``. Raises a pydantic ``ValidationError`` on bad values."""
+    config_dir = Path(config_dir)
+    env = EnvSettings(_env_file=env_file)  # type: ignore[call-arg]
+    app = AppConfig.model_validate(_read_yaml(config_dir / "settings.yaml"))
+    categories_raw = _read_yaml(config_dir / "categories.yaml").get("categories") or {}
+    categories = {k: CategoryConfig.model_validate(v) for k, v in categories_raw.items()}
+    regions = RegionsConfig.model_validate(_read_yaml(config_dir / "regions.yaml"))
+    filters = FiltersConfig.model_validate(_read_yaml(config_dir / "filters.yaml"))
+    return Settings(
+        env=env,
+        app=app,
+        categories=categories,
+        regions=regions,
+        filters=filters,
+        config_dir=config_dir,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Cached settings for the running process."""
+    return load_settings()

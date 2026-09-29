@@ -1,0 +1,35 @@
+# =====================================================================
+#  Ayvona Jobs — asosiy sozlamalar (maxfiy emas, git'ga qo'shiladi)
+#  Maxfiy narsalar (token, API_HASH) bu yerda EMAS — .env faylida.
+# =====================================================================
+
+# --- Manbalar ---------------------------------------------------------
+# E'lonlar o'qiladigan kanallar. Hozircha bo'sh.
+# Qo'shish uchun "[]" ni o'chirib, pastdagi namunaga o'xshab yozing:
+#
+# sources:
+#   - type: telegram            # hozircha faqat "telegram" (keyin "web:..." qo'shiladi)
+#     identifier: "@kanal_nomi"  # kanal username'i (yoki t.me/kanal_nomi)
+#     title: "Kanal nomi"         # ixtiyoriy, o'zingiz uchun
+#     enabled: true              # vaqtincha o'chirish uchun: false
+#     own_usernames:             # shu kanalning o'z reklama @username/havolalari (tozalashda o'chiriladi)
+#       - "@kanal_nomi"
+#
+# Diqqat: Telethon akkauntingiz shu kanallarga a'zo bo'lishi shart emas (ochiq kanal bo'lsa),
+# lekin yopiq kanallar uchun a'zo bo'lishi kerak.
+# Ro'yxatdan olib tashlangan kanal bazadan o'chirilmaydi — faqat "enabled=false" bo'ladi.
+sources: []
+
+# --- Collector (kanallarni o'qish) ------------------------------------
+collector:
+  poll_interval_seconds: 90          # har necha soniyada hamma kanallar tekshiriladi
+  initial_backfill: 0                # yangi kanal qo'shilganda nechta eski post olinsin (0 = faqat bundan keyingilari)
+  fetch_limit: 200                   # bitta so'rovda bitta kanaldan max nechta post (qolgani keyingi siklda)
+  delay_between_sources_seconds: 2.5 # kanallar orasida kutish (Telegram'ni bezovta qilmaslik uchun)
+  fetch_timeout_seconds: 120         # bitta kanal shuncha vaqtda javob bermasa — xato deb hisoblanadi
+  heartbeat_interval_seconds: 60     # "tirikman" belgisi (kv_store) har necha soniyada yoziladi
+
+# --- Publisher (kanalga joylash) — Bosqich 7 da ishlatiladi -------------
+publisher:
+  publish_interval_seconds: 60       # kanalga postlar orasidagi minimal vaqt
+  max_publish_attempts: 8            # shuncha xatodan keyin "failed" + admin'ga xabar

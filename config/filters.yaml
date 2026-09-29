@@ -1,0 +1,33 @@
+# =====================================================================
+#  Filtrlar. Hozircha namunaviy. Admin keyin /addword bilan qo'shadi (filter_words jadvali).
+# =====================================================================
+
+# Taqiqlangan so'zlar — bunday e'lon rad etiladi
+ban:
+  - kazino
+  - casino
+  - казино
+  - stavka
+  - ставки
+
+# Spam belgilari
+spam:
+  - pul ishlash oson
+  - kuniga 100$
+  - заработок без вложений
+
+# Firibgarlik belgilari — user e'loni admin tekshiruviga yuboriladi
+scam:
+  - oldindan to'lov
+  - depozit
+  - viza uchun pul
+  - предоплата
+  - оплата за оформление
+
+# Manba kanallarning reklama qatorlari (tozalashda olib tashlanadi)
+ad_patterns:
+  - obuna bo'ling
+  - kanalimizga
+  - reklama uchun
+  - подписывайтесь
+  - наш канал
