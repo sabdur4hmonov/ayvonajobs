@@ -1,0 +1,5 @@
+Alembic migrations (database schema versions).
+
+Apply:            uv run alembic upgrade head
+New migration:    uv run alembic revision --autogenerate -m "short message"
+                  -> always read the generated file before committing it.

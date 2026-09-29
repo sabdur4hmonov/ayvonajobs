@@ -120,6 +120,8 @@ Oxirida menga o'zbekcha tushuntir: har bir papka nima uchun, .env ni qanday to'l
 
 ## BOSQICH 2 — Baza modellari + migratsiya ⏱ 45 daq · Model: `opusplan`
 
+- [x] Bajarildi — 2026-09-29 (tafsilot: `docs/PROGRESS.md`)
+
 ```text
 docs/ARCHITECTURE.md 4-bo'limidagi HAMMA jadvallarni SQLAlchemy 2.0 (async, Mapped[] uslubi) modellari
 sifatida src/ayvona/db/models.py da yoz. Statuslar uchun Enum ishlat (3-bo'lim).

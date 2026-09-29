@@ -57,6 +57,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B011"]
+"migrations/versions/**" = ["E501"]  # generated code
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
