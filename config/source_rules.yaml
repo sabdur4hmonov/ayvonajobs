@@ -13,6 +13,7 @@
 #   * header_lines: post boshidagi bezak qatorlari (masalan "✅✅✅✅").
 #   * extra_own_usernames: shu kanalning o'ziga tegishli reklama akkauntlari (aloqa emas!).
 #   * non_job_hashtags / job_hashtags: kanal o'zi qo'yadigan teglar — e'lon yoki boshqa narsa ekanini bildiradi.
+#   * require_job_hashtag: true bo'lsa — job_hashtags dan birortasi bo'lmagan post e'lon EMAS.
 #  Admin bot orqali qo'shgan yangi kanalga faqat "defaults" qo'llanadi.
 # =====================================================================
 
@@ -131,6 +132,7 @@ sources:
       - "e'lon joylash uchun: @kasbdor_uz"
     extra_own_usernames: ["@kasbdor_uz"]
     job_hashtags: ["#vakansiya"]
+    require_job_hashtag: true           # '#vakansiya' siz post = maslahat/foydali post (e'lon emas)
     notes: >
       Juda tartibli qolip: '#vakansiya / 📌 Lavozim / • Maosh / • Manzil / • Ish vaqti / • Ish beruvchi / • Holat: #faol'.
       Oxirida 'N3311' kabi tartib raqami — olib tashlanadi. '#vakansiya' siz postlar — maslahat/foydali post.

@@ -34,6 +34,8 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
 7. Every user-submitted job **must** have a contact: phone (+998…) or Telegram @username.
 8. **Channel output = job vacancies only, always in Uzbek Latin.** Resumes, courses, grants, events are never posted.
    Uzbek Cyrillic → transliterated; Russian/English → Uzbek fields only (see docs/SOURCE_ANALYSIS.md §11).
+9. **Admin manages sources from the bot, never by editing code/YAML**: add/remove/pause Telegram channels
+   and websites (`/addsource`, `/sources`). DB is the source of truth. Every new source type must be manageable this way.
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)

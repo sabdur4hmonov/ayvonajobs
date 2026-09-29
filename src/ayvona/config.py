@@ -184,6 +184,8 @@ class SourceRule(BaseModel):
     extra_own_usernames: list[str] = Field(default_factory=list)
     job_hashtags: list[str] = Field(default_factory=list)
     non_job_hashtags: list[str] = Field(default_factory=list)
+    # True: a post without any of job_hashtags is not a job ad (the channel always tags its ads)
+    require_job_hashtag: bool = False
     closed_markers: list[str] = Field(default_factory=list)
     drop_trailing_hashtags: bool = False
     notes: str | None = None

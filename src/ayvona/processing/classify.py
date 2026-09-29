@@ -111,6 +111,15 @@ def find_deadline(folded_text: str) -> date | None:
         return None
 
 
+@dataclass(frozen=True, slots=True)
+class _SourceRules:
+    boilerplate: BoilerplateRules
+    closed: KeywordSet
+    job_tags: frozenset[str]
+    non_job_tags: frozenset[str]
+    require_job_tag: bool
+
+
 class Classifier:
     """Build once from config (compiles keyword lists), call :meth:`classify` per post."""
 
@@ -122,17 +131,18 @@ class Classifier:
         self.closed = KeywordSet(filters.closed_markers)
         self.opportunity = KeywordSet(filters.opportunity_markers)
         self.scam = KeywordSet(filters.scam)
-        self._per_source: dict[str, tuple[BoilerplateRules, KeywordSet, set[str], set[str]]] = {}
+        self._per_source: dict[str, _SourceRules] = {}
 
-    def _source(self, source: str | None) -> tuple[BoilerplateRules, KeywordSet, set[str], set[str]]:
+    def _source(self, source: str | None) -> _SourceRules:
         key = (source or "").lower()
         if key not in self._per_source:
             rule = self.source_rules.for_source(source)
-            self._per_source[key] = (
-                BoilerplateRules.build(rule, self.source_rules.defaults),
-                KeywordSet(rule.closed_markers),
-                {fold(t) for t in rule.job_hashtags},
-                {fold(t) for t in rule.non_job_hashtags},
+            self._per_source[key] = _SourceRules(
+                boilerplate=BoilerplateRules.build(rule, self.source_rules.defaults),
+                closed=KeywordSet(rule.closed_markers),
+                job_tags=frozenset(fold(t) for t in rule.job_hashtags),
+                non_job_tags=frozenset(fold(t) for t in rule.non_job_hashtags),
+                require_job_tag=rule.require_job_hashtag,
             )
         return self._per_source[key]
 
@@ -147,8 +157,8 @@ class Classifier:
         if not post.text.strip():
             return Classification(PostKind.NO_TEXT, ("no_text",))
 
-        boiler, src_closed, job_tags, non_job_tags = self._source(post.source)
-        norm = strip_boilerplate(normalize(post.text), boiler)
+        src = self._source(post.source)
+        norm = strip_boilerplate(normalize(post.text), src.boilerplate)
         folded = fold(norm)
         # Ad markers like "erid=" hide in link URLs, not in the text.
         urls = " ".join(
@@ -172,7 +182,7 @@ class Classifier:
             return Classification(kind, reasons, score, bool(contacts), language, contacts)
 
         # 1. closed: explicit marker or application deadline in the past
-        if hits := self.closed.find(folded) | src_closed.find(folded):
+        if hits := self.closed.find(folded) | src.closed.find(folded):
             return result(PostKind.CLOSED, *sorted(f"closed:{h}" for h in hits))
         deadline = find_deadline(folded)
         if deadline and deadline < now.date():
@@ -188,9 +198,11 @@ class Classifier:
 
         # 4. the channel's own tags
         tags = set(_HASHTAG_RE.findall(folded))
-        if hit := tags & non_job_tags:
+        if hit := tags & src.non_job_tags:
             return result(PostKind.NOT_JOB, *sorted(f"tag:{t}" for t in hit))
-        tagged_job = bool(tags & job_tags)
+        tagged_job = bool(tags & src.job_tags)
+        if src.require_job_tag and not tagged_job:
+            return result(PostKind.NOT_JOB, "no_job_hashtag")
 
         # 5. opportunity / advertisement, unless job evidence is strong
         opp = self.opportunity.find(folded)

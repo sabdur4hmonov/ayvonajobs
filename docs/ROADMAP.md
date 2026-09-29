@@ -315,7 +315,11 @@ Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza
      Qo'shishda so'raladi: eski postlardan nechtasini olish (0 / 5 / 20 tugmalari).
    - /sources — ro'yxat, har biri yonida inline tugmalar: [⏸ O'chirish] [▶️ Yoqish] [🗑 O'chirish] [📊 Statistika].
      O'chirilgan manba bazadan o'chmaydi (enabled=false), postlari saqlanib qoladi.
-   - /addsource web:<nom> — faqat kodi yozilgan sayt turlarini yoqadi (yangi sayt = yangi parser kodi, Bosqich 16).
+   - /addsource web:<nom> — kodi yozilgan saytni yoqadi (hh, osonish, himalayas...).
+   - /addsource rss:<URL> — RSS/Atom lentasi bor HAR QANDAY saytni kodsiz qo'shadi (Bosqich 16.0 da yoziladi;
+     hozircha buyruq "tez orada" deb javob bersin). Admin sayt nomini va kunlik limitni tugma bilan tanlaydi.
+   - /sources ro'yxatida Telegram kanallar va saytlar birga ko'rinadi; saytlar uchun ham [⏸] [▶️] [🗑] [📊]
+     va "tekshirish oralig'i" (15 daq / 30 daq / 1 soat) tugmalari.
    - Faqat ADMIN_IDS ishlata oladi; har o'zgarish logga yoziladi.
 ```
 **Commit:** `feat(admin): notifications, monitoring, backups, admin commands`
@@ -470,6 +474,10 @@ url, apply_url, source_name ("Himalayas"), location_restrictions qo'sh. Formatte
 settings.publisher.max_remote_per_day (standart 12) va "O'zbekistondan ariza topsa bo'ladi" filtri
 (Worldwide/Anywhere, Uzbekistan, Central Asia, CIS, Asia yoki UTC+5 ni qamragan vaqt mintaqasi).
 Kategoriyalar: chet_el (#xorijda_ish), masofaviy teglar #masofaviy #xalqaro.
+UMUMIY RSS MANBA: sources/web/rss.py — RSS/Atom lentasini o'qiydigan universal manba (feedparser yoki
+xml.etree). Admin botda /addsource rss:<URL> deydi → bot lentani tekshiradi, sarlavhasini ko'rsatadi,
+[✅ Qo'shish] bosilgach sources jadvaliga type="rss" bilan yoziladi; collector restart'siz o'qiy boshlaydi.
+Hamma veb-manbalar botdagi /sources da boshqariladi (yoqish/o'chirish/oraliq/limit). Kod yoki YAML tahriri kerak emas.
 ```
 
 **16.x — har bir sayt:**

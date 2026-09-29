@@ -94,6 +94,16 @@ job_markers:
   - salary
   - requirements
   - how to apply
+  # 2026-09-29 (Bosqich 4): POST_EXAMPLES dagi e'lonlar ball yetmay qolgani uchun qo'shildi
+  - kk                     # "kerak" ning qisqartmasi: "odam kk"
+  - jamoasiga qo'shiling
+  - jamoamizga qo'shiling
+  - oklad
+  - оклад
+  - biz taklif qilamiz
+  - tasks
+  - responsibilities
+  - cv
 
 # Aniq REKLAMA / e'lon emas (bittasi yetarli — agar job_markers kuchsiz bo'lsa)
 not_job_markers:
@@ -134,7 +144,7 @@ resume_markers:
   - ish joyi kerak
   - ish joyi qidiryapman
   - ism-familiya
-  - исмим
+  - "исмим:"               # ikki nuqta bilan: maslahat postidagi "Mening ismim Ali" rezyume emas
   - tug'ilgan sana
   - туғулган сана
   - malaka va tajriba

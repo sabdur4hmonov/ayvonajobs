@@ -75,7 +75,8 @@ def write_fixture(path: Path, raw: dict[str, Any], old: dict[str, Any] | None) -
     data.update(raw)
     data["expected"] = (old or {}).get("expected", {})
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as f:  # LF on Windows too
+        f.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
 def main() -> int:

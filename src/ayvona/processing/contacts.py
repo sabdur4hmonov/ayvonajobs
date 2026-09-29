@@ -28,7 +28,8 @@ _PHONE_RE = re.compile(
     r"(?!\d)"
 )
 _PHONE_LINK_RE = re.compile(r"t\.me/\+998(\d{9})\b")
-_USERNAME_RE = re.compile(r"(?<![\w@.])@([a-z][a-z0-9_]{3,31})\b")
+# "(?<![\w@])": not part of an email (name@gmail.com); "xabar.@ainna_hr" is still a username.
+_USERNAME_RE = re.compile(r"(?<![\w@])@([a-z][a-z0-9_]{3,31})\b")
 _TME_USER_RE = re.compile(r"(?:https?://)?(?:t|telegram)\.me/([a-z][a-z0-9_]{3,31})(?![\w/+])")
 _EMAIL_RE = re.compile(r"\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}\b")
 _URL_RE = re.compile(r"(?:https?://|www\.)[^\s<>()\"']+|\b(?:t\.me|telegra\.ph)/[^\s<>()\"']+")
