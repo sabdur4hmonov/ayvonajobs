@@ -1,0 +1,22 @@
+{
+  "title": "O'quv markaz reklamasi",
+  "source": "@Ish_Toshkent",
+  "external_id": "6737",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-14T05:25:05+00:00",
+  "text": "Maktabda darslar boshlandi — farzandingiz tayyormi?\n\n⚡️ Yangi sinf, yangi mavzular, yangi talablar. Farzandingiz tengdoshlaridan ortda qolib ketmasin — tayyorgarlikni hoziroq boshlang.\n\n✅ Hozirda Registonda:\n— Ingliz tili;\n— Rus tili;\n— Matematika fanlari uchun qabul ochiq!\n\n📞 920012700\nDastlabki BEPUL darsga yozilish uchun bosing",
+  "extra": {
+    "links": [
+      {
+        "text": "Dastlabki BEPUL darsga yozilish uchun bosing",
+        "url": "https://www.registan-edu.uz/chorsu"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "not_job",
+    "language": "uz_latin"
+  }
+}

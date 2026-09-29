@@ -76,6 +76,10 @@ sources:
   - type: telegram
     identifier: "@jobs_fba"
     own_usernames: ["@jobs_fba"]
+  - type: telegram
+    identifier: "@migratsiyaagentligi"
+    title: "Xorijda ish (Migratsiya agentligi, rasmiy)"
+    own_usernames: ["@migratsiyaagentligi"]
 
 # --- Collector (kanallarni o'qish) ------------------------------------
 collector:

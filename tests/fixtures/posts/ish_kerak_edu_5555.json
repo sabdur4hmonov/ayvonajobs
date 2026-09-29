@@ -1,0 +1,30 @@
+{
+  "title": "Strukturasiz bitta paragraf",
+  "source": "@ish_kerak_edu",
+  "external_id": "5555",
+  "grouped_id": null,
+  "has_media": false,
+  "media_type": null,
+  "posted_at": "2026-09-28T14:24:13+00:00",
+  "text": "Toshkent viloyati Parkent tumani ,,XAKIM OTA'' fermer xoʻjaligiga bogʻga va molga qarashga bitta yaxshi nomozxon, halol, mollarni arqonlab boqishni biladigan oʻzini ishini qilgandek ishlidigan odam kk ish qiyin emas  55 yoshgacha oylik 4.5mln sharoit+ovqat (ovqatni oʻzi tayyorlab yiydi) bn taminlanadi faqat astoydil ishlidigan odam yozsin\n\nTELEFON :  +998991976796\n\nTELEGRAM : @OzodXakimov\n\nAgar vakansiya sizga mos bo‘lmasa — tanishingizga ulashing! Balki aynan u kishi ushbu imkoniyatni kutyapti.\n\n📍Ish yoki ishchi xodim topish: @ish_kerak_edu\n\nE'LON JOYLASH UCHUN :  @ish_kerak_edu_admini",
+  "extra": {},
+  "expected": {
+    "kind": "job",
+    "category": "boshqa",
+    "salary_min": 4500000,
+    "currency": "UZS",
+    "region": "toshkent_vil",
+    "district": "Parkent",
+    "phones": [
+      "+998991976796"
+    ],
+    "usernames": [
+      "@OzodXakimov"
+    ],
+    "strip": [
+      "Agar vakansiya sizga mos bo'lmasa... dan oxirigacha"
+    ],
+    "note": "Past ishonch bo'lishi mumkin → fallback shablon ham to'g'ri",
+    "language": "uz_latin"
+  }
+}

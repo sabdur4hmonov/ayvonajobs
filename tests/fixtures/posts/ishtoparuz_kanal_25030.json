@@ -1,0 +1,28 @@
+{
+  "title": "Oddiy, toza e'lon",
+  "source": "@ishtoparuz_kanal",
+  "external_id": "25030",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-28T14:12:08+00:00",
+  "text": "⚡️ Maktabga Ayol oshpaz kerak\n\n📣 Ish haqida:\nMaktab oshxonasiga tajribali va o‘z ishining ustasi bo‘lgan oshpaz taklif etiladi.\n\n❗️ Talablar:\n– Oshpazlik sohasida malaka va yetarli tajribaga ega bo‘lish\n\n⏰ Ish vaqti:\n– 07:00 dan 16:00 gacha\n\n💵 Oylik maosh:\n– 4 000 000 so‘m\n\n✉️ Murojaat uchun:\n– Tel: +998 50 977 33 36\n– Tel: +998 94 138 14 14\n\n📌 Manzil:\n– Toshkent shahri, Yunusobod tumani",
+  "extra": {},
+  "expected": {
+    "kind": "job",
+    "category": "oshpaz",
+    "title_contains": "oshpaz",
+    "salary_min": 4000000,
+    "salary_max": 4000000,
+    "currency": "UZS",
+    "salary_period": "month",
+    "region": "toshkent_sh",
+    "district": "Yunusobod",
+    "phones": [
+      "+998509773336",
+      "+998941381414"
+    ],
+    "usernames": [],
+    "language": "uz_latin"
+  }
+}

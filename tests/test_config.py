@@ -14,7 +14,7 @@ from ayvona.config import (
 def test_repository_config_loads() -> None:
     s = load_settings(DEFAULT_CONFIG_DIR, env_file=None)
 
-    assert s.app.sources == []
+    assert all(src.identifier.startswith("@") for src in s.app.sources)
     assert s.app.collector.poll_interval_seconds == 90
     assert s.app.collector.initial_backfill == 0
     assert s.app.publisher.publish_interval_seconds == 60
@@ -22,6 +22,10 @@ def test_repository_config_loads() -> None:
     assert FALLBACK_CATEGORY in s.categories
     assert s.regions.regions and s.regions.remote_keywords
     assert s.filters.scam
+    assert s.filters.job_markers and s.filters.closed_markers and s.filters.opportunity_markers
+    assert s.source_rules.defaults.drop_link_patterns
+    assert s.source_rules.for_source("@NEXTHIREX").header_junk_words == ["new", "without"]
+    assert s.source_rules.for_source("@unknown_channel").cut_from == []
 
 
 def test_env_defaults_without_env_file() -> None:

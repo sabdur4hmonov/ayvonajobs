@@ -1,0 +1,75 @@
+{
+  "title": "Tugma + katta footer",
+  "source": "@huntmejob",
+  "external_id": "37074",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-28T19:15:01+00:00",
+  "text": "🏢 Safar TS LLC\n\n👉 🚀 APPLY VIA HUNTER AI 👈\n\n👔 Position: Fleet Specialist\n🌎 Location: Tashkent, Uzbekistan\n💼 Experience: 1-2 years\n👤 Gender: Any\n💵 Salary: $500 - $1,000\n\n📋 Job Requirements:\n• fleet management\n\n💬 Contact: @Alex_fuel_fleet\n\nHuntme Jobs\nPlatform | Hunter AI | Telegram\n\nTry our products:\n\nJobs | Services | HRMS\n\nAll telegram channels\n\nHUNTME — Endless Opportunities",
+  "extra": {
+    "links": [
+      {
+        "text": "🚀 APPLY VIA HUNTER AI",
+        "url": "https://t.me/huntmesmartassistantbot?start=ch_apply_61e2357a-d4b7-4ad9-a604-1b8bf549deee"
+      },
+      {
+        "text": "@Alex_fuel_fleet",
+        "url": "https://t.me/Alex_fuel_fleet"
+      },
+      {
+        "text": "Platform",
+        "url": "https://jobs.huntmegroup.com/"
+      },
+      {
+        "text": "Hunter AI",
+        "url": "https://t.me/huntmesmartassistantbot?start=ch_apply_61e2357a-d4b7-4ad9-a604-1b8bf549deee"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/huntmejob"
+      },
+      {
+        "text": "Jobs",
+        "url": "https://jobs.huntmegroup.com/"
+      },
+      {
+        "text": "Services",
+        "url": "https://marketplace.huntmegroup.com/"
+      },
+      {
+        "text": "HRMS",
+        "url": "https://hrms.huntmegroup.com/"
+      },
+      {
+        "text": "All telegram channels",
+        "url": "https://t.me/huntmegroup"
+      }
+    ],
+    "buttons": [
+      {
+        "text": "📝 Apply here",
+        "url": "https://backend.huntmegroup.com/track/apply/61e2357a-d4b7-4ad9-a604-1b8bf549deee?source=telegram_channel"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "category": "logistika",
+    "title_contains": "Fleet Specialist",
+    "company": "Safar TS LLC",
+    "salary_min": 500,
+    "salary_max": 1000,
+    "currency": "USD",
+    "region": "toshkent_sh",
+    "usernames": [
+      "@Alex_fuel_fleet"
+    ],
+    "apply_url": "https://backend.huntmegroup.com/track/apply/61e2357a-d4b7-4ad9-a604-1b8bf549deee",
+    "strip": [
+      "👉 🚀 APPLY VIA HUNTER AI 👈",
+      "Huntme Jobs... dan oxirigacha"
+    ],
+    "language": "en"
+  }
+}

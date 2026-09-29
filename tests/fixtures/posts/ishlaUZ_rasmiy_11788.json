@@ -1,0 +1,43 @@
+{
+  "title": "Kirill, ko'p lavozim, qisqa telefon",
+  "source": "@ishlaUZ_rasmiy",
+  "external_id": "11788",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-29T05:34:50+00:00",
+  "text": "👨‍💻👨‍💻👨‍💻👨‍💻👨‍💻👨‍💻👨‍💻\n\n✅\"Доброе\" корхонасига ишга таклиф киламиз! \n\nБиз таклиф киламиз:\n\n- Ойлик маош 4.000.000 дан бошланади\n\n- Ётокхона хамда 3 махал овкат             корхона ҳисобидан\n\n- Ахил жамоада ишлаш хамда ўсиш имконияти мавжуд\n\nМавжуд иш уринлари:\n\n- Цех бошкарувчига ёрдамчи ( Тажриба булиши шарт) тунги смена 19:00-07:00 Ойлик келишилади\n\n- Лаборант (Тажриба булиши шарт) тунги смена 19:00 - 07:00\n\n- Грузчик (омбор га) кундузги смена 08:00 - 20:00\n\n- Ишчи (холодильник бўлимига) кундузги смена 07:00-19:00\n\n\nМанзил: Тошкент шахар Олмазор тумани Чукурсой 82\nТел: 33 077 14 03 t.me/HR_dobroe\n\n📷Instagram\n\n📲Telegram",
+  "extra": {
+    "links": [
+      {
+        "text": "Instagram",
+        "url": "https://www.instagram.com/ishla.uz?igsh=MXBldzNkY2Nsb3NuaA%3D%3D&utm_source=qr"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/ishlaUZ_rasmiy"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "multi": true,
+    "category": "ishlab_chiqarish",
+    "salary_min": 4000000,
+    "currency": "UZS",
+    "region": "toshkent_sh",
+    "district": "Olmazor",
+    "phones": [
+      "+998330771403"
+    ],
+    "usernames": [
+      "@HR_dobroe"
+    ],
+    "strip": [
+      "👨‍💻👨‍💻... sarlavha",
+      "📷Instagram",
+      "📲Telegram"
+    ],
+    "language": "uz_cyrillic"
+  }
+}

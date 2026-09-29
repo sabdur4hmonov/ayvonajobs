@@ -273,6 +273,10 @@ apps/worker.py ni yoz, ichida 2 ta asyncio vazifa:
    grouped_id bo'yicha birlashtiradi → classify → (job bo'lsa) clean → dedup → extract → categorize → format →
    jobs(queued). Boshqa turlar: statusi not_job/resume/closed/opportunity/suspicious/duplicate/no_contact.
    suspicious va no_text — admin chatga yuboriladi. Istisno bo'lsa: status=error, admin'ga xabar, sikl davom etadi.
+1b) YIG'ISH OYNASI (bir e'lon 2-3 kanalda chiqsa): yangi job darhol emas, settings.publisher.hold_minutes
+   (standart 20) dan keyin chiqadi. Shu vaqt ichida kelgan dublikat ORIGINALDAN TO'LIQROQ bo'lsa (aloqa, maosh,
+   manzil bor; confidence yuqori) — dublikat asosiy job bo'ladi, eskisi duplicate. Chiqib bo'lgan postga tegilmaydi.
+   Manba havolasi — tanlangan versiyaning kanali. 14 kundan keyin yana chiqsa — yangi e'lon (vakansiya hali ochiq).
 2) publisher (outbox): queued/retry jobs ni navbat bilan oladi, publish_interval_seconds ga rioya qiladi.
    Yuborishdan oldin status=sending. sendPhoto (kategoriya rasmi, category_images.telegram_file_id kesh)
    + caption HTML + formatter bergan tugmalar. Link preview O'CHIQ (manba havolasi kartochka bo'lib chiqmasin).
@@ -450,14 +454,31 @@ Testlar: AI mock — muvaffaqiyat, 429, timeout, noto'g'ri JSON → hammasida e'
 
 ---
 
-## BOSQICH 16 — Veb-sayt manbalari ⏱ har sayt 1–2 soat · Model: `sonnet`
+## BOSQICH 16 — Veb-sayt va xalqaro manbalar ⏱ har manba 1–2 soat · Model: `sonnet` (hh.uz va Oson Ish uchun `opusplan`)
 
+> Ro'yxat va shartlar: `docs/WEB_SOURCES.md`. Tartib: hh.uz → Oson Ish → Himalayas + Remotive → Jobicy, Remote OK → vacancy.gov.uz.
+> "Xorijda ish" (@migratsiyaagentligi) allaqachon Telegram manba sifatida qo'shilgan.
+> Har bir manbani ALOHIDA sessiyada qo'shing. Oldin umumiy asos (16.0), keyin har sayt.
+
+**16.0 — umumiy asos (bir marta):**
 ```text
-<SAYT_NOMI> (<URL>) uchun sources/web/<nom>.py — WebSource: httpx (User-Agent, timeout, retry) + selectolax.
-Avval saytning robots.txt va foydalanish shartlarini tekshir va menga ayt — ruxsat bo'lmasa to'xtat.
-Agar sayt ochiq API yoki RSS bersa, o'shani ishlat. last_seen_id = oxirgi e'lon ID/URL.
-So'rovlar oralig'i kamida 10 daqiqa. HTML'ni RawItem ga aylantir (matn + asl havola).
-registry.py ga "web:<nom>" tipini qo'sh. Saqlangan HTML namunasi bilan test.
+docs/WEB_SOURCES.md ni o'qi. sources/web/base.py: WebSource(BaseSource) — httpx (User-Agent "AyvonaJobsBot/1.0
+(+https://t.me/ayvona)", timeout, retry, 429/5xx da kutish), har manba uchun minimal so'rov oralig'i va
+kunlik limit (settings.yaml: web_sources.<nom>.interval_minutes, max_requests_per_day). RawItem ga
+url, apply_url, source_name ("Himalayas"), location_restrictions qo'sh. Formatter: veb-manbada oxirgi qator
+<i>manba: <a href="URL">Sayt nomi</a></i>, "🔗 Ariza topshirish" tugmasi. Xalqaro masofaviy e'lonlar uchun
+settings.publisher.max_remote_per_day (standart 12) va "O'zbekistondan ariza topsa bo'ladi" filtri
+(Worldwide/Anywhere, Uzbekistan, Central Asia, CIS, Asia yoki UTC+5 ni qamragan vaqt mintaqasi).
+Kategoriyalar: chet_el (#xorijda_ish), masofaviy teglar #masofaviy #xalqaro.
+```
+
+**16.x — har bir sayt:**
+```text
+<MANBA_NOMI> ni qo'sh (docs/WEB_SOURCES.md dagi qator). Avval saytning hozirgi shartlarini, robots.txt ni
+va API hujjatini tekshirib menga qisqacha ayt — ruxsat bo'lmasa yoki shartlar o'zgargan bo'lsa TO'XTA.
+sources/web/<nom>.py: faqat ruxsat etilgan yo'llar, limitlarga qat'iy rioya, last_seen_id = oxirgi e'lon ID/URL.
+Natijani RawItem ga aylantir (matn, maydonlar, url, apply_url). registry.py ga "web:<nom>" qo'sh.
+Saqlangan javob (JSON yoki HTML) namunasi bilan test. Bot orqali /addsource web:<nom> bilan yoqiladigan bo'lsin.
 ```
 
 ---

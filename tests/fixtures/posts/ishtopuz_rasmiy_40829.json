@@ -1,0 +1,40 @@
+{
+  "title": "Lavozimsiz, faqat forma havolasi",
+  "source": "@ishtopuz_rasmiy",
+  "external_id": "40829",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-28T15:33:40+00:00",
+  "text": "✅✅✅✅\n\nSiz ham Crafers jamoasiga qo’shiling! 🤩\n\nQo'ng'iroq qilish shart emas — so’rovnomani to'ldiring, biz o'zimiz bog'lanamiz 👇\n\nSO’ROVNOMANI TO’LDIRING👈\n\nDiqqat⚠️ Hurmatli obunachi!\ne’lonlarning texnik holatiga, oyliklarga va ish beruvchi bilan kelishuvingizga kanal ma’muriyati javob bermaydi!!!\nShaxsiy ma’lumotingizni (pasport,karta) hechkimga bermang!!!\nIsh beruvchi pul talab qilsa kanal adminini ogohlantiring !!!\nOgohlik-davr talabi…\n\n\n✅ instagram  |  ✅ telegram  | ✅ facebook\n\n                                                                \n✅✅✅✅✅✅",
+  "extra": {
+    "links": [
+      {
+        "text": "SO’ROVNOMANI TO’LDIRING👈",
+        "url": "https://docs.google.com/forms/d/e/1FAIpQLSdS6CiLwqPRncUyjg_TYV6L7ahGcoOfmN7D3BMJGd8GANY4LQ/viewform"
+      },
+      {
+        "text": "instagram",
+        "url": "https://instagram.com/ishtop.uz"
+      },
+      {
+        "text": "telegram",
+        "url": "https://t.me/ishbor_ishtop_ishkerak"
+      },
+      {
+        "text": "facebook",
+        "url": "https://www.facebook.com/profile.php?id=100088232062935&mibextid=LQQJ4d"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "confidence": "past (fallback)",
+    "apply_url": "https://docs.google.com/forms/d/e/1FAIpQLSdS6CiLwqPRncUyjg_TYV6L7ahGcoOfmN7D3BMJGd8GANY4LQ/viewform",
+    "strip": [
+      "✅✅✅✅",
+      "Diqqat⚠️ Hurmatli obunachi! ... dan oxirigacha"
+    ],
+    "language": "uz_latin"
+  }
+}

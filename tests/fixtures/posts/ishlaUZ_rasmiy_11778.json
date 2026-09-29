@@ -1,0 +1,27 @@
+{
+  "title": "Ish emas: mashina ijarasi + depozit",
+  "source": "@ishlaUZ_rasmiy",
+  "external_id": "11778",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-28T08:01:45+00:00",
+  "text": "👨‍💻👨‍💻👨‍💻👨‍💻👨‍💻👨‍💻👨‍💻\n\n✅Suxoy arenda yangi mashinalar \n \n💵 Maosh:  Depozit 200$\n📍 Hudud: Toshkent \n \n#Toshkent #Ayollar #Erkaklar \n  \n📣 Ish haqida: \n– DEPO TAXPARKDA SUXOY ARENDA MASHINALAR BERAMIZ \n \n❗️ Talablar: \n– Yosh: 24 yoshdan yuqori \n \n⏰ Ish vaqti: \n– 24/7 \n \n📌 Manzil: \n– Toshkent sh. Uchtepa Depo Mall \n \n☎️ Bog‘lanish: \n– +998950007979 \n– +998993171661\n\n📷Instagram\n\n📲Telegram",
+  "extra": {
+    "links": [
+      {
+        "text": "Instagram",
+        "url": "https://www.instagram.com/ishla.uz?igsh=MXBldzNkY2Nsb3NuaA%3D%3D&utm_source=qr"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/ishlaUZ_rasmiy"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "suspicious",
+    "note": "'Depozit 200$' maosh emas",
+    "language": "uz_latin"
+  }
+}

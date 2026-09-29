@@ -1,0 +1,36 @@
+{
+  "title": "Albom + kurs reklamasi",
+  "source": "@beminnatvakant_ish",
+  "external_id": "24486",
+  "grouped_id": 14324862937745802,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-28T15:04:27+00:00",
+  "text": "HR kasbi haqida eshitganmisiz? \n\nHR kasbida o’sish va rivojlanish, uning ortidan keladigan savob amallar va daromadlar haqidachi? 🔥\n\nMen, Madina Farkhadovna, 5 yildan buyon HR sohasida faoliyat yuritib kelaman. Va 60 dan oshiq shogirdlar lar ustoziman . \n\nSahifamda:\n\n- Qalb kasbiga yo’l, qalb kasbini aniqlash;\n- HR sohasiga kirish va rivojlanish\n- Daromadni o’stirish\nhaqida gaplashamiz 💎\n\nShu kasbim orqali chet ellarga sayohat qildim, TOP kompaniyalarga ishga kirdim, orzuyimdagi hayotda yashash nasib qildi va sizga ham nasib qiladi. 🎁\n\nhttps://t.me/+IzVF00vLNjg2NjIy\n\nhttps://t.me/+IzVF00vLNjg2NjIy",
+  "extra": {},
+  "album": [
+    {
+      "external_id": "24483",
+      "text": "",
+      "has_media": true,
+      "media_type": "photo"
+    },
+    {
+      "external_id": "24484",
+      "text": "",
+      "has_media": true,
+      "media_type": "photo"
+    },
+    {
+      "external_id": "24485",
+      "text": "",
+      "has_media": true,
+      "media_type": "photo"
+    }
+  ],
+  "expected": {
+    "kind": "not_job",
+    "note": "grouped_id bilan 24483-24485 (matnsiz rasmlar) bilan bitta albom",
+    "language": "uz_latin"
+  }
+}

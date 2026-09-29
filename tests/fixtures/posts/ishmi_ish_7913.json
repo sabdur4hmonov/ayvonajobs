@@ -1,0 +1,15 @@
+{
+  "title": "Bot reklamasi",
+  "source": "@ishmi_ish",
+  "external_id": "7913",
+  "grouped_id": null,
+  "has_media": false,
+  "media_type": null,
+  "posted_at": "2026-09-28T14:00:02+00:00",
+  "text": "━━━━━━━━━━━━━━\n🔥 O'zingizni sinab ko'ring!\n📚 Yuzlab testlar shu yerda:\n👉 @Zehndon_bot\n━━━━━━━━━━━━━━",
+  "extra": {},
+  "expected": {
+    "kind": "not_job",
+    "language": "uz_latin"
+  }
+}

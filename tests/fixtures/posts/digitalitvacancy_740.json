@@ -1,0 +1,38 @@
+{
+  "title": "Yashirin 'havola' + email",
+  "source": "@digitalitvacancy",
+  "external_id": "740",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-09T13:47:48+00:00",
+  "text": "Amerika bozoridagi startup uchun tajribali UI/UX veb dizayner izlanmoqda\n\n📌Toshkent | Inhouse  \n⚡️ Oylik: Tajribaga qarab ($300 - $1000)  \n⌛ Ish vaqti: 13:00 dan 22:00 gacha\n\n💼 Talablar:\n➡️ Ofisdan ishlay olish\n➡️ 2 yil+ ish tajribasi bo'lishi \n➡️ Figma bilan professional ishlay olish\n➡️ Web-based SaaS, CRM, ERP loyihalarida tajriba\n➡️AI dan professional foydalana olish\n➡️Yangi g‘oyalarga ochiq bo‘lish\n➡️Startap muhitida ishlay olish\n➡️Ingliz tilini bilish\n\n 📩 CV yuborish uchun: havola\n🔗 Murojaat uchun e-pochta: rustamjon.business@gmail.com\n\n⌛ Shoshiling, bunday qulay imkoniyatni qo‘ldan boy bermang!\n\n🚀 Telegram",
+  "extra": {
+    "links": [
+      {
+        "text": "havola",
+        "url": "https://t.me/rustamjon_019"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/digitalitvacancy"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "category": "dizayner",
+    "title_contains": "UI/UX",
+    "salary_min": 300,
+    "salary_max": 1000,
+    "currency": "USD",
+    "region": "toshkent_sh",
+    "usernames": [
+      "@rustamjon_019"
+    ],
+    "emails": [
+      "rustamjon.business@gmail.com"
+    ],
+    "language": "uz_latin"
+  }
+}

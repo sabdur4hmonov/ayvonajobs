@@ -1,0 +1,35 @@
+{
+  "title": "Ruscha, to'liq matn telegra.ph da",
+  "source": "@edustaffs",
+  "external_id": "6797",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-28T07:27:16+00:00",
+  "text": "#Вакансия #Ru\n\n📌 Ночной Преподаватель английского языка\n\n— Зарплата: от 5 000 000 до 15 000 000 сум;\n \n— Адрес: Ташкент.\n\n— Описание работы.\n\n👉 Чтобы разместить объявление или резюме: Admin\n\n📣 @EduStaffs — Место, где талант встречается с возможностями",
+  "extra": {
+    "links": [
+      {
+        "text": "Описание работы",
+        "url": "https://telegra.ph/Nochnoj-Prepodavatel-anglijskogo-yazyka-09-28"
+      },
+      {
+        "text": "Admin",
+        "url": "https://t.me/Entrepreneur_J"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "category": "oqituvchi",
+    "salary_min": 5000000,
+    "salary_max": 15000000,
+    "currency": "UZS",
+    "region": "toshkent_sh",
+    "phones": [],
+    "usernames": [],
+    "apply_url": "https://telegra.ph/Nochnoj-Prepodavatel-anglijskogo-yazyka-09-28",
+    "note": "@Entrepreneur_J (kanal admini) aloqa EMAS",
+    "language": "ru"
+  }
+}

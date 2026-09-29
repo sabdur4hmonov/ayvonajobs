@@ -165,6 +165,57 @@ class FiltersConfig(BaseModel):
     spam: list[str] = Field(default_factory=list)
     scam: list[str] = Field(default_factory=list)
     ad_patterns: list[str] = Field(default_factory=list)
+    # Post kind detection (processing/classify.py)
+    job_markers: list[str] = Field(default_factory=list)
+    not_job_markers: list[str] = Field(default_factory=list)
+    resume_markers: list[str] = Field(default_factory=list)
+    closed_markers: list[str] = Field(default_factory=list)
+    opportunity_markers: list[str] = Field(default_factory=list)
+
+
+class SourceRule(BaseModel):
+    """Per-channel cleaning / classification hints from ``config/source_rules.yaml``."""
+
+    cut_from: list[str] = Field(default_factory=list)
+    strip_lines: list[str] = Field(default_factory=list)
+    exact_lines: list[str] = Field(default_factory=list)
+    header_lines: list[str] = Field(default_factory=list)
+    header_junk_words: list[str] = Field(default_factory=list)
+    extra_own_usernames: list[str] = Field(default_factory=list)
+    job_hashtags: list[str] = Field(default_factory=list)
+    non_job_hashtags: list[str] = Field(default_factory=list)
+    closed_markers: list[str] = Field(default_factory=list)
+    drop_trailing_hashtags: bool = False
+    notes: str | None = None
+
+
+class SourceRuleDefaults(BaseModel):
+    drop_whitespace_text_links: bool = True
+    drop_link_patterns: list[str] = Field(default_factory=list)
+    phone_link_pattern: str | None = None
+    strip_url_params: list[str] = Field(default_factory=list)
+    strip_lines: list[str] = Field(default_factory=list)
+
+
+class SourceRulesConfig(BaseModel):
+    """Content of ``config/source_rules.yaml``."""
+
+    defaults: SourceRuleDefaults = Field(default_factory=SourceRuleDefaults)
+    sources: dict[str, SourceRule] = Field(default_factory=dict)
+
+    def for_source(self, identifier: str | None) -> SourceRule:
+        """Rules of one channel (case-insensitive, ``@`` optional); empty rules if unknown."""
+        if identifier:
+            key = identifier.lstrip("@").lower()
+            for name, rule in self.sources.items():
+                if name.lstrip("@").lower() == key:
+                    return rule
+        return SourceRule()
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _none_is_empty(cls, v: Any) -> Any:
+        return v or {}
 
 
 FALLBACK_CATEGORY = "boshqa"
@@ -179,6 +230,7 @@ class Settings(BaseModel):
     categories: dict[str, CategoryConfig]
     regions: RegionsConfig
     filters: FiltersConfig
+    source_rules: SourceRulesConfig = Field(default_factory=SourceRulesConfig)
     config_dir: Path
 
     @property
@@ -227,12 +279,14 @@ def load_settings(
     categories = {k: CategoryConfig.model_validate(v) for k, v in categories_raw.items()}
     regions = RegionsConfig.model_validate(_read_yaml(config_dir / "regions.yaml"))
     filters = FiltersConfig.model_validate(_read_yaml(config_dir / "filters.yaml"))
+    source_rules = SourceRulesConfig.model_validate(_read_yaml(config_dir / "source_rules.yaml"))
     return Settings(
         env=env,
         app=app,
         categories=categories,
         regions=regions,
         filters=filters,
+        source_rules=source_rules,
         config_dir=config_dir,
     )
 

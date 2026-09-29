@@ -1,0 +1,52 @@
+{
+  "title": "Aloqa yashirin: 'Aloqa uchun 👈'",
+  "source": "@huntmeglobal",
+  "external_id": "726",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-22T15:47:37+00:00",
+  "text": "☑️Lavozim: Grafik Dizayner \n☑️ Firma: ALSTAR ACP ishlab chiqarish zavodi\n☑️ Maosh: 1000$ gacha\n☑️ Manzil: Zangiota tumani, Katta Chinor MFY\n☑️ Ish vaqti: 09:00–18:00\n☑️ Ish tartibi: 5/2\n\n☑️ TALABLAR:\n•  Grafik dizayn sohasida kamida 2 yillik tajriba\n•  Kreativ fikrlash va yangi g‘oyalar yaratish qobiliyati\n•  Avval boshqa dizayn loyihalarida ishlagan bo‘lish\n•  Dizayn yo‘nalishida amaliy tajriba va portfolio\n\n☑️ BIZ TAKLIF QILAMIZ:\n•  1000$ gacha maosh\n•  Bepul tushlik\n•  Professional rivojlanish imkoniyati\n•  Barqaror va professional ish muhiti\n\nAloqa uchun 👈\n\nHuntme Global Jobs 💜\nTelegram\n\nTry our products:\n\nJobs | Services | HRMS \n\nAll telegram channels 📱",
+  "extra": {
+    "links": [
+      {
+        "text": "Aloqa uchun",
+        "url": "https://t.me/hr_alstar"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/huntmeglobal"
+      },
+      {
+        "text": "Jobs ",
+        "url": "https://app.huntmegroup.com/"
+      },
+      {
+        "text": "Services",
+        "url": "https://marketplace.huntmegroup.com/"
+      },
+      {
+        "text": "HRMS",
+        "url": "https://hrms.huntmegroup.com/"
+      },
+      {
+        "text": "All telegram channels ",
+        "url": "https://t.me/huntmegroup"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "category": "dizayner",
+    "title_contains": "Grafik Dizayner",
+    "company": "ALSTAR ACP",
+    "salary_max": 1000,
+    "currency": "USD",
+    "region": "toshkent_vil",
+    "district": "Zangiota",
+    "usernames": [
+      "@hr_alstar"
+    ],
+    "language": "uz_latin"
+  }
+}

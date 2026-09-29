@@ -1,0 +1,15 @@
+{
+  "title": "Kurs narxi reklamasi",
+  "source": "@Buxgalteriyaishorinlarii",
+  "external_id": "5451",
+  "grouped_id": null,
+  "has_media": false,
+  "media_type": null,
+  "posted_at": "2026-09-20T17:40:16+00:00",
+  "text": "Dars narxi 650.000 som chegirma. \n\nTajribali ustoz tarafidan  1 yil Qollab quvatlash",
+  "extra": {},
+  "expected": {
+    "kind": "not_job",
+    "language": "uz_latin"
+  }
+}

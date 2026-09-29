@@ -1,0 +1,29 @@
+{
+  "title": "Juda tartibli qolip",
+  "source": "@kasbdoruz",
+  "external_id": "5372",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-26T09:21:39+00:00",
+  "text": "#vakansiya\n\n📌 Call operator\n\n• Maosh: 3 500 000 so‘m kafolatlangan maosh + bonuslar + KPI\n• Manzil: Yunusobod, Ahmad Donish ko‘chasi, 20A, S-Space Biznes markazi, mo‘ljal — Turkiston metro bekati\n• Ish vaqti: 9:00-18:00 6/1\n• Ish beruvchi: UYSOT\n• Holat: #faol\n\n🔰 Sizdan talab qilinadi:\n-Ish tajribasi shart emas — barchasini o‘rgatamiz! \n-O‘zbek tilini yaxshi bilish;\n-Kirishimlilik va faollik;\n-Mas’uliyatlilik;\n-Rivojlanish va kompaniya bilan birga o‘sish istagi.\n\nSiz nima bilan shug‘ullanasiz:\n-Mijozlardan kelgan qo‘ng‘iroqlarni qabul qilish;\n-Mahsulotlarimiz va xizmatlarimiz haqida ma’lumot berish;\n-Sayt orqali kelib tushgan murojaatlarni qayta ishlash;\n-Bajarilgan ishlar bo‘yicha hisobotlar tayyorlash.\n\n➕ Qo‘shimcha:\n\n- Greyd tizimi — kompaniyada o‘sasiz → daromadingiz ham oshadi;\n- Ishning dastlabki bosqichida o‘quv-trening;\n- Karyerada o‘sish imkoniyati;\n- Tushlik xarajatining 50% kompaniya tomonidan qoplanadi;\n\n- Barcha zarur sharoitlarga ega qulay ofis;\n\n- Biz tashabbuskorlik, halollik, ochiqlik va rivojlanishga bo‘lgan intilishni qadrlaymiz.\n\nUYSOT — ko‘chmas mulk sohasi uchun zamonaviy texnologiyalarni yaratayotgan PropTech kompaniya. So‘nggi bir yil ichida biz 3 baravarga o‘sdik — va bu hali boshlanishi! \nYosh va jadal rivojlanayotgan IT-kompaniyada ishlashni, o‘zingizni rivojlantirishni va ajoyib jamoaning bir qismi bo‘lishni xohlaysizmi? Unda sizni jamoamizga taklif qilamiz! \n\n📞 Bog‘lanish uchun: \n\n@uysot_elyor - rezyume yuboring\n\n👉🏻 E’lon joylash uchun: @kasbdor_uz\n\n🌏 @Kasbdoruz— kasbiy o‘sishdagi ideal platformangiz!\n\nN3311",
+  "extra": {},
+  "expected": {
+    "kind": "job",
+    "category": "operator",
+    "title_contains": "Call operator",
+    "company": "UYSOT",
+    "salary_min": 3500000,
+    "currency": "UZS",
+    "region": "toshkent_sh",
+    "district": "Yunusobod",
+    "usernames": [
+      "@uysot_elyor"
+    ],
+    "phones": [],
+    "strip": [
+      "👉🏻 E'lon joylash uchun... dan oxirigacha (N3311 bilan)"
+    ],
+    "language": "uz_latin"
+  }
+}

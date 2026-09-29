@@ -1,0 +1,23 @@
+{
+  "title": "Ariza muddati o'tgan (2026-09-19)",
+  "source": "@jobs_fba",
+  "external_id": "63",
+  "grouped_id": null,
+  "has_media": false,
+  "media_type": null,
+  "posted_at": "2026-09-16T13:01:16+00:00",
+  "text": "💼 Financist\n🏢 Multinational Mining Group\n📍 Toshkent viloyati  Olmaliq shahar\n💰 Maosh: 7 000 000 — 10 000 000 so'm\n🎯 Tajriba: 1-3 yil\n💼 To'liq bandlik\n🗓 Ish grafigi: To'liq kun · 6/1\n⏰ Ish vaqti: 09:00-18:00\n📅 Ariza muddati: 2026-09-19\n\nTalablar:\n• Oliy ma'lumot\n• Ingliz tili\n• ACCA sertifikatlari (MA/FA/FM)\n• Excel , Google sheet\n\n👇 Qiziqsangiz — tugmani bosing, FBA Connect orqali ariza beriladi.",
+  "extra": {
+    "buttons": [
+      {
+        "text": "✋ Qiziqish bildirish",
+        "url": "https://t.me/fba_connect_bot?start=vak7"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "closed",
+    "note": "Muddat hali o'tmagan bo'lsa: job, buxgalter, 7-10 mln, Olmaliq, apply_url fba_connect_bot tugmasi",
+    "language": "uz_latin"
+  }
+}

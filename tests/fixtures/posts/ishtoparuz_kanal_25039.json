@@ -1,0 +1,30 @@
+{
+  "title": "Kunlik maosh + kanal reklama qatori",
+  "source": "@ishtoparuz_kanal",
+  "external_id": "25039",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-29T05:04:41+00:00",
+  "text": "✨ MAR MAR OILAVIY RESTORANIGA KASSIR KERAK\n\nKASSIR — O‘G‘IL BOLA \n\n⏰ Ish vaqti: [09:00-21:00] \n\n💵 Maosh: 250 000 \n❗️Stajirofka 5 kun 100 000 so’mdan to’lanadi\n\nNOMZODGA TALABLAR:\n• Rus tilini bilishi shart ❗️\n• Kassirlik sohasida kamida 1 yillik tajriba\n• Naqd va karta orqali to‘lovlarni aniq qabul qilish\n• iiko dasturida ishlay olish\n• Kassa hisobini yuritish va smena yakunida hisobot topshirish\n• Mijozlar bilan xushmuomala muloqot qilish\n• Mas’uliyatli, chaqqon va tartibli bo‘lish\n\n⚠️ TALABALAR BEZOVTA QILMASIN!\n\n📍Manzil: Toshkent shahar\nMAR MAR oilaviy restorani\n\n☎️Murojaat uchun:\nResume bilan murojat qilin @asaminov\n\nINSTAGRAMDAN QAYSIDIR ISHNI KO’RIB KANALGA KIRIB TOPA OLMAYOTGAN BO’LSANGIZ 👇👇👇👇 PASTDAGI LINKGA BOSING O’SHA KO’RGAN ISHINGIZNI TOPISH O’RGATILGAN !👇👇👇👇\n\nhttps://youtu.be/qkPn4_8IoEw?si=rpCnQfqRpLePbJvq",
+  "extra": {},
+  "expected": {
+    "kind": "job",
+    "category": "oshpaz",
+    "title_contains": "kassir",
+    "salary_min": 250000,
+    "salary_max": 250000,
+    "currency": "UZS",
+    "salary_period": "day",
+    "region": "toshkent_sh",
+    "usernames": [
+      "@asaminov"
+    ],
+    "phones": [],
+    "strip": [
+      "INSTAGRAMDAN QAYSIDIR ISHNI...",
+      "youtu.be havola"
+    ],
+    "language": "uz_latin"
+  }
+}
