@@ -164,6 +164,7 @@ class FiltersConfig(BaseModel):
     ban: list[str] = Field(default_factory=list)
     spam: list[str] = Field(default_factory=list)
     scam: list[str] = Field(default_factory=list)
+    scam_exceptions: list[str] = Field(default_factory=list)
     ad_patterns: list[str] = Field(default_factory=list)
     # Post kind detection (processing/classify.py)
     job_markers: list[str] = Field(default_factory=list)
@@ -171,6 +172,7 @@ class FiltersConfig(BaseModel):
     resume_markers: list[str] = Field(default_factory=list)
     closed_markers: list[str] = Field(default_factory=list)
     opportunity_markers: list[str] = Field(default_factory=list)
+    opportunity_strong_markers: list[str] = Field(default_factory=list)
 
 
 class SourceRule(BaseModel):

@@ -1,8 +1,8 @@
 """What kind of post is this? ``job | not_job | resume | closed | opportunity | suspicious | no_text``.
 
 Order of rules (docs/SOURCE_ANALYSIS.md §3):
-    no_text -> closed -> resume -> suspicious -> channel hashtags -> opportunity / not_job
-    (only when job evidence is weak) -> job.
+    no_text -> closed -> resume -> suspicious -> unpaid internship -> channel hashtags ->
+    opportunity / not_job (only when job evidence is weak) -> job.
 
 Only ``job`` goes to our channel. The rest stay in the DB with their kind as status.
 A ``job`` without any contact gets ``has_contact=False``; the pipeline (Bosqich 7) turns it into
@@ -61,6 +61,8 @@ class Classification:
     has_contact: bool = False
     language: Language | None = None
     contacts: Contacts = field(default_factory=Contacts)
+    # Normalized text without channel boilerplate — input for dedup (and later extract).
+    clean_text: str = ""
 
 
 def merge_album(parts: Sequence[PostInput]) -> PostInput:
@@ -130,7 +132,9 @@ class Classifier:
         self.resume = KeywordSet(filters.resume_markers)
         self.closed = KeywordSet(filters.closed_markers)
         self.opportunity = KeywordSet(filters.opportunity_markers)
+        self.opportunity_strong = KeywordSet(filters.opportunity_strong_markers)
         self.scam = KeywordSet(filters.scam)
+        self.scam_exceptions = KeywordSet(filters.scam_exceptions)
         self._per_source: dict[str, _SourceRules] = {}
 
     def _source(self, source: str | None) -> _SourceRules:
@@ -179,7 +183,7 @@ class Classifier:
         score = len(job_hits)
 
         def result(kind: PostKind, *reasons: str) -> Classification:
-            return Classification(kind, reasons, score, bool(contacts), language, contacts)
+            return Classification(kind, reasons, score, bool(contacts), language, contacts, norm)
 
         # 1. closed: explicit marker or application deadline in the past
         if hits := self.closed.find(folded) | src.closed.find(folded):
@@ -193,10 +197,14 @@ class Classifier:
             return result(PostKind.RESUME, *sorted(f"resume:{h}" for h in hits))
 
         # 3. scam markers
-        if hits := self.scam.find(folded):
+        if hits := self.scam.find(self.scam_exceptions.remove(folded)):
             return result(PostKind.SUSPICIOUS, *sorted(f"scam:{h}" for h in hits))
 
-        # 4. the channel's own tags
+        # 4. unpaid internship etc. — decisive whatever the job score
+        if hits := self.opportunity_strong.find(folded):
+            return result(PostKind.OPPORTUNITY, *sorted(f"opportunity:{h}" for h in hits))
+
+        # 5. the channel's own tags
         tags = set(_HASHTAG_RE.findall(folded))
         if hit := tags & src.non_job_tags:
             return result(PostKind.NOT_JOB, *sorted(f"tag:{t}" for t in hit))
@@ -204,16 +212,18 @@ class Classifier:
         if src.require_job_tag and not tagged_job:
             return result(PostKind.NOT_JOB, "no_job_hashtag")
 
-        # 5. opportunity / advertisement, unless job evidence is strong
+        # 6. opportunity / advertisement, unless job evidence is strong.
+        # Ads need at least as many ad markers as job markers: "xodimlarga 50% chegirma" in a real
+        # job ad must not outweigh "talablar + maosh + ish vaqti".
         opp = self.opportunity.find(folded)
         ads = self.not_job.find(haystack)
         if not tagged_job and score < STRONG_JOB_SCORE:
             if opp:
                 return result(PostKind.OPPORTUNITY, *sorted(f"opportunity:{h}" for h in opp))
-            if ads:
+            if ads and len(ads) >= score:
                 return result(PostKind.NOT_JOB, *sorted(f"ad:{h}" for h in ads))
 
-        # 6. job
+        # 7. job
         if tagged_job or score >= MIN_JOB_SCORE:
             reasons = [f"job:{h}" for h in sorted(job_hits)]
             if tagged_job:

@@ -60,7 +60,7 @@ src/ayvona/
   ai/                  gemini client + cache (later)
   apps/                entrypoints: collector.py, worker.py, bot.py
 config/                settings.yaml, categories.yaml, regions.yaml, filters.yaml
-assets/categories/     one image per category (+ boshqa.jpg)
+assets/images/         <category>/<profession>/ 3–4 variants each, rotated (docs/IMAGES.md)
 tests/                 fixtures/posts/*.txt + unit tests
 deploy/                systemd units + Oracle setup guide
 data/                  (gitignored) ayvona.db, *.session, backups/

@@ -45,6 +45,13 @@ scam:
   - karta raqamingizni yuboring
   - sms kodni yuboring
 
+# Scam so'zi shu iboralar ichida bo'lsa — firibgarlik EMAS (ish vazifasi):
+# "mijozlardan oldindan to'lovlarni qabul qilib" — sotuv menejerining vazifasi.
+scam_exceptions:
+  - oldindan to'lovlarni qabul
+  - oldindan to'lovni qabul
+  - oldindan to'lov qabul
+
 # Manba kanallarning reklama qatorlari (umumiy; kanalga xos qoidalar — config/source_rules.yaml)
 ad_patterns:
   - obuna bo'ling
@@ -104,8 +111,22 @@ job_markers:
   - tasks
   - responsibilities
   - cv
+  - vazifalar
+  - tajriba shart emas
+  - tajriba talab etilmaydi
+  - anketa to'ldiring
+  - anketani to'ldiring
+  - jamoasi kengay           # "jamoasi kengaymoqda / kengayishda"
+  - jamoasini kengaytir
+  - "we're hiring"
+  - we are hiring
+  - join our team
+  - is looking for
+  - duties
+  - в поисках
 
-# Aniq REKLAMA / e'lon emas (bittasi yetarli — agar job_markers kuchsiz bo'lsa)
+# Aniq REKLAMA / e'lon emas. Qoida: topilgan reklama belgilari soni >= job ball bo'lsa (va job ball < 4) — not_job.
+# ("chegirma" ish e'lonida ham uchraydi: "xodimlarga 50% chegirma" — shuning uchun bitta belgi hal qilmaydi.)
 not_job_markers:
   - "#reklama"
   - "erid="
@@ -169,9 +190,15 @@ opportunity_markers:
   - dev camp
   - akademiyasiga arizalar
   - ishtirok etish bepul
-  - amaliyot uchun haq to'lanmaydi
-  - bepul amaliyot
   - bepul o'qitilmoqda
   - forum
   - hackathon
   - xakaton
+
+# HAL QILUVCHI imkoniyat belgilari — job ball qancha bo'lsa ham opportunity (haq to'lanmaydigan amaliyot).
+opportunity_strong_markers:
+  - amaliyot uchun haq to'lanmaydi
+  - haq to'lanmaydigan amaliyot
+  - bepul amaliyot
+  - unpaid internship
+  - неоплачиваемая стажировка

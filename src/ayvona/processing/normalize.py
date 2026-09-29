@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from ayvona.processing.language import Language, detect_language, is_uzbek_cyrillic
+from ayvona.processing.language import Language, cyrillic_scores, detect_language
 
 # --------------------------------------------------------------------------- character tables
 APOSTROPHES = "‘’ʻʼ`´′"
@@ -92,12 +92,21 @@ def _collapse(text: str) -> str:
 
 
 def _transliterate_uzbek(text: str, language: Language) -> str:
-    """Uzbek Cyrillic lines -> Latin; Russian lines stay as they are."""
+    """Uzbek Cyrillic lines -> Latin; Russian lines stay as they are (lower-cased input).
+
+    Decided per line (posts mix both languages); a line without evidence either way follows
+    the language of the whole post.
+    """
     if not any(_is_cyr(ch) for ch in text):
         return text
-    if language is Language.UZ_CYRILLIC:
-        return to_latin(text)
-    return "\n".join(to_latin(line) if is_uzbek_cyrillic(line) else line for line in text.split("\n"))
+    out = []
+    for line in text.split("\n"):
+        if any(_is_cyr(ch) for ch in line):
+            uz, ru = cyrillic_scores(line)
+            if uz > ru or (uz == ru and language is Language.UZ_CYRILLIC):
+                line = to_latin(line)
+        out.append(line)
+    return "\n".join(out)
 
 
 def normalize(text: str) -> str:

@@ -93,7 +93,7 @@ def main() -> int:
     conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
     try:
         if args.source and args.external_id:
-            path = fixture_path(args.dir, args.source, args.external_id)
+            path = fixture_path(args.dir.resolve(), args.source, args.external_id)
             old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
             write_fixture(path, load_raw(conn, args.source, args.external_id), old)
             print(f"Yozildi: {path.relative_to(PROJECT_ROOT)}")

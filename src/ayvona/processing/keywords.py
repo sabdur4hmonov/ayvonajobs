@@ -39,3 +39,9 @@ class KeywordSet:
 
     def find(self, folded_text: str) -> set[str]:
         return {kw for kw, pat in self._patterns if pat.search(folded_text)}
+
+    def remove(self, folded_text: str) -> str:
+        """Blank out every occurrence (keeps other keywords from matching inside them)."""
+        for _, pat in self._patterns:
+            folded_text = pat.sub(" ", folded_text)
+        return folded_text

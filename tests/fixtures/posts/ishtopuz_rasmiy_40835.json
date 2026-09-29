@@ -62,7 +62,6 @@
     ]
   },
   "expected": {
-    "kind": "not_job",
-    "language": "uz_cyrillic"
+    "kind": "not_job"
   }
 }

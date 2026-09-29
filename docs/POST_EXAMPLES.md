@@ -5,7 +5,7 @@ Har birida: asl matn (aynan), yashirin havolalar/tugmalar va **kutilgan natija**
 Bosqich 4 da Claude Code bularni `tests/fixtures/posts/` ga test sifatida ko'chiradi.
 Tahlil va qoidalar: `docs/SOURCE_ANALYSIS.md`, `config/source_rules.yaml`, `config/filters.yaml`.
 
-**Kutilgan natija maydonlari:** `kind` (job / not_job / resume / closed / opportunity / suspicious), `category`,
+**Kutilgan natija maydonlari:** `kind` (job / not_job / resume / closed / opportunity / suspicious), `category` va `profession` (`config/categories.yaml` kalitlari),
 `title_contains` (lavozimda bo'lishi kerak bo'lgan so'z), `salary_min/max` (son), `currency`, `salary_period`,
 `region` (`regions.yaml` kaliti), `district`, `phones`, `usernames`, `emails`, `apply_url`, `multi` (bir necha vakansiya),
 `strip` (olib tashlanishi kerak bo'lgan qismlar). Yozilmagan maydon = tekshirilmaydi.
@@ -46,7 +46,8 @@ Maktab oshxonasiga tajribali va o‘z ishining ustasi bo‘lgan oshpaz taklif et
 
 ```yaml
 kind: job
-category: oshpaz
+category: oshxona
+profession: oshpaz
 title_contains: oshpaz
 salary_min: 4000000
 salary_max: 4000000
@@ -105,7 +106,8 @@ https://youtu.be/qkPn4_8IoEw?si=rpCnQfqRpLePbJvq
 
 ```yaml
 kind: job
-category: oshpaz
+category: sotuv
+profession: kassir
 title_contains: kassir
 salary_min: 250000
 salary_max: 250000
@@ -176,7 +178,7 @@ strip:
 
 ```yaml
 kind: job
-category: sotuvchi
+category: sotuv
 salary_min: 7000000
 salary_max: 15000000
 currency: UZS
@@ -248,6 +250,7 @@ Yunusobod tumani, Bog‘ishamolko‘chasi, 160-uy
 ```yaml
 kind: job
 category: ishlab_chiqarish
+profession: sex_ishchisi
 salary_min: 3000000
 salary_max: 10000000
 currency: UZS
@@ -329,7 +332,8 @@ note: '''10 00 0000'' = 10 000 000'
 ```yaml
 kind: job
 multi: true
-category: oqituvchi
+category: talim
+profession: oqituvchi
 region: toshkent_sh
 phones:
 - '+998935888488'
@@ -451,6 +455,7 @@ note: grouped_id bilan 24483-24485 (matnsiz rasmlar) bilan bitta albom
 ```yaml
 kind: job
 category: marketing
+profession: marketolog
 title_contains: Marketing Manager
 company: Jana Post
 salary_min: 900
@@ -562,6 +567,7 @@ kind: not_job
 ```yaml
 kind: job
 category: operator
+profession: operator
 title_contains: Оператор колл-центра
 company: FreeLink
 salary_min: 4000000
@@ -676,7 +682,8 @@ Ochiq vakansiyalar:
 ```yaml
 kind: job
 multi: true
-category: sotuvchi
+category: sotuv
+profession: savdo_agenti
 salary_min: 3000000
 salary_max: 15000000
 currency: UZS
@@ -748,7 +755,8 @@ Moʻljal: “Bedapoya”
 ```yaml
 kind: job
 multi: true
-category: oshpaz
+category: oshxona
+profession: oshpaz
 region: toshkent_sh
 phones:
 - '+998878053333'
@@ -813,7 +821,7 @@ strip:
 
 ```yaml
 kind: job
-category: menejer
+category: ofis
 title_contains: TRENING
 salary_min: 5000000
 currency: UZS
@@ -1076,7 +1084,8 @@ Spoken English from B2!
 
 ```yaml
 kind: job
-category: dizayner
+category: dizayn_media
+profession: dizayner
 title_contains: UX/UI Designer
 salary_max: 3800
 currency: USD
@@ -1177,6 +1186,7 @@ N3311
 ```yaml
 kind: job
 category: operator
+profession: operator
 title_contains: Call operator
 company: UYSOT
 salary_min: 3500000
@@ -1273,7 +1283,8 @@ kind: not_job
 
 ```yaml
 kind: job
-category: hr
+category: ofis
+profession: hr
 title_contains: RECRUITER
 company: WELKIN
 salary_max: 1000
@@ -1435,6 +1446,7 @@ HUNTME — Endless Opportunities
 ```yaml
 kind: job
 category: logistika
+profession: trucking
 title_contains: Fleet Specialist
 company: Safar TS LLC
 salary_min: 500
@@ -1565,7 +1577,8 @@ All telegram channels 📱
 
 ```yaml
 kind: job
-category: dizayner
+category: dizayn_media
+profession: dizayner
 title_contains: Grafik Dizayner
 company: ALSTAR ACP
 salary_max: 1000
@@ -1609,7 +1622,8 @@ Siz ham ishchi yoki ish qidirayotgan bo'lsangiz, bizning kanalda hoziroq e'lon j
 
 ```yaml
 kind: job
-category: marketing
+category: dizayn_media
+profession: mobilograf
 title_contains: Mobilograf
 salary_min: 4000000
 salary_max: 7000000
@@ -1705,7 +1719,8 @@ SAMARQAND
 
 ```yaml
 kind: job
-category: buxgalter
+category: moliya
+profession: buxgalter
 salary_min: 6000000
 currency: UZS
 region: samarqand
@@ -1747,7 +1762,8 @@ phones:
 
 ```yaml
 kind: job
-category: oqituvchi
+category: talim
+profession: oqituvchi
 salary_min: 5000000
 salary_max: 15000000
 currency: UZS
@@ -1931,7 +1947,8 @@ Amerika bozoridagi startup uchun tajribali UI/UX veb dizayner izlanmoqda
 
 ```yaml
 kind: job
-category: dizayner
+category: dizayn_media
+profession: dizayner
 title_contains: UI/UX
 salary_min: 300
 salary_max: 1000
@@ -2066,7 +2083,7 @@ Talablar:
 
 ```yaml
 kind: closed
-note: 'Muddat hali o''tmagan bo''lsa: job, buxgalter, 7-10 mln, Olmaliq, apply_url
+note: 'Muddat hali o''tmagan bo''lsa: job, moliya/moliyachi, 7-10 mln, Olmaliq, apply_url
   fba_connect_bot tugmasi'
 ```
 

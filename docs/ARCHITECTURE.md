@@ -130,7 +130,7 @@ rejected (filtr yoki admin rad etdi)
 | id | |
 | origin | `aggregator` / `user` |
 | raw_post_id → raw_posts (null bo'lishi mumkin), author_id → users (null bo'lishi mumkin) | |
-| title, company, category | lavozim, kompaniya, kategoriya kodi |
+| title, company, category, profession | lavozim, kompaniya, kategoriya va kasb kodi (`config/categories.yaml`) |
 | salary_min, salary_max, currency, salary_text | qidiruv uchun so'mga keltirilgan son + asl matn |
 | region, city, is_remote | |
 | schedule, requirements, description | |
@@ -147,14 +147,14 @@ created_at, last_active_at
 
 **favorites** — user_id, job_id, created_at · UNIQUE(user_id, job_id)
 
-**subscriptions** (ish obunasi / alert) — id, user_id, category, region, min_salary, keyword, is_active, created_at
+**subscriptions** (ish obunasi / alert) — id, user_id, category, profession, region, min_salary, keyword, is_active, created_at
 
 **alert_deliveries** — subscription_id, job_id, sent_at · UNIQUE(subscription_id, job_id) → bir xabar ikki marta ketmaydi
 
 **search_logs** — user_id, filtrlar (json), natija soni, created_at (statistika va "nimani qidirishyapti" uchun)
 
 ### Umumiy
-**category_images** — category, file_path, telegram_file_id (bir marta yuklab, keyin file_id qayta ishlatiladi)
+**images** — category, profession, file_path, file_hash, telegram_file_id, times_used, last_used_at (navbat bilan tanlash; file_id kesh — docs/IMAGES.md)
 
 **filter_words** — word, kind (`ban` / `spam` / `scam`), added_by
 

@@ -1,59 +1,210 @@
 # =====================================================================
-#  Kategoriyalar. Kalit so'zlar: o'zbek lotin, o'zbek kirill va rus tilida.
-#  Hozircha namunaviy 4 ta + "boshqa". To'liq ro'yxat — Bosqich 5 da.
-#  Kalit so'zlar kichik harfda yoziladi (matn solishtirishdan oldin normalize qilinadi).
+#  Ish turlari: KATEGORIYA (keng) → KASB (aniq).
+#  2026-09-29: 19 kanaldagi 377 real post asosida tuzildi.
+#
+#  * Kategoriya — rasm (image), bot qidiruvidagi katta tugma, keng teg (#tibbiyot).
+#  * Kasb — aniq teg (#shifokor), bot qidiruvida 2-qadam, obunalarda ham ishlatiladi.
+#  * Postdagi teglar: #kasb #kategoriya #hudud + ko'pi bilan 2 ta belgi-teg (pastda). Jami ≤ 5.
+#    Kasb va kategoriya tegi bir xil bo'lsa — bittasi yoziladi.
+#  * Teg qoidasi: faqat lotin kichik harf, raqam va "_" (apostrof yo'q: o'qituvchi → #oqituvchi).
+#  * Kalit so'zlar normalize/fold qilingan matnda qidiriladi (kirill → lotin), shuning uchun
+#    ruscha va o'zbek kirill so'zlar ham ishlaydi. So'z chegarasi bilan qidiriladi.
+#  * Lavozim (title) dagi moslik 3x ball. Kasb topilmasa — faqat kategoriya; hech narsa → "boshqa".
+#  * Kategoriya darajasidagi "keywords" bo'sh — kasblarning kalit so'zlari birlashtiriladi.
+#  Bosqich 5 da Claude Code kalit so'zlarni real postlarga qarab to'ldiradi.
 # =====================================================================
+
 categories:
-  sotuvchi:
-    title: "Sotuv"
-    hashtag: "sotuvchi"
-    image: "sotuvchi.jpg"
-    keywords:
-      - sotuvchi
-      - sotuv konsultanti
-      - konsultant
-      - сотувчи
-      - продавец
-      - продавец-консультант
-      - консультант
 
-  haydovchi:
-    title: "Haydovchi"
-    hashtag: "haydovchi"
-    image: "haydovchi.jpg"
-    keywords:
-      - haydovchi
-      - shofyor
-      - ҳайдовчи
-      - водитель
-      - шофер
+  sotuv:
+    title: "Sotuv va savdo"
+    hashtag: "sotuv"
+    image: "sotuv.jpg"
+    keywords: []
+    professions:
+      sotuvchi:        {title: "Sotuvchi", keywords: [sotuvchi, sotuvchi-konsultant, konsultant, prodavets, продавец, продавец-консультант, консультант, salesperson]}
+      kassir:          {title: "Kassir", keywords: [kassir, кассир, cashier]}
+      sotuv_menejeri:  {title: "Sotuv menejeri", keywords: [sotuv menejeri, sotuv menejer, sotuv bo'yicha mutaxassis, sales manager, sales specialist, менеджер по продажам, b2b sotuv]}
+      savdo_agenti:    {title: "Savdo agenti", keywords: [savdo agenti, sotuv agenti, savdo vakili, agent, торговый представитель, торговый агент, supervayzer, супервайзер, diller]}
+      promouter:       {title: "Promouter", keywords: [promouter, промоутер, promoter]}
 
-  dasturchi:
-    title: "IT / Dasturlash"
-    hashtag: "dasturchi"
-    image: "dasturchi.jpg"
-    keywords:
-      - dasturchi
-      - programmist
-      - developer
-      - frontend
-      - backend
-      - дастурчи
-      - программист
-      - разработчик
+  operator:
+    title: "Operator / Call-markaz"
+    hashtag: "operator"
+    image: "operator.jpg"
+    keywords: []
+    professions:
+      operator:        {title: "Call-markaz operatori", keywords: [operator, call operator, call-markaz, call markaz, call center, call-center, колл-центр, оператор, sotuv operatori, qo'ng'iroqlarga javob]}
 
-  oqituvchi:
+  oshxona:
+    title: "Oshxona va restoran"
+    hashtag: "oshxona"
+    image: "oshxona.jpg"
+    keywords: []
+    professions:
+      oshpaz:          {title: "Oshpaz", keywords: [oshpaz, povar, повар, cook, chef, shashlikchi, somsapaz, salatchi, oshpaz universal]}
+      ofitsiant:       {title: "Ofitsiant", keywords: [ofitsiant, официант, waiter, waitress]}
+      barista:         {title: "Barista", keywords: [barista, бариста]}
+      nonvoy:          {title: "Nonvoy / Qandolatchi", keywords: [nonvoy, xamirchi, pekar, пекарь, qandolatchi, konditer, кондитер, biskvit]}
+      idish_yuvuvchi:  {title: "Idish yuvuvchi", keywords: [idish yuvuvchi, posudomoyka, посудомойщица, посудомойщик]}
+
+  transport:
+    title: "Haydovchi va kuryer"
+    hashtag: "transport"
+    image: "transport.jpg"
+    keywords: []
+    professions:
+      haydovchi:       {title: "Haydovchi", keywords: [haydovchi, shofyor, shofer, voditel, водитель, шофер, driver, damas]}
+      kuryer:          {title: "Kuryer", keywords: [kuryer, kurer, курьер, courier, avtokuryer, velokuryer, dostavka, dostavshchik, yetkazib beruvchi, доставщик]}
+
+  logistika:
+    title: "Logistika"
+    hashtag: "logistika"
+    image: "logistika.jpg"
+    keywords: []
+    professions:
+      dispetcher:      {title: "Dispetcher", keywords: [dispetcher, dispatcher, диспетчер, dispatch specialist]}
+      logist:          {title: "Logist", keywords: [logist, логист, logistics specialist, logistika mutaxassisi]}
+      trucking:        {title: "Trucking mutaxassisi", keywords: [update specialist, update manager, safety specialist, fleet specialist, fleet manager, trailer manager, driver recruiter, trucking]}
+
+  ombor:
+    title: "Ombor va ishchi"
+    hashtag: "ombor"
+    image: "ombor.jpg"
+    keywords: []
+    professions:
+      omborchi:        {title: "Omborchi", keywords: [omborchi, ombor xodimi, kladovshik, кладовщик, yig'uvchi, sborshik, сборщик, warehouse]}
+      yuk_tashuvchi:   {title: "Yuk tashuvchi", keywords: [yuk tashuvchi, gruzchik, грузчик, yuk ortuvchi]}
+      ishchi:          {title: "Ishchi", keywords: [ishchi, ishchilar, raznorabochiy, разнорабочий, рабочий, universal xodim]}
+
+  ishlab_chiqarish:
+    title: "Ishlab chiqarish"
+    hashtag: "ishlab_chiqarish"
+    image: "ishlab_chiqarish.jpg"
+    keywords: []
+    professions:
+      tikuvchi:        {title: "Tikuvchi", keywords: [tikuvchi, швея, bichuvchi, dazmolchi, tikuv sexi, tikuv]}
+      sex_ishchisi:    {title: "Sex ishchisi", keywords: [sex ishchisi, sexga ishchi, stanokchi, stanok, fabrika, zavod, ishlab chiqarish, sex]}
+      qadoqlovchi:     {title: "Qadoqlovchi", keywords: [qadoqlovchi, upakovkachi, upakovka, упаковщик, упаковщица]}
+      texnolog:        {title: "Texnolog / Laborant", keywords: [texnolog, технолог, laborant, лаборант, sifat nazoratchisi]}
+
+  qurilish:
+    title: "Qurilish va ustalar"
+    hashtag: "qurilish"
+    image: "qurilish.jpg"
+    keywords: []
+    professions:
+      quruvchi:        {title: "Quruvchi", keywords: [quruvchi, строитель, qurilish ishchisi, montajchi, suvoqchi, kafelchi]}
+      elektrik:        {title: "Elektrik", keywords: [elektrik, elektromontajchi, электрик, электромонтажник]}
+      santexnik:       {title: "Santexnik", keywords: [santexnik, сантехник]}
+      payvandchi:      {title: "Payvandchi", keywords: [payvandchi, svarshik, сварщик, welder]}
+      mebel_ustasi:    {title: "Mebel ustasi", keywords: [mebel ustasi, mebelchi, stolyar, столяр, yumshoq mebel, дурадгор, duradgor]}
+      avto_usta:       {title: "Avto usta", keywords: [avtomexanik, avtoslesar, автомеханик, vulkanizator, вулканизатор, avtomoyka, avtomoykachi, mexanik]}
+
+  tibbiyot:
+    title: "Tibbiyot"
+    hashtag: "tibbiyot"
+    image: "tibbiyot.jpg"
+    keywords: []
+    professions:
+      shifokor:        {title: "Shifokor", keywords: [shifokor, vrach, врач, doktor, doctor, terapevt, pediatr, xirurg, nevrolog, kardiolog, ginekolog]}
+      stomatolog:      {title: "Stomatolog", keywords: [stomatolog, стоматолог, tish shifokori, dentist]}
+      hamshira:        {title: "Hamshira", keywords: [hamshira, медсестра, medsestra, nurse, med brat]}
+      farmatsevt:      {title: "Farmatsevt", keywords: [farmatsevt, provizor, фармацевт, провизор, pharmacist, dorixona]}
+      tibbiy_vakil:    {title: "Tibbiy vakil", keywords: [tibbiy vakil, медицинский представитель, medical representative]}
+
+  talim:
     title: "Ta'lim"
-    hashtag: "oqituvchi"
-    image: "oqituvchi.jpg"
-    keywords:
-      - o'qituvchi
-      - ustoz
-      - repetitor
-      - ўқитувчи
-      - учитель
-      - преподаватель
-      - репетитор
+    hashtag: "talim"
+    image: "talim.jpg"
+    keywords: []
+    professions:
+      oqituvchi:       {title: "O'qituvchi", keywords: [o'qituvchi, oqituvchi, ustoz, ustozlar, teacher, учитель, преподаватель, mentor, repetitor, репетитор, instructor]}
+      tarbiyachi:      {title: "Tarbiyachi", keywords: [tarbiyachi, воспитатель, bog'cha, detskiy sad]}
+      kurator:         {title: "Kurator / Yordamchi o'qituvchi", keywords: [kurator, куратор, yordamchi o'qituvchi, assistant teacher, помощник воспитателя]}
+
+  moliya:
+    title: "Buxgalteriya va moliya"
+    hashtag: "moliya"
+    image: "moliya.jpg"
+    keywords: []
+    professions:
+      buxgalter:       {title: "Buxgalter", keywords: [buxgalter, buhgalter, бухгалтер, bosh buxgalter, accountant, bookkeeper, hisobchi, хисобчи]}
+      moliyachi:       {title: "Moliyachi / Iqtisodchi", keywords: [moliyachi, moliyaviy menejer, moliyaviy tahlilchi, financist, finance manager, финансист, iqtisodchi, экономист, economist]}
+      auditor:         {title: "Auditor", keywords: [auditor, аудитор, ichki auditor]}
+
+  it:
+    title: "IT"
+    hashtag: "it"
+    image: "it.jpg"
+    keywords: []
+    professions:
+      dasturchi:       {title: "Dasturchi", keywords: [dasturchi, developer, programmist, программист, разработчик, frontend, backend, fullstack, full stack, mobile developer, android, ios, python, java, golang]}
+      tester:          {title: "Tester (QA)", keywords: [tester, qa, тестировщик, qa engineer, qa muhandis]}
+      devops:          {title: "DevOps / Tizim administratori", keywords: [devops, sysadmin, tizim administratori, системный администратор, network engineer, tarmoq administratori, sre]}
+      data:            {title: "Data / AI mutaxassisi", keywords: [data analyst, data scientist, ml engineer, ai engineer, ma'lumotlar tahlilchisi, analitik]}
+      it_menejer:      {title: "IT menejer", keywords: [product manager, project manager, loyiha menejeri, mahsulot menejeri, business analyst, biznes tahlilchi]}
+
+  dizayn_media:
+    title: "Dizayn va media"
+    hashtag: "dizayn"
+    image: "dizayn.jpg"
+    keywords: []
+    professions:
+      dizayner:        {title: "Dizayner", keywords: [dizayner, designer, дизайнер, grafik dizayner, ui/ux, ux/ui, product designer, 3d generalist]}
+      mobilograf:      {title: "Mobilograf / Videograf", keywords: [mobilograf, мобилограф, videograf, видеограф, videooperator, video operator, montajchi, montajyor, монтажер, reels]}
+      fotograf:        {title: "Fotograf", keywords: [fotograf, фотограф, photographer]}
+
+  marketing:
+    title: "Marketing va SMM"
+    hashtag: "marketing"
+    image: "marketing.jpg"
+    keywords: []
+    professions:
+      smm:             {title: "SMM menejer", keywords: [smm, smm menejer, smm-menejer, social media manager, kontent meyker, content maker, kontent prodyuser]}
+      marketolog:      {title: "Marketolog", keywords: [marketolog, маркетолог, marketing manager, marketing menejeri, brand manager]}
+      targetolog:      {title: "Targetolog", keywords: [targetolog, таргетолог, meta ads, facebook ads]}
+      pr:              {title: "PR menejer", keywords: [pr menejer, pr manager, pr-менеджер]}
+
+  ofis:
+    title: "Ofis va boshqaruv"
+    hashtag: "ofis"
+    image: "ofis.jpg"
+    keywords: []
+    professions:
+      administrator:   {title: "Administrator", keywords: [administrator, администратор, resepshen, reception, ресепшн, qabulxona]}
+      hr:              {title: "HR / Rekruter", keywords: [hr, recruiter, rekruter, рекрутер, hr menejer, hr specialist, kadrlar bo'limi, кадровик]}
+      menejer:         {title: "Menejer", keywords: [menejer, manager, filial menejeri, rahbar, direktor, boshqaruvchi, supervisor, ish boshqaruvchi]}
+      kotiba:          {title: "Kotiba / Ofis menejeri", keywords: [kotiba, sekretar, секретарь, office manager, ofis menejeri, assistent]}
+      yurist:          {title: "Yurist", keywords: [yurist, юрист, advokat, lawyer, huquqshunos]}
+
+  gozallik:
+    title: "Go'zallik"
+    hashtag: "gozallik"
+    image: "gozallik.jpg"
+    keywords: []
+    professions:
+      sartarosh:       {title: "Sartarosh", keywords: [sartarosh, barber, парикмахер, stilist]}
+      kosmetolog:      {title: "Kosmetolog", keywords: [kosmetolog, косметолог, cosmetologist]}
+      manikyur:        {title: "Manikyur ustasi", keywords: [manikyur, маникюр, nail master, pedikyur]}
+
+  xizmat:
+    title: "Xizmat ko'rsatish"
+    hashtag: "xizmat"
+    image: "xizmat.jpg"
+    keywords: []
+    professions:
+      tozalik:         {title: "Farrosh / Tozalovchi", keywords: [farrosh, tozalovchi, tozalik bekasi, uborshitsa, уборщица, cleaner, tozalik xodimi]}
+      qoriqchi:        {title: "Qo'riqchi", keywords: [qo'riqchi, qoriqchi, oxrana, охрана, охранник, security, storoj]}
+      enaga:           {title: "Enaga / Uy yordamchisi", keywords: [enaga, nyanka, няня, nanny, uy ishlariga, uy yordamchisi, sidelka]}
+      mehmonxona:      {title: "Mehmonxona xodimi", keywords: [mehmonxona, gornichnaya, горничная, housekeeping, hotel]}
+
+  chet_el:
+    title: "Xorijda ish"
+    hashtag: "xorijda_ish"
+    image: "chet_el.jpg"
+    keywords: [xorijda ish, chet elda ish, germaniya, koreya, yaponiya, buyuk britaniya, angliya, polsha, qatar, dubay, eps-topik, mavsumiy ish]
+    professions: {}
 
   # Hech qaysi kategoriyaga tushmasa — shu. O'chirmang!
   boshqa:
@@ -61,3 +212,23 @@ categories:
     hashtag: "boshqa"
     image: "boshqa.jpg"
     keywords: []
+    professions: {}
+
+# ---------------------------------------------------------------------
+#  BELGI-TEGLAR (ixtiyoriy, har postda ≤ 2 ta). INKORNI hisobga olish shart:
+#  "yotoqxona YO'Q", "talabalar qabul qilinMAYDI", "tajriba SHART" — teg qo'yilmaydi!
+# ---------------------------------------------------------------------
+feature_tags:
+  masofaviy:
+    keywords: [masofaviy, masofadan, uydan turib, onlayn ish, online ish, remote, удаленно, удалённо, work from home]
+  tajribasiz:
+    keywords: [tajriba shart emas, tajriba talab qilinmaydi, tajribasiz, o'zimiz o'rgatamiz, 0 dan o'rgatamiz, noldan o'rgatamiz, без опыта, no experience]
+    negations: [tajribasizlar murojaat qilmasin]
+  talabalar_uchun:
+    keywords: [talabalar ham, talabalarni ham, talabalar uchun, studentlar ham, студентов]
+    negations: [talabalar qabul qilinmaydi, talabalar ishga olinmaydi, talabalarni olmaymiz, talabalar bezovta qilmasin, studentlar kerak emas, student olinmaydi]
+  yotoqjoy:
+    keywords: [yotoq joy, yotoqxona, turar joy bilan, жилье, общежитие]
+    negations: [yotoqxona yo'q, yotoq joy yo'q, yotoqxona mavjud emas, ётоқ жой мавжуд эмас, yotoqxonamiz yo'q, yotoq joy pullik]
+  yarim_stavka:
+    keywords: [yarim stavka, 0,5 stavka, 0.5 stavka, part time, part-time, yarim smena, неполный день]

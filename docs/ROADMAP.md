@@ -221,11 +221,12 @@ SOURCE_ANALYSIS 4–7 va 9-10 bo'limlaridagi HAMMA formatlarni qo'lla:
   Remote/online/uydan turib → is_remote.
 - multi: bir postda bir necha lavozim (ro'yxat, 1️⃣ 2️⃣, bir necha "... kerak" bloki) → positions ro'yxati.
 - confidence 0..1: title + aloqa bo'lsa ≥ 0.7.
-Categorize: title 3x ball. Kategoriyalar: sotuvchi (kassir ham), haydovchi, kuryer, dasturchi, oqituvchi,
-oshpaz (ofitsiant, kafe/restoran), buxgalter (moliya ham), operator (call-center), ombor (yuk tashuvchi,
-gruzchik, yig'uvchi), ishlab_chiqarish (sex, tikuvchi, fabrika), qurilish, tibbiyot, gozallik, menejer,
-marketing (SMM, mobilograf, videograf), dizayner, logistika (dispatcher, update/safety specialist, fleet),
-hr (recruiter), qoriqchi, tozalik, administrator, chet_el, boshqa. Lotin + kirill + rus + ingliz kalit so'zlar.
+Categorize: config/categories.yaml TAYYOR (19 kategoriya → 64 kasb, teglar, feature_tags). Natija:
+(category, profession | None, feature_tags). Kasb kalit so'zlari → kasb va uning kategoriyasi; title 3x ball;
+kasb topilmasa kategoriya darajasida (chet_el kalit so'zlari); hech narsa → boshqa. Kalit so'zlarni real postlarga
+qarab to'ldir (lotin + kirill + rus + ingliz). feature_tags (masofaviy, tajribasiz, talabalar_uchun, yotoqjoy,
+yarim_stavka) INKOR bilan: "yotoqxona yo'q", "talabalar qabul qilinmaydi" → teg YO'Q. jobs jadvaliga
+profession ustunini qo'sh (Alembic migratsiya).
 Lavozimni o'zbekchaga o'girish: config/title_translations.yaml (exact, keyin words) — ru/en e'lonlar uchun.
 Menga qaysi misollar o'tmaganini va nima uchunligini tushuntir.
 ```
@@ -242,7 +243,7 @@ matnning 40% dan kami qolsa — kesma, log yoz. utm_*/text= parametrlarini havol
 Aloqa @username va telefonlar HECH QACHON o'chmasin. Admin bot orqali qo'shgan kanalga faqat defaults.
 processing/formatter.py: docs/POST_EXAMPLES.md oxiridagi "KELISHILGAN SHABLON" — AYNAN shunday:
 bo'sh maydon chiqmaydi, maosh yo'q → "Kelishiladi", ko'p vakansiya → "📌 Lavozimlar:" ro'yxati,
-hashtaglar #kategoriya #hudud, imzo, eng oxirida <i><a href="https://t.me/<kanal>/<id>">manba</a></i>
+teglar: #kasb #kategoriya #hudud + ko'pi bilan 2 ta feature teg (jami ≤ 5, takror yo'q), imzo, eng oxirida <i><a href="https://t.me/<kanal>/<id>">manba</a></i>
 (faqat aggregator postlarida). 1024 belgi: avval talablar/tafsilotlar qisqaradi; lavozim, maosh, manzil,
 aloqa, imzo, manba — hech qachon. html.escape hamma matnga.
 Fallback: confidence past bo'lsa — kategoriya sarlavhasi + tozalangan matn + aloqa + imzo + manba.
@@ -253,7 +254,13 @@ TIL QOIDASI (SOURCE_ANALYSIS 11-bo'lim): post doim o'zbekcha va lotinda.
   o'rniga "📝 To'liq ma'lumot: asl e'londa" (asl postga havola). Fallback ru/en uchun ham shu.
 Tugmalar ro'yxatini ham qaytar: 📩 Murojaat (username bo'lsa), 🔗 Ariza topshirish (apply_url bo'lsa),
 ⭐ Saqlash va 🔍 Boshqa ishlar (bot deep link).
-assets/categories/ ga har kategoriya uchun oddiy placeholder rasm (men keyin almashtiraman) + boshqa.jpg.
+RASMLAR (docs/IMAGES.md): processing/images.py — pick_image(category, profession): assets/images/<kat>/<kasb>/
+→ assets/images/<kat>/ → assets/images/boshqa/; har papkada 3–4 variant NAVBAT BILAN (round-robin, hisoblagich
+bazada, restart'dan keyin ham davom etadi — mavjud category_images jadvalini Alembic migratsiya bilan
+ARCHITECTURE dagi images jadvaliga kengaytir), papkadagi fayllar har safar qayta o'qiladi. Bo'sh papkalar uchun
+scripts/make_placeholder_images.py — Pillow bilan 3 ta vaqtinchalik rasm (1280×720, har kategoriyaga o'z rangi,
+o'rtada kasb nomi, burchakda "Ayvona Jobs"), fayl nomi placeholder_*.jpg; haqiqiy rasm qo'shilsa placeholder'lar
+ishlatilmaydi.
 Test: 41 fixture uchun natijani tests/snapshots/<kanal>_<id>.html ga yoz.
 ```
 **Tekshirish:** `tests/snapshots/` dagi postlarni o'qing — shunday chiqishi sizga yoqadimi? Menga (chatdagi Claude'ga) 3–4 tasini tashlang, birga ko'rib chiqamiz.
@@ -278,7 +285,7 @@ apps/worker.py ni yoz, ichida 2 ta asyncio vazifa:
    manzil bor; confidence yuqori) — dublikat asosiy job bo'ladi, eskisi duplicate. Chiqib bo'lgan postga tegilmaydi.
    Manba havolasi — tanlangan versiyaning kanali. 14 kundan keyin yana chiqsa — yangi e'lon (vakansiya hali ochiq).
 2) publisher (outbox): queued/retry jobs ni navbat bilan oladi, publish_interval_seconds ga rioya qiladi.
-   Yuborishdan oldin status=sending. sendPhoto (kategoriya rasmi, category_images.telegram_file_id kesh)
+   Yuborishdan oldin status=sending. sendPhoto (pick_image(category, profession); har fayl uchun telegram_file_id kesh — fayl o'zgarsa kesh yangilanadi)
    + caption HTML + formatter bergan tugmalar. Link preview O'CHIQ (manba havolasi kartochka bo'lib chiqmasin).
    Muvaffaqiyat: published, channel_message_id. TelegramRetryAfter → kut. Tarmoq xatosi → exponential
    backoff (next_retry_at). HTML parse xatosi → oddiy matn bilan qayta urin. max_publish_attempts dan
@@ -321,6 +328,8 @@ Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza
    - /sources ro'yxatida Telegram kanallar va saytlar birga ko'rinadi; saytlar uchun ham [⏸] [▶️] [🗑] [📊]
      va "tekshirish oralig'i" (15 daq / 30 daq / 1 soat) tugmalari.
    - Faqat ADMIN_IDS ishlata oladi; har o'zgarish logga yoziladi.
+6) RASMLARNI BOT ORQALI BOSHQARISH (docs/IMAGES.md): /images (bo'shliqlar va placeholder'lar ro'yxati),
+   /addimage <kasb|kategoriya> → admin rasm yuboradi → tegishli papkaga saqlanadi, /images <kasb> → [🗑 O'chirish].
 ```
 **Commit:** `feat(admin): notifications, monitoring, backups, admin commands`
 
@@ -389,7 +398,7 @@ Testlar: har bir filtr, limit, aloqa majburiyligi.
 
 ```text
 bot/handlers/search.py:
-- Qidiruv ustasi: Kategoriya (yoki "Hammasi") → Hudud (yoki "Hammasi", "Masofaviy") → Maosh
+- Qidiruv ustasi: Kategoriya (yoki "Hammasi") → Kasb (shu kategoriyadagi kasblar tugmalari yoki "Hammasi") → Hudud (yoki "Hammasi", "Masofaviy") → Maosh
   ("Farqi yo'q", "2 mln+", "4 mln+", "6 mln+", "10 mln+") → natijalar.
 - Yoki "🔤 So'z bilan qidirish" — jobs_fts (FTS5), normalize qilingan so'rov.
 - Natijalar: faqat published va muddati o'tmagan, published_at bo'yicha eng yangisi birinchi, 5 tadan sahifa
@@ -407,7 +416,7 @@ USD maoshlar uchun kurs: kv_store.usd_rate (kunda 1 marta cbu.uz ochiq API'dan y
 ## BOSQICH 13 — 🔔 Ish obunalari ⏱ 1–2 soat · Model: `sonnet`
 
 ```text
-bot/handlers/alerts.py: obuna yaratish (qidiruv ustasi bilan bir xil qadamlar + ixtiyoriy kalit so'z),
+bot/handlers/alerts.py: obuna yaratish (qidiruv ustasi bilan bir xil qadamlar: kategoriya → KASB → hudud → maosh + ixtiyoriy kalit so'z),
 ro'yxat, o'chirish, pauza. Foydalanuvchiga max 5 ta obuna.
 services/alerts.py (worker ichida): e'lon published bo'lgach mos obunalarni topadi, alert_deliveries UNIQUE
 orqali bir xabarni ikki marta yubormaydi, foydalanuvchiga kuniga max 20 ta xabar (qolganlari kunlik
