@@ -41,7 +41,7 @@ EXPECTED_TABLES = {
     "subscriptions",
     "alert_deliveries",
     "search_logs",
-    "category_images",
+    "images",
     "filter_words",
     "ai_cache",
     "kv_store",

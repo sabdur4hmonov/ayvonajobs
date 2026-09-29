@@ -240,6 +240,8 @@ Menga qaysi misollar o'tmaganini va nima uchunligini tushuntir.
 
 ## BOSQICH 6 — Tozalash, shablon, rasmlar ⏱ 1–2 soat · Model: `sonnet`
 
+- [x] Bajarildi — 2026-09-29 (tafsilot: `docs/PROGRESS.md`; ko'rib chiqish: `tests/snapshots/`, `scripts/preview_posts.py`)
+
 ```text
 processing/clean.py: config/source_rules.yaml ni o'qi (defaults + har kanal: cut_from, strip_lines, exact_lines,
 header_lines, header_junk_words, drop_trailing_hashtags, extra_own_usernames). Xavfsizlik: kesishdan keyin

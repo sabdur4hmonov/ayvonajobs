@@ -129,12 +129,41 @@ class PublisherConfig(BaseModel):
     max_publish_attempts: int = 8
 
 
+class BrandingConfig(BaseModel):
+    """Our channel and bot (post signature, deep-link buttons). Usernames without ``@``."""
+
+    channel_username: str = "ayvona"
+    channel_title: str = "Ayvona Jobs"
+    bot_username: str = "ayvonabot"
+
+    @field_validator("channel_username", "bot_username")
+    @classmethod
+    def _no_at(cls, v: str) -> str:
+        return v.strip().lstrip("@")
+
+
+class FormatterConfig(BaseModel):
+    min_confidence: float = Field(default=0.7, ge=0, le=1)
+    max_caption_length: int = Field(default=1024, ge=200)
+    max_tags: int = Field(default=5, ge=1)
+    max_feature_tags: int = Field(default=2, ge=0)
+    max_contacts: int = Field(default=3, ge=1)
+
+
+class ImagesConfig(BaseModel):
+    root: str = "assets/images"
+    fallback_category: str = "boshqa"
+
+
 class AppConfig(BaseModel):
     """Content of ``config/settings.yaml``."""
 
     sources: list[SourceConfig] = Field(default_factory=list)
     collector: CollectorConfig = Field(default_factory=CollectorConfig)
     publisher: PublisherConfig = Field(default_factory=PublisherConfig)
+    branding: BrandingConfig = Field(default_factory=BrandingConfig)
+    formatter: FormatterConfig = Field(default_factory=FormatterConfig)
+    images: ImagesConfig = Field(default_factory=ImagesConfig)
 
     @field_validator("sources", mode="before")
     @classmethod
@@ -322,6 +351,10 @@ class Settings(BaseModel):
     @property
     def timezone(self) -> ZoneInfo:
         return ZoneInfo(self.env.tz)
+
+    @property
+    def images_dir(self) -> Path:
+        return resolve_path(self.app.images.root)
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:

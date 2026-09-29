@@ -10,6 +10,7 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-29 | 3 — Collector | `sources/base.py`, `telegram_source.py`, `registry.py`, `apps/collector.py` (`--once` rejimi bilan), `scripts/login_telethon.py`, `scripts/show_status.py`; soxta manba + soxta Telethon client bilan testlar | 66 test ✅ (5 marta ketma-ket), ruff ✅. Haqiqiy Telegram'da **tekshirilmagan** (session yo'q) |
 | 2026-09-29 | 4 — Normalize, classify, dedup | 41 fixture (`tests/fixtures/posts/`, bazadan aynan) + 10 dedup fixture; `processing/`: `normalize`, `language`, `keywords`, `contacts`, `boilerplate`, `classify`, `dedup`; `scripts/export_fixtures.py`, `scripts/dedup_report.py` | 251 test ✅ + 24 xfail (extract — Bosqich 5), ruff ✅. **41/41** kind to'g'ri. 377 postda: 27 dublikat guruh (14 kunlik oyna) |
 | 2026-09-29 | 5 — Extractor, kategoriya | `processing/`: `extract`, `salary`, `location`, `categorize` (+ `contacts` kengaytirildi); `config/extract.yaml` (yangi), `regions.yaml` (14 hudud, tumanlar, mo'ljallar), `categories.yaml` kalit so'zlari; `jobs.profession` + `jobs.salary_period` (migratsiya `b5e1a7c3d9f2`); `low_quality` statusi; `scripts/extract_report.py`; 735/742 qoida tuzatildi | 370 test ✅ (0 xfail — **24/24 o'tdi**), ruff ✅. 313 job'dan: 2 tasi aloqasiz, 3 tasi low_quality, 309 tasi kanalga chiqadi |
+| 2026-09-29 | 6 — Tozalash, shablon, rasmlar | `processing/`: `clean`, `formatter`, `images`; `db/repositories/images_repo.py`; `images` jadvali (migratsiya `c7a4e2d8f1b6`, `category_images` o'rniga); `settings.yaml`: `branding`, `formatter`, `images`; `Extraction.address`; `scripts/make_placeholder_images.py` (Pillow), `scripts/preview_posts.py`; 43 ta snapshot `tests/snapshots/` | 524 test ✅, ruff ✅. Bazadagi 309 e'lon: 285 to'liq shablon, 24 fallback, eng uzuni 1022/1024 |
 
 ---
 
@@ -238,6 +239,72 @@ Ko'rish: `uv run python scripts/extract_report.py` (`--jobs`, `--no-contact`, `-
 - "Har video uchun 50 000" kabi KPI summalar maosh bilan aralashsa, aql-hush tekshiruvi sonlarni tashlaydi (faqat matn).
 - Ko'p vakansiyali postning kategoriyasi — eng yaxshi / birinchi lavozimniki (v1 qarori, SOURCE_ANALYSIS §9).
 
+### Bosqich 6
+1. **`clean.py` qator qarorlarini `boilerplate.keep_mask()` dan oladi** (Bosqich 4) — classify/dedup/extract bilan
+   aynan bir xil qatorlar o'chadi. Asl matnning emoji va alifbosi saqlanadi (faqat NFKC, keycap, apostrof bir xil).
+   `header_lines` qo'shimcha qo'llanadi. 40% qoidasi ishlasa — `logger.warning` (bazada 2 ta: Crafers 40829/40838).
+2. **Aloqa hech qachon o'chmaydi:** o'chirilgan qatorda telefon yoki (kanalniki bo'lmagan) @username bo'lsa va u
+   qolgan matnda yo'q bo'lsa — qator qaytariladi (`restored_lines`, log). Bazadagi 313 job'da **0 marta** kerak bo'ldi
+   (qoidalar aloqani kesmaydi), lekin himoya turibdi. Yashirin havolalar: reklama (`drop_link_patterns`, bo'sh matnli,
+   kanalning o'z akkaunti) va o'chgan qatordagilari tashlanadi; URL tugmalar qoladi. `utm_*`, `text=` ... olib tashlanadi.
+   Bot orqali qo'shilgan kanal: `clean(..., only_defaults=True)` (YAML'da bo'lmagan kanalga baribir faqat defaults tushadi).
+3. **Shablon — POST_EXAMPLES dagi bilan aynan** (test `test_full_template_matches_the_agreed_example` belgima-belgi
+   tekshiradi). Qo'shimcha qatorlar (shablonda yo'q edi):
+   - `📧 Email:` — aloqa faqat email bo'lsa ham ko'rinsin;
+   - `🔗 Ariza: ariza topshirish` (havola) — **faqat** telefon/username/email bo'lmasa (masalan hh.uz e'lonlari), aks
+     holda ariza havolasi faqat tugmada;
+   - `📝 To'liq ma'lumot: asl e'londa` — ru/en e'lonlarda va fallback matni qisqartirilganda.
+4. **Maosh ko'rinishi:** `4 000 000 – 6 000 000 so'm`, faqat min → `4 000 000 so'mdan`, faqat max → `so'mgacha`,
+   USD → `500 – 800 $`, davr → `(kunlik)` / `(haftalik)` / `(soatbay)` (oylik — yozilmaydi), matnda KPI/bonus bo'lsa
+   `+ KPI` / `+ bonus`. Son yo'q: "kelishiladi" so'zlari (`extract.yaml: salary_negotiable`) → `Kelishiladi`, aks holda
+   o'zbekcha `salary_text` (masalan 25039: `250 000` — sizning Bosqich 5 qaroringiz). ru/en da son yo'q → `Kelishiladi`.
+5. **Manzil:** `Extraction.address` qo'shildi ("Manzil:" yorlig'i qiymati). Bor bo'lsa — o'sha (shahar/viloyat nomi
+   bo'lmasa oldiga hudud qo'shiladi: `Toshkent sh., Chilonzor 9-kvartal`), yo'q bo'lsa — `Toshkent sh., Chilonzor tumani`
+   ("tumani" faqat Toshkent shahri uchun; viloyatlardagi nomlar ko'pincha shahar). Masofaviy → `Masofaviy, ...`.
+   Ko'p hudud → hudud nomlari (≤ 3). ru/en da erkin manzil matni ko'rsatilmaydi — faqat bizning hudud nomlari.
+6. **Til qoidasi:**
+   - Kanalda **kirill harf umuman chiqmaydi** — o'zbek postidagi ruscha qator ham lotinga o'giriladi (test hamma real
+     postda tekshiradi). Lavozim kichik harf bilan boshlansa — bosh harf (`Moddiy ashyoviy xisobchi`).
+   - ru lavozim: lug'atda **butun** lavozim bo'lsa — tarjima; bo'lmasa **kasb nomi** (`Sotuv menejeri`), u ham bo'lmasa —
+     so'zma-so'z. Sabab: ruschani so'zma-so'z o'girish rus grammatikasini qoldiradi ("Menejer po rabote s ...").
+   - en lavozim: lug'at (exact, keyin so'zma-so'z); tarjima qilinmagan so'zlar **asl harf kattaligida** qoladi
+     (`UX/UI dizayner`, avval `Ux/ui dizayner` edi — `TitleTranslator` ga ko'chirildi, extract ham shundan foydalanadi).
+   - ru/en ish vaqti: faqat vaqt va kunlar (`с 10:00 до 19:00, 5/2` → `10:00–19:00, 5/2`), so'z bo'lsa — ko'rsatilmaydi.
+7. **Teglar:** `#kasb #kategoriya #hudud(lar)` + ≤ 2 belgi-teg, jami ≤ 5, takror yo'q (operator = operator → bitta).
+   Ko'p hududda har hudud tegi (5 tagacha, keyin belgi-teglar sig'maydi). `#boshqa` ham yoziladi (izchillik uchun).
+8. **Fallback** (`confidence < formatter.min_confidence`, 0.7): `💼 Yangi ish e'loni — <kategoriya>` + tozalangan matn
+   (manbaning `#teg` qatorlari va **faqat aloqani takrorlaydigan** qatorlar — "TELEFON : +998..." — olib tashlanadi,
+   chunki pastda `📞 Aloqa` bor) + aloqa. Yashirin havolalar matnga `<a>` bo'lib qaytadi. ru/en fallback'da matn yo'q —
+   lavozim (bo'lsa), maosh, manzil va `📝 To'liq ma'lumot`.
+9. **1024 belgi Telegram hisobida** (UTF-16: emoji = 2). Qisqartirish tartibi: fallback matni → talablar (qisqarib,
+   25 belgidan kam qolsa — o'chadi) → lavozimlar ro'yxati (`… va yana N ta`) → ish vaqti/kompaniya/manzil qisqaradi →
+   ish vaqti o'chadi → teglar. Lavozim, maosh, aloqa, imzo, manba — hech qachon. Talablar oldindan 400, manzil 120
+   belgigacha. Hamma matn `html.escape`.
+10. **Tugmalar:** `FormattedPost.buttons(job_id)` — 1-qator `📩 Murojaat` (birinchi @username) + `🔗 Ariza topshirish`
+    (apply_url), 2-qator `⭐ Saqlash` (`t.me/ayvonabot?start=save_<id>`; job id kerak — Bosqich 7 da beriladi) +
+    `🔍 Boshqa ishlar` (`?start=search`). Kanal/bot nomlari `settings.yaml: branding` da (kodda emas).
+11. **Rasmlar:** `category_images` (bitta rasm/kategoriya) → **`images`** jadvali (ARCHITECTURE §4): kasb, fayl yo'li,
+    sha256, `telegram_file_id`, `times_used`, `last_used_at`, `is_placeholder`. Navbat = **eng uzoq ishlatilmagani**
+    (1→2→3→1; restart'dan keyin ham). Fayl o'zgarsa (hash) — `file_id` o'chadi; eski faylning kech kelgan `file_id` si
+    yangi faylga yozilmaydi. Haqiqiy rasm har doim vaqtinchalikdan ustun — batafsil `docs/IMAGES.md`.
+    Hech rasm bo'lmasa `pick_image` → `None` (Bosqich 7 publisher shunda matnni rasmsiz yuboradi).
+12. **Vaqtinchalik rasmlar git'ga tushmaydi** (`.gitignore`): 249 ta fayl (~9 MB) repo'ni og'irlashtirardi, skript esa
+    har joyda 10 soniyada yasaydi. ⚠️ **Bosqich 9 (`deploy.sh`) da `make_placeholder_images.py` ni chaqirish kerak.**
+13. **Pillow** qo'shildi (`uv add pillow`) — skript uchun; Bosqich 8 `/addimage` ham ishlatadi.
+14. **Snapshot testi:** `tests/snapshots/<kanal>_<id>.html` (43 ta: 41 misol + 2 regressiya). E'lon bo'lmaganlar uchun
+    faqat "kanalga chiqmaydi (kind=...)" izohi. Ataylab o'zgartirilgandan keyin yangilash buyrug'i test faylining boshida.
+15. **Bosqich 5 ga tegishli topilma (tuzatmadim):** `@Buxgalteriyaishorinlarii/5450` ("Video darsliklar mavzusi" —
+    kurs reklamasi) job deb tasniflangan va fallback bilan chiqadi. Filtr so'zi kerak (masalan "video darslik").
+
+**Natija:** 41 misoldan 23 tasi kanalga chiqadi (21 to'liq shablon + 2 fallback), 17 tasi e'lon emas, 1 tasi (40829)
+low_quality; 2 regressiya misoli (735, 742) — to'liq shablon. Bazadagi 309 ta chiqadigan e'lon: **285 to'liq shablon, 24 fallback**, 10 tasi qisqartirildi (hammasi
+fallback matni), eng uzuni 1022/1024.
+
+**Ma'lum cheklovlar:**
+- Ko'p vakansiyali postda maosh/manzil — umumiy (birinchi topilgani), har lavozimniki alohida emas.
+- ru/en e'lonning talablari ko'rsatilmaydi (Bosqich 15 Gemini tarjima qiladi).
+- Fallback'da manbaning emojilari va KATTA HARFLI sarlavhalari saqlanadi (asl matn shunday).
+
 ---
 
 ## Sardor uchun
@@ -258,6 +325,11 @@ Kompyuter yoniga qaytganingizda qilishingiz kerak bo'lgan narsalar (batafsil —
 - [ ] **Bosqich 5 migratsiyasi:** `uv run alembic upgrade head` (jobs jadvaliga `profession`, `salary_period`).
 - [ ] **Qaror kerak — 742** (2 oy bepul amaliyot, keyin haq): job qildim. Kerak bo'lmasa `config/filters.yaml` dagi
       `opportunity_strong_exceptions` ni o'chiring.
+- [ ] **Bosqich 6 migratsiyasi:** `uv run alembic upgrade head` (`category_images` → `images` jadvali).
+- [ ] **Vaqtinchalik rasmlar:** `uv run python scripts/make_placeholder_images.py` (allaqachon bir marta ishga tushirdim —
+      249 ta rasm `assets\images\` da; git'ga tushmaydi).
+- [ ] **Postlar ko'rinishini ko'ring:** `uv run python scripts/preview_posts.py` → `start data\preview.html`
+      (309 ta e'lon kanaldagidek). Yoki `tests\snapshots\*.html`. Yoqmagan 3–4 tasini chatdagi Claude'ga tashlang.
 
 ---
 

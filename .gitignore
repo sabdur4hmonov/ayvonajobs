@@ -8,6 +8,9 @@
 # --- Runtime data (baza, loglar, backup'lar) ---
 data/
 
+# --- Vaqtinchalik rasmlar: scripts/make_placeholder_images.py har joyda o'zi chizadi ---
+assets/images/**/placeholder_*.jpg
+
 # --- Python ---
 .venv/
 __pycache__/

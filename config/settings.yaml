@@ -94,3 +94,21 @@ collector:
 publisher:
   publish_interval_seconds: 60       # kanalga postlar orasidagi minimal vaqt
   max_publish_attempts: 8            # shuncha xatodan keyin "failed" + admin'ga xabar
+
+# --- Kanal posti ko'rinishi (processing/formatter.py) --------------------
+branding:
+  channel_username: "ayvona"         # bizning kanal (imzo: "📢 @ayvona — Ayvona Jobs")
+  channel_title: "Ayvona Jobs"
+  bot_username: "ayvonabot"          # ommaviy bot (imzo va "⭐ Saqlash" / "🔍 Boshqa ishlar" tugmalari)
+
+formatter:
+  min_confidence: 0.7                # extract ishonchi shundan past bo'lsa — fallback shablon (tozalangan asl matn)
+  max_caption_length: 1024           # Telegram rasm osti matni chegarasi
+  max_tags: 5                        # #kasb #kategoriya #hudud + belgi-teglar, jami
+  max_feature_tags: 2                # #masofaviy #tajribasiz ... ko'pi bilan nechta
+  max_contacts: 3                    # har turdagi aloqadan (telefon, @username) ko'pi bilan nechta
+
+# --- Post rasmlari (processing/images.py, docs/IMAGES.md) ----------------
+images:
+  root: "assets/images"              # <kategoriya>/<kasb>/ papkalari
+  fallback_category: "boshqa"        # hech narsa topilmasa shu papka

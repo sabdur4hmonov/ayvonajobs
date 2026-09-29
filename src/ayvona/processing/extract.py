@@ -10,7 +10,7 @@ Fields:
 * title      — "Lavozim:/Position:/Вакансия:" label, else "... kerak" / "ищет ..." /
                "We are looking for ...", else a short first line with a profession in it,
                else the profession name; a vacancy list -> company or "Bir nechta vakansiya";
-* company, schedule, requirements — template labels (config/extract.yaml), "—" = empty;
+* company, schedule, requirements, address — template labels (config/extract.yaml), "—" = empty;
 * salary     — salary.py; region / district / is_remote — location.py;
 * positions  — vacancy lists (header + items, 1️⃣ 2️⃣ blocks, several "... kerak" blocks, lines
                with their own apply links) -> ``multi``;
@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass, field
 from functools import lru_cache
 
-from ayvona.config import DEFAULT_CONFIG_DIR, Settings, load_settings
+from ayvona.config import DEFAULT_CONFIG_DIR, Settings, TitleTranslations, load_settings
 from ayvona.processing.boilerplate import BoilerplateRules, keep_mask
 from ayvona.processing.categorize import Categorization, Categorizer
 from ayvona.processing.classify import PostInput
@@ -169,6 +169,7 @@ class Extraction:
     region: str | None = None
     regions: tuple[str, ...] = ()
     district: str | None = None
+    address: str | None = None  # "Manzil:" label value as written ("Chilonzor 9-kvartal")
     is_remote: bool = False
     schedule: str | None = None
     requirements: str | None = None
@@ -209,6 +210,37 @@ def _label_re(words: list[str]) -> re.Pattern[str] | None:
 def _phrase_re(words: list[str]) -> str:
     folded = sorted({fold(w) for w in words if fold(w)}, key=len, reverse=True)
     return "|".join(re.escape(w) for w in folded) or "(?!)"
+
+
+class TitleTranslator:
+    """Russian / English job title -> Uzbek (config/title_translations.yaml: exact, then words)."""
+
+    def __init__(self, tt: TitleTranslations) -> None:
+        self._exact = {fold(k): v for k, v in tt.exact.items()}
+        self._words = sorted(
+            ((fold(k), v) for k, v in tt.words.items()), key=lambda kv: -len(kv[0])
+        )
+
+    def exact(self, title: str) -> str | None:
+        """Translation of the whole title, if the dictionary has it."""
+        return self._exact.get(fold(title).strip(" ."))
+
+    def translate(self, title: str | None, language: Language | None) -> str | None:
+        """The Uzbek title; the title itself if the language is Uzbek or no word is known."""
+        if not title or language not in (Language.RU, Language.EN):
+            return title
+        key = fold(title).strip(" .")
+        if key in self._exact:
+            return self._exact[key]
+        # A Latin (English) title keeps the case of the words we don't translate ("UX/UI");
+        # a Cyrillic one is matched in its folded form (the dictionary keys are folded).
+        cyrillic = any("Ѐ" <= ch <= "ӿ" for ch in title)
+        out, changed = (key if cyrillic else title.strip(" .")), False
+        for src, dst in self._words:
+            new = re.sub(rf"(?<![\w']){re.escape(src)}(?![\w'])", dst, out, flags=re.IGNORECASE)
+            changed |= new != out
+            out = new
+        return (out[:1].upper() + out[1:]) if changed else title
 
 
 class Extractor:
@@ -252,11 +284,7 @@ class Extractor:
         self._region_words = KeywordSet(
             w for r in settings.regions.regions.values() for w in [*r.keywords, *r.districts]
         )
-        tt = settings.title_translations
-        self._exact = {fold(k): v for k, v in tt.exact.items()}
-        self._words = sorted(
-            ((fold(k), v) for k, v in tt.words.items()), key=lambda kv: -len(kv[0])
-        )
+        self.translator = TitleTranslator(settings.title_translations)
         self._rules: dict[str, BoilerplateRules] = {}
 
     # ------------------------------------------------------------------ helpers
@@ -567,17 +595,7 @@ class Extractor:
 
     def translate_title(self, title: str | None, language: Language | None) -> str | None:
         """Russian / English title -> Uzbek (config/title_translations.yaml: exact, then words)."""
-        if not title or language not in (Language.RU, Language.EN):
-            return title
-        key = fold(title).strip(" .")
-        if key in self._exact:
-            return self._exact[key]
-        out, changed = key, False
-        for src, dst in self._words:
-            new = re.sub(rf"(?<![\w']){re.escape(src)}(?![\w'])", dst, out)
-            changed |= new != out
-            out = new
-        return (out[:1].upper() + out[1:]) if changed else title
+        return self.translator.translate(title, language)
 
     # ------------------------------------------------------------------ main
     def extract(self, post: PostInput) -> Extraction:
@@ -611,6 +629,7 @@ class Extractor:
         loc: Location = self.location.find([ln.folded for ln in lines])
         schedule = self._text_field("schedule", lines, limit=3)
         requirements = self._text_field("requirements", lines, limit=MAX_BLOCK_LINES)
+        address = self._text_field("location", lines, limit=2)
 
         has_contact = bool(contacts)
         confidence = 0.0
@@ -641,6 +660,7 @@ class Extractor:
             region=loc.region,
             regions=loc.regions,
             district=loc.district,
+            address=address,
             is_remote=loc.is_remote,
             schedule=schedule,
             requirements=requirements,

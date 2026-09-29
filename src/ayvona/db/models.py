@@ -286,14 +286,30 @@ class SearchLog(Base):
 
 
 # =========================================================================== shared
-class CategoryImage(Base):
-    """Uploaded once; afterwards the Telegram ``file_id`` is reused."""
+class Image(Base):
+    """One picture file under ``assets/images/<category>/[<profession>/]`` (docs/IMAGES.md).
 
-    __tablename__ = "category_images"
+    ``times_used`` / ``last_used_at`` drive the rotation (least recently used goes next, so the
+    order survives restarts). ``telegram_file_id`` is reused after the first upload and reset
+    when ``file_hash`` changes (the file was replaced).
+    """
 
-    category: Mapped[str] = mapped_column(String(64), primary_key=True)
-    file_path: Mapped[str] = mapped_column(String(512))
+    __tablename__ = "images"
+    __table_args__ = (Index("ix_images_category_profession", "category", "profession"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category: Mapped[str] = mapped_column(String(64))
+    profession: Mapped[str | None] = mapped_column(String(64))  # None = a category picture
+    # Relative to the images root, "/" separators: "tibbiyot/shifokor/1.jpg"
+    file_path: Mapped[str] = mapped_column(String(512), unique=True)
+    file_hash: Mapped[str | None] = mapped_column(String(64))  # sha256
     telegram_file_id: Mapped[str | None] = mapped_column(String(255))
+    is_placeholder: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=sql_text("0")
+    )
+    times_used: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
+    last_used_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 
 

@@ -69,6 +69,14 @@ uv run python scripts/show_status.py            # bazada nima bor: manbalar, hea
 
 Keyingi bosqichlarda: `uv run python -m ayvona.apps.worker` va `uv run python -m ayvona.apps.bot`.
 
+**Post rasmlari va ko'rinishi** (Bosqich 6):
+```powershell
+uv run python scripts/make_placeholder_images.py   # bo'sh rasm papkalariga vaqtinchalik rasmlar (bir marta)
+uv run python scripts/preview_posts.py             # bazadagi e'lonlar kanalda qanday chiqadi -> data\preview.html
+start data\preview.html                            # brauzerda ochish
+```
+Haqiqiy rasmlarni `assets\images\<kategoriya>\<kasb>\` ga qo'ying (docs/IMAGES.md) — vaqtinchaliklari o'zi ishlatilmay qoladi.
+
 ## 6. Dasturchi uchun
 
 ```powershell
@@ -92,8 +100,8 @@ uv run ruff format .              # kodni formatlash
 | `src/ayvona/apps/` | Ishga tushadigan jarayonlar: collector, worker, bot |
 | `config/` | Sozlamalar (maxfiy emas): manbalar, kategoriyalar, hududlar, filtrlar |
 | `migrations/` | Alembic migratsiyalari (baza tuzilmasining versiyalari) |
-| `assets/categories/` | Har kategoriya uchun rasm |
-| `scripts/` | Yordamchi skriptlar (Telegram login) |
+| `assets/images/` | Post rasmlari: `<kategoriya>/<kasb>/`, navbat bilan (docs/IMAGES.md) |
+| `scripts/` | Yordamchi skriptlar (Telegram login, hisobotlar, rasmlar, postlar ko'rinishi) |
 | `tests/` | Testlar |
 | `deploy/` | Serverga chiqarish (Oracle, systemd) |
 | `data/` | **git'ga tushmaydi**: baza, session, loglar, backup'lar |

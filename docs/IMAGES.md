@@ -38,6 +38,14 @@ tikuvchi, oqituvchi, administrator, buxgalter, dasturchi, dispetcher, mobilograf
 
 Rasm hali yo'q joyda Bosqich 6 avtomatik **vaqtinchalik** rasm (rangli fon + kasb nomi) yasaydi — kanal hech qachon rasmsiz qolmaydi.
 
+**Vaqtinchalik rasmlar (Bosqich 6):** `uv run python scripts/make_placeholder_images.py` — har bo'sh papkaga 3 ta
+`placeholder_*.jpg`. Ular git'ga tushmaydi (`.gitignore`), har kompyuter/serverda shu buyruq bilan yasaladi.
+Tanlash tartibi: kasb papkasidagi **haqiqiy** rasm → kategoriya papkasidagi haqiqiy rasm → `boshqa/` dagi haqiqiy
+rasm → faqat hech qayerda haqiqiy rasm bo'lmasa, vaqtinchalik rasmlar (xuddi shu tartibda). Ya'ni `tibbiyot/` ga
+3 ta haqiqiy rasm qo'ysangiz, hamma tibbiyot kasblari o'sha rasmlarni oladi (kasbning o'z haqiqiy rasmi bo'lmaguncha).
+Navbat hisoblagichi bazada (`images` jadvali) — restart'dan keyin ham davom etadi. Fayl almashtirilsa, Telegram'dagi
+`file_id` keshi o'zi yangilanadi.
+
 ## Admin botdan boshqarish (Bosqich 8)
 
 - `/images` — qaysi kategoriya/kasbda nechta rasm bor, qaysilari vaqtinchalik (bo'shliqlar ro'yxati).
