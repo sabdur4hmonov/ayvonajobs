@@ -26,7 +26,8 @@
   "expected": {
     "kind": "job",
     "multi": true,
-    "category": "oshpaz",
+    "category": "oshxona",
+    "profession": "oshpaz",
     "region": "toshkent_sh",
     "phones": [
       "+998878053333"

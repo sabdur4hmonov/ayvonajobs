@@ -17,7 +17,8 @@
   },
   "expected": {
     "kind": "job",
-    "category": "marketing",
+    "category": "dizayn_media",
+    "profession": "mobilograf",
     "title_contains": "Mobilograf",
     "salary_min": 4000000,
     "salary_max": 7000000,

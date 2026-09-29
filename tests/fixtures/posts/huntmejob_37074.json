@@ -56,6 +56,7 @@
   "expected": {
     "kind": "job",
     "category": "logistika",
+    "profession": "trucking",
     "title_contains": "Fleet Specialist",
     "company": "Safar TS LLC",
     "salary_min": 500,

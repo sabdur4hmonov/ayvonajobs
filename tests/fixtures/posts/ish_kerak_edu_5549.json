@@ -74,7 +74,8 @@
   "expected": {
     "kind": "job",
     "multi": true,
-    "category": "sotuvchi",
+    "category": "sotuv",
+    "profession": "savdo_agenti",
     "salary_min": 3000000,
     "salary_max": 15000000,
     "currency": "UZS",

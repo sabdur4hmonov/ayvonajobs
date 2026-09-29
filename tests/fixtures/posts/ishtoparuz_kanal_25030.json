@@ -10,7 +10,8 @@
   "extra": {},
   "expected": {
     "kind": "job",
-    "category": "oshpaz",
+    "category": "oshxona",
+    "profession": "oshpaz",
     "title_contains": "oshpaz",
     "salary_min": 4000000,
     "salary_max": 4000000,

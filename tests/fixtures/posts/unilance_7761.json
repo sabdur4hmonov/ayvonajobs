@@ -17,7 +17,8 @@
   },
   "expected": {
     "kind": "job",
-    "category": "dizayner",
+    "category": "dizayn_media",
+    "profession": "dizayner",
     "title_contains": "UX/UI Designer",
     "salary_max": 3800,
     "currency": "USD",

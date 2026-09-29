@@ -156,6 +156,15 @@ not_job_markers:
   - "#dayjest"
   - "#маьлумот"
   - "#фойдали"
+  # Maosh jadvali / yangilik ("1-sentyabrdan pedagoglar qancha maosh oladilar" — @edustaffs/6799).
+  # Bittasi yetmaydi: reklama belgilari soni job balldan kam bo'lmasligi kerak (classify.py).
+  - prezident farmoni
+  - vazirlar mahkamasi qarori
+  - maosh oladilar
+  - oylik oladilar
+  - qo'lga tegishi
+  - ish haqlari miqdori
+  - toifalar bo'yicha
 
 # REZYUME — ish qidiruvchining e'loni (v1 da chiqarilmaydi; keyin "Rezyumelar" bo'limi uchun saqlanadi)
 resume_markers:

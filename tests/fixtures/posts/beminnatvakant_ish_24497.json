@@ -26,7 +26,8 @@
   "expected": {
     "kind": "job",
     "multi": true,
-    "category": "oqituvchi",
+    "category": "talim",
+    "profession": "oqituvchi",
     "region": "toshkent_sh",
     "phones": [
       "+998935888488",

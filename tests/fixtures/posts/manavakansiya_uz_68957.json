@@ -25,7 +25,7 @@
   },
   "expected": {
     "kind": "job",
-    "category": "menejer",
+    "category": "ofis",
     "title_contains": "TRENING",
     "salary_min": 5000000,
     "currency": "UZS",

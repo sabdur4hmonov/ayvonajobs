@@ -80,7 +80,9 @@ def write_fixture(path: Path, raw: dict[str, Any], old: dict[str, Any] | None) -
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("source", nargs="?", help="@kanal")
     parser.add_argument("external_id", nargs="?", help="post id")
     parser.add_argument("--dir", type=Path, default=DEFAULT_DIR)

@@ -37,7 +37,8 @@
   },
   "expected": {
     "kind": "job",
-    "category": "dizayner",
+    "category": "dizayn_media",
+    "profession": "dizayner",
     "title_contains": "Grafik Dizayner",
     "company": "ALSTAR ACP",
     "salary_max": 1000,

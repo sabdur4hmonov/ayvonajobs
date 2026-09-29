@@ -6,6 +6,7 @@ Usage:
     uv run python scripts/dedup_report.py            # duplicate groups (all posts with text)
     uv run python scripts/dedup_report.py --kinds    # + list of every non-job post and why
     uv run python scripts/dedup_report.py --jobs-only
+    uv run python scripts/dedup_report.py --review   # + weak "job" posts (score <= 2 / no contact)
 """
 
 from __future__ import annotations
@@ -88,7 +89,9 @@ def all_own_usernames(settings: Settings) -> set[str]:
     return own
 
 
-def run(posts: list[Post], jobs_only: bool, ignore: set[str]) -> dict[str, list[tuple[Post, DedupMatch]]]:
+def run(
+    posts: list[Post], jobs_only: bool, ignore: set[str]
+) -> dict[str, list[tuple[Post, DedupMatch]]]:
     index = DedupIndex()
     groups: dict[str, list[tuple[Post, DedupMatch]]] = defaultdict(list)
     for p in posts:
@@ -97,7 +100,11 @@ def run(posts: list[Post], jobs_only: bool, ignore: set[str]) -> dict[str, list[
         if r.kind is PostKind.NO_TEXT or (jobs_only and r.kind is not PostKind.JOB):
             continue
         entry = make_entry(
-            p.key, p.posted_at, r.clean_text, r.contacts.keys and _ordered(r), ignore_usernames=ignore
+            p.key,
+            p.posted_at,
+            r.clean_text,
+            r.contacts.keys and _ordered(r),
+            ignore_usernames=ignore,
         )
         p.title = entry.title
         if match := index.check(entry):
@@ -110,7 +117,9 @@ def _ordered(r: Classification) -> list[str]:
 
 
 def print_groups(groups: dict[str, list[tuple[Post, DedupMatch]]], by_key: dict[str, Post]) -> None:
-    for n, (orig_key, dups) in enumerate(sorted(groups.items(), key=lambda g: g[1][0][0].posted_at), 1):
+    for n, (orig_key, dups) in enumerate(
+        sorted(groups.items(), key=lambda g: g[1][0][0].posted_at), 1
+    ):
         orig = by_key[orig_key]
         kind = orig.result.kind if orig.result else "?"
         print(f"\n[{n}] ORIGINAL {orig_key}  ({kind})  {orig.posted_at:%m-%d %H:%M}")
@@ -126,9 +135,14 @@ def print_groups(groups: dict[str, list[tuple[Post, DedupMatch]]], by_key: dict[
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument("--jobs-only", action="store_true", help="only posts classified as job")
     parser.add_argument("--kinds", action="store_true", help="also list every non-job post")
+    parser.add_argument(
+        "--review", action="store_true", help="also list weak jobs (score <= 2 or no contact)"
+    )
     args = parser.parse_args()
 
     settings = get_settings()
@@ -158,6 +172,15 @@ def main() -> int:
             if r and r.kind is not PostKind.JOB:
                 first = p.input.text.strip().split("\n", 1)[0][:70]
                 print(f"  {r.kind:<11} {p.key:<36} {', '.join(r.reasons)[:60]:<60} | {first}")
+
+    if args.review:
+        print("\n--- Tekshirish kerak bo'lgan job'lar (ball <= 2 yoki aloqa yo'q) ---")
+        for p in posts:
+            r = p.result
+            if r and r.kind is PostKind.JOB and (r.job_score <= 2 or not r.has_contact):
+                first = p.input.text.strip().split("\n", 1)[0][:70]
+                contact = "aloqa bor" if r.has_contact else "ALOQA YO'Q"
+                print(f"  ball={r.job_score} {contact:<10} {p.key:<36} | {first}")
 
     groups = run(posts, args.jobs_only, all_own_usernames(settings))
     by_key = {p.key: p for p in posts}

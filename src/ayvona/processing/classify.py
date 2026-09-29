@@ -1,4 +1,6 @@
-"""What kind of post is this? ``job | not_job | resume | closed | opportunity | suspicious | no_text``.
+"""What kind of post is this?
+
+``job | not_job | resume | closed | opportunity | suspicious | no_text``.
 
 Order of rules (docs/SOURCE_ANALYSIS.md §3):
     no_text -> closed -> resume -> suspicious -> unpaid internship -> channel hashtags ->

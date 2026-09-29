@@ -11,6 +11,7 @@
   "expected": {
     "kind": "job",
     "category": "operator",
+    "profession": "operator",
     "title_contains": "Оператор колл-центра",
     "company": "FreeLink",
     "salary_min": 4000000,

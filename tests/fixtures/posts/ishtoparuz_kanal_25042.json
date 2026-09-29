@@ -10,7 +10,7 @@
   "extra": {},
   "expected": {
     "kind": "job",
-    "category": "sotuvchi",
+    "category": "sotuv",
     "salary_min": 7000000,
     "salary_max": 15000000,
     "currency": "UZS",

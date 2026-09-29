@@ -135,7 +135,7 @@ def find_contacts(
             continue
         user = _TME_USER_RE.search(low)
         # t.me/<user> is a contact; t.me/<bot>?start=... is an apply link.
-        if user and not low[user.end() : user.end() + 1] == "?":
+        if user and low[user.end() : user.end() + 1] != "?":
             usernames.append(canon_username(user.group(1)))
         else:
             urls.append(url)

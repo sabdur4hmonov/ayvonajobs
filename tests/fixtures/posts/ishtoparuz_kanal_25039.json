@@ -10,7 +10,8 @@
   "extra": {},
   "expected": {
     "kind": "job",
-    "category": "oshpaz",
+    "category": "sotuv",
+    "profession": "kassir",
     "title_contains": "kassir",
     "salary_min": 250000,
     "salary_max": 250000,

@@ -10,7 +10,8 @@
   "extra": {},
   "expected": {
     "kind": "job",
-    "category": "buxgalter",
+    "category": "moliya",
+    "profession": "buxgalter",
     "salary_min": 6000000,
     "currency": "UZS",
     "region": "samarqand",

@@ -38,7 +38,9 @@ def test_jobs_in_examples_have_contact(classifier: Classifier) -> None:
 def test_deadline_not_passed_is_still_a_job(classifier: Classifier) -> None:
     fx = next(f for f in POSTS if f["id"] == "jobs_fba_63")  # "Ariza muddati: 2026-09-19"
     assert classifier.classify(to_post(fx), datetime(2026, 9, 17, tzinfo=UTC)).kind is PostKind.JOB
-    assert classifier.classify(to_post(fx), datetime(2026, 9, 20, tzinfo=UTC)).kind is PostKind.CLOSED
+    assert (
+        classifier.classify(to_post(fx), datetime(2026, 9, 20, tzinfo=UTC)).kind is PostKind.CLOSED
+    )
 
 
 @pytest.mark.parametrize(
@@ -99,7 +101,8 @@ def test_employee_discount_does_not_make_job_an_ad(classifier: Classifier) -> No
 
 def test_prepayment_as_duty_is_not_scam(classifier: Classifier) -> None:
     text = (
-        "Sotuv menejeri kerak\nMaosh: 5 mln\nVazifalar: mijozlardan oldindan to‘lovlarni qabul qilish\n"
+        "Sotuv menejeri kerak\nMaosh: 5 mln\n"
+        "Vazifalar: mijozlardan oldindan to‘lovlarni qabul qilish\n"
         "Aloqa: @hr_x"
     )
     assert classifier.classify(PostInput(text=text), NOW).kind is PostKind.JOB

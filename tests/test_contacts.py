@@ -28,7 +28,9 @@ def test_phone_spellings(raw: str, phone: str) -> None:
     assert find_phones(normalize(raw)) == [phone]
 
 
-@pytest.mark.parametrize("raw", ["4 000 000 so'm", "7 500 000 - 15 000 000", "2026-09-19", "920012700"])
+@pytest.mark.parametrize(
+    "raw", ["4 000 000 so'm", "7 500 000 - 15 000 000", "2026-09-19", "920012700"]
+)
 def test_not_phones(raw: str) -> None:
     assert find_phones(normalize(raw)) == []
 
@@ -70,7 +72,9 @@ def test_bot_deep_link_is_apply_url_not_username() -> None:
 
 
 def test_own_usernames_exact_match() -> None:
-    c = find_contacts(normalize("@JahongirAcademy_admin va @JahongirAcademy"), own_usernames=["@JahongirAcademy"])
+    c = find_contacts(
+        normalize("@JahongirAcademy_admin va @JahongirAcademy"), own_usernames=["@JahongirAcademy"]
+    )
     assert c.usernames == ["@jahongiracademy_admin"]
 
 

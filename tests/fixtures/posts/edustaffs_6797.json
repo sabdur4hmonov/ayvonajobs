@@ -21,7 +21,8 @@
   },
   "expected": {
     "kind": "job",
-    "category": "oqituvchi",
+    "category": "talim",
+    "profession": "oqituvchi",
     "salary_min": 5000000,
     "salary_max": 15000000,
     "currency": "UZS",

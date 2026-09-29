@@ -88,7 +88,8 @@ def test_exact_text_is_duplicate_and_first_stays() -> None:
 
 def test_links_hashtags_and_channel_accounts_do_not_matter() -> None:
     index = DedupIndex()
-    index.check(entry("a", BASE + "\n#toshkent\n@kanal_bir"))
+    first = normalize(BASE + "\n#toshkent\n@kanal_bir")
+    index.check(make_entry("a", T0, first, ignore_usernames=["@kanal_bir"]))
     b = make_entry(
         "b", T0, normalize(BASE + "\nhttps://t.me/x?utm_source=y\n@kanal_ikki"),
         ignore_usernames=["@kanal_ikki"],
@@ -169,5 +170,5 @@ def test_guess_title(text: str, title: str) -> None:
 
 def test_dedup_text() -> None:
     assert dedup_text("sotuvchi kerak! #toshkent https://t.me/x @kanal @hr", ["@kanal"]) == (
-        "sotuvchi kerak @hr"
+        "sotuvchi kerak hr"
     )

@@ -18,6 +18,7 @@
   "expected": {
     "kind": "job",
     "category": "marketing",
+    "profession": "marketolog",
     "title_contains": "Marketing Manager",
     "company": "Jana Post",
     "salary_min": 900,

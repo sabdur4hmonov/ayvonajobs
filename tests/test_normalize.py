@@ -12,7 +12,9 @@ def test_keycap_digits() -> None:
     assert normalize("3️⃣.000.000 – 6️⃣.000.000 so‘m") == "3.000.000 – 6.000.000 so'm"
 
 
-@pytest.mark.parametrize("raw", ["o‘qituvchi", "oʻqituvchi", "o’qituvchi", "o`qituvchi", "o'qituvchi"])
+@pytest.mark.parametrize(
+    "raw", ["o‘qituvchi", "oʻqituvchi", "o’qituvchi", "o`qituvchi", "o'qituvchi"]
+)
 def test_apostrophes_unified(raw: str) -> None:
     assert normalize(raw) == "o'qituvchi"
 
@@ -34,7 +36,9 @@ def test_russian_text_is_not_transliterated() -> None:
 
 def test_mixed_post_only_uzbek_lines_transliterated() -> None:
     text = "Требуется бухгалтер для работы в компании\nИш ҳақи 6 млндан бошланади"
-    assert normalize(text) == "требуется бухгалтер для работы в компании\nish haqi 6 mlndan boshlanadi"
+    assert (
+        normalize(text) == "требуется бухгалтер для работы в компании\nish haqi 6 mlndan boshlanadi"
+    )
 
 
 @pytest.mark.parametrize(

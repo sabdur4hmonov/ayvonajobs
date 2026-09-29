@@ -21,7 +21,8 @@
   },
   "expected": {
     "kind": "job",
-    "category": "dizayner",
+    "category": "dizayn_media",
+    "profession": "dizayner",
     "title_contains": "UI/UX",
     "salary_min": 300,
     "salary_max": 1000,

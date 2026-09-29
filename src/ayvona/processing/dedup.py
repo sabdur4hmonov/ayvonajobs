@@ -10,6 +10,8 @@ of an earlier one when:
                      (>= 85) or at least one shared phone/username. A shared contact does not
                      count when both titles are known and clearly different (< 50): channels like
                      @jobs_fba put the same admin contact under every ad.
+                     Between 85 and 90 (the same ad re-typed in another channel's template)
+                     BOTH signals are required: similar titles AND a shared contact.
 
 The second signal in (3) matters: template channels (@huntmejob, @NextHireX, @kasbdoruz) post
 short ads that are 90%+ alike but are different vacancies. When in doubt we say "not a duplicate":
@@ -33,6 +35,8 @@ from ayvona.processing.contacts import canon_username
 
 WINDOW = timedelta(days=14)
 TEXT_THRESHOLD = 90.0
+# 85..90: only with similar titles AND a shared contact (both).
+STRICT_TEXT_THRESHOLD = 85.0
 TITLE_THRESHOLD = 85.0
 # Below this the titles name different positions -> never a duplicate via a shared contact.
 TITLE_CONFLICT = 50.0
@@ -62,9 +66,9 @@ def guess_title(norm_text: str) -> str:
     """
     lines = [ln.strip() for ln in norm_text.split("\n")]
     for line in lines:
-        if m := _TITLE_KEY_RE.match(line):
-            if title := _squash(_HASHTAG_RE.sub(lambda h: h.group(0)[1:], m.group(1))):
-                return title[:120]
+        m = _TITLE_KEY_RE.match(line)
+        if m and (title := _squash(_HASHTAG_RE.sub(lambda h: h.group(0)[1:], m.group(1)))):
+            return title[:120]
     for line in lines:
         rest = _squash(_HASHTAG_RE.sub(" ", line))
         if sum(ch.isalpha() for ch in rest) >= 3:
@@ -139,9 +143,11 @@ class DedupIndex:
         window: timedelta = WINDOW,
         text_threshold: float = TEXT_THRESHOLD,
         title_threshold: float = TITLE_THRESHOLD,
+        strict_text_threshold: float = STRICT_TEXT_THRESHOLD,
     ) -> None:
         self.window = window
         self.text_threshold = text_threshold
+        self.strict_text_threshold = strict_text_threshold
         self.title_threshold = title_threshold
         self._entries: list[DedupEntry] = []
         self._root: dict[Hashable, Hashable] = {}
@@ -186,17 +192,20 @@ class DedupIndex:
             entry.text,
             [c.text for c in cands],
             scorer=fuzz.ratio,
-            score_cutoff=self.text_threshold,
+            score_cutoff=min(self.strict_text_threshold, self.text_threshold),
             limit=None,
         )
         for _, score, idx in sorted(hits, key=lambda h: -h[1]):
             c = cands[idx]
             both_titles = bool(entry.title and c.title)
             title_score = fuzz.token_sort_ratio(entry.title, c.title) if both_titles else 0.0
-            if both_titles and title_score >= self.title_threshold:
-                return self._match(entry, c, "fuzzy", score)
-            conflict = both_titles and title_score < TITLE_CONFLICT
-            if entry.contacts & c.contacts and not conflict:
+            title_ok = both_titles and title_score >= self.title_threshold
+            shared = bool(entry.contacts & c.contacts)
+            if score < self.text_threshold:
+                if title_ok and shared:
+                    return self._match(entry, c, "fuzzy", score)
+                continue
+            if title_ok or (shared and not (both_titles and title_score < TITLE_CONFLICT)):
                 return self._match(entry, c, "fuzzy", score)
         return None
 
