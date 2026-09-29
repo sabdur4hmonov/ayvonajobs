@@ -32,6 +32,8 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
 5. **Secrets never in git**: `.env`, `*.session`, `data/`. Check `.gitignore` before every commit.
 6. **Sources are pluggable**: every source implements `BaseSource`; adding a website must not change the pipeline.
 7. Every user-submitted job **must** have a contact: phone (+998…) or Telegram @username.
+8. **Channel output = job vacancies only, always in Uzbek Latin.** Resumes, courses, grants, events are never posted.
+   Uzbek Cyrillic → transliterated; Russian/English → Uzbek fields only (see docs/SOURCE_ANALYSIS.md §11).
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)

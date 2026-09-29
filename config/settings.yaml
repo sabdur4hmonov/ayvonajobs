@@ -18,7 +18,64 @@
 # Diqqat: Telethon akkauntingiz shu kanallarga a'zo bo'lishi shart emas (ochiq kanal bo'lsa),
 # lekin yopiq kanallar uchun a'zo bo'lishi kerak.
 # Ro'yxatdan olib tashlangan kanal bazadan o'chirilmaydi — faqat "enabled=false" bo'ladi.
-sources: []
+sources:
+  - type: telegram
+    identifier: "@ishtoparuz_kanal"
+    own_usernames: ["@ishtoparuz_kanal"]
+  - type: telegram
+    identifier: "@beminnatvakant_ish"
+    own_usernames: ["@beminnatvakant_ish", "@tilchi_tarjimon_jobs", "@Kvartira_uylar_Tashkent"]
+  - type: telegram
+    identifier: "@ishmi_ish"
+    own_usernames: ["@ishmi_ish"]
+  - type: telegram
+    identifier: "@ish_kerak_edu"
+    own_usernames: ["@ish_kerak_edu", "@ish_kerak_edu_admini"]
+  - type: telegram
+    identifier: "@manavakansiya_uz"
+    own_usernames: ["@manavakansiya_uz"]
+  - type: telegram
+    identifier: "@ishlaUZ_rasmiy"
+    own_usernames: ["@ishlaUZ_rasmiy", "@ishla_uz1"]
+  - type: telegram
+    identifier: "@ishtopuz_rasmiy"
+    own_usernames: ["@ishtopuz_rasmiy", "@ishbor_ishtop_ishkerak"]
+  - type: telegram
+    identifier: "@unilance"
+    own_usernames: ["@unilance", "@webmakon"]
+  - type: telegram
+    identifier: "@kasbdoruz"
+    own_usernames: ["@kasbdoruz", "@kasbdor_uz"]
+  - type: telegram
+    identifier: "@jobmakon"
+    own_usernames: ["@jobmakon"]
+  - type: telegram
+    identifier: "@NextHireX"
+    own_usernames: ["@NextHireX"]
+  - type: telegram
+    identifier: "@huntmejob"
+    own_usernames: ["@huntmejob", "@huntmeglobal", "@huntmegroup", "@huntmesmartassistantbot", "@huntmemarketplace"]
+  - type: telegram
+    identifier: "@huntmeglobal"
+    own_usernames: ["@huntmeglobal", "@huntmejob", "@huntmegroup", "@huntmesmartassistantbot", "@huntmemarketplace"]
+  - type: telegram
+    identifier: "@toshkentda_ish_bor_ishchi"
+    own_usernames: ["@toshkentda_ish_bor_ishchi"]
+  - type: telegram
+    identifier: "@Buxgalteriyaishorinlarii"
+    own_usernames: ["@Buxgalteriyaishorinlarii"]
+  - type: telegram
+    identifier: "@edustaffs"
+    own_usernames: ["@edustaffs", "@Entrepreneur_J"]
+  - type: telegram
+    identifier: "@Ish_Toshkent"
+    own_usernames: ["@Ish_Toshkent"]
+  - type: telegram
+    identifier: "@digitalitvacancy"
+    own_usernames: ["@digitalitvacancy"]
+  - type: telegram
+    identifier: "@jobs_fba"
+    own_usernames: ["@jobs_fba"]
 
 # --- Collector (kanallarni o'qish) ------------------------------------
 collector:

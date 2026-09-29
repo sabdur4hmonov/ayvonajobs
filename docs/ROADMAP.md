@@ -54,7 +54,8 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] ⭐ Saqlanganlar + ulashish
 - [ ] 🔔 Ish obunasi: "dasturchi, Toshkent, 5 mln+" → yangi mos e'lon chiqsa bot xabar beradi
 - [ ] E'lonni yopish ("Ish topildi" tugmasi) + 30 kundan keyin qidiruvdan avtomatik chiqish
-- [ ] Admin: `/stats /queue /failed /retry /pause /resume /ban /unban /addword /delword /sources`
+- [ ] Admin: `/stats /queue /failed /retry /pause /resume /ban /unban /addword /delword`
+- [ ] Manbalarni bot orqali boshqarish: `/addsource /sources` (qo'shish, o'chirish, pauza — kodga tegmasdan)
 - [ ] Kanal postida tugmalar: "📩 Murojaat" · "⭐ Saqlash" · "🔍 Boshqa ishlar" (botga deep link)
 
 **AI (3-qism, ixtiyoriy)** — Gemini faqat regex uddalay olmaganda, kesh, fallback.
@@ -171,45 +172,62 @@ collector'ni o'chiring, 10 daqiqa kuting, yoqing → oradagi postlar ham kelgan 
 
 ---
 
-## BOSQICH 4 — Real post misollari → testlar ⏱ 1 soat · Model: `sonnet`
+## BOSQICH 4 — Real misollar → testlar, normalize, klassifikator, dedup ⏱ 1–2 soat · Model: `opusplan`
 
-> Bu bosqichdan oldin `docs/POST_EXAMPLES.md` ni to'ldiring (har kanaldan 2–3 ta post).
-> Chat'dagi Claude bilan shablonni kelishib olamiz, keyin bu prompt.
+> ✅ Tayyor: `docs/POST_EXAMPLES.md` (41 ta real misol + kutilgan natija), `docs/SOURCE_ANALYSIS.md`,
+> `config/source_rules.yaml`, `config/filters.yaml` — 19 kanaldan 377 post tahlili asosida.
 
 ```text
-docs/POST_EXAMPLES.md dagi har bir misolni tests/fixtures/posts/<manba>_<n>.txt ga ko'chir va
-har biri uchun tests/fixtures/posts/<manba>_<n>.expected.yaml yarat: is_job, category, title, company,
-salary_min, salary_max, currency, region, city, phone, username (misoldagi "kutilgan natija"ga qarab).
-Keyin processing/normalize.py yoz: kichik harf, o'zbek kirill→lotin transliteratsiya, o‘ oʻ o' o` ni bitta
-shaklga, emoji va ortiqcha bo'shliqlarni olib tashlash. processing/dedup.py: content_hash, fingerprint,
-rapidfuzz o'xshashlik (≥90%, oxirgi 7 kun). Hozircha faqat normalize va dedup testlarini yoz;
-extract testlari keyingi bosqichda (xfail bilan qoldir).
+docs/SOURCE_ANALYSIS.md, docs/POST_EXAMPLES.md, config/filters.yaml va config/source_rules.yaml ni o'qi.
+1) POST_EXAMPLES dagi 41 misolning har birini tests/fixtures/posts/<kanal>_<id>.json ga ko'chir:
+   {"source": "@kanal", "external_id": "...", "text": "...", "extra": {links, buttons}, "expected": {...}}.
+   Matn va extra ni POST_EXAMPLES dan emas, data/ayvona.db dagi raw_posts dan ol (aynan bo'lsin).
+2) processing/normalize.py: NFKC (𝗨𝗫 → UX), keycap raqamlar (3️⃣ → 3), kichik harf, o'zbek kirill→lotin
+   (ruscha matnni buzmasdan: faqat o'zbekcha harflar ў қ ғ ҳ bo'lsa yoki kontekst o'zbekcha bo'lsa),
+   o‘ oʻ o' o` → o', emoji va ortiqcha bo'shliqlarni olib tashlash. Asl matn ham saqlanib qoladi.
+3) processing/classify.py: kind = job | not_job | resume | closed | opportunity | suspicious
+   (SOURCE_ANALYSIS 3-bo'lim tartibi, filters.yaml markerlari, source_rules.yaml dagi job/non_job teglari,
+   'Ariza muddati' o'tgan bo'lsa closed). So'zlarni so'z chegarasi bilan qidir ("grant" ≠ "emigrant").
+   Matnsiz albom qismlari grouped_id bo'yicha birlashtiriladi.
+4) processing/dedup.py: SOURCE_ANALYSIS 8-bo'lim — tozalangan matn bo'yicha, 14 kunlik oyna, content_hash +
+   fingerprint (lavozim + birinchi telefon/username) + rapidfuzz ≥ 90%. Birinchisi qoladi, qolgani duplicate.
+   data/ayvona.db dagi 377 post ustida sinab ko'r: ≈ 22 guruh topilishi kerak — natijani menga ayt.
+5) processing/language.py: e'lon tilini aniqla — uz_latin | uz_cyrillic | ru | en (o'zbek kirill harflari ў қ ғ ҳ
+   va so'zlari bo'yicha; ruscha bilan adashtirma). Kanalga FAQAT kind=job chiqadi (resume/opportunity kerak emas).
+6) Testlar: normalize, classify (41 misolning hammasida kind to'g'ri), language, dedup. extract testlari — xfail.
+Menga o'zbekcha: nechta misol o'tdi, qaysilari o'tmadi va nega.
 ```
-**Commit:** `test: real post fixtures, normalize and dedup`
+**Commit:** `feat(processing): normalize, classify, dedup with real fixtures`
 
 ---
 
 ## BOSQICH 5 — Regex extractor + kategoriya ⏱ 2–3 soat · Model: `opus`
 
 ```text
-processing/extract.py va processing/categorize.py ni yoz. tests/fixtures dagi HAMMA xfail testlar
-o'tishi kerak.
-Extract (normalize qilingan va asl matndan):
-- phone: +998 XX XXX XX XX ning barcha yozilishlari (bo'shliq, tire, qavs, 998 siz, 9 raqamli) → +998XXXXXXXXX
-- username: @..., t.me/... (lekin sources.own_usernames dagilar EMAS)
-- salary: "3 mln", "3 000 000", "3.5 mln so'm", "5-7 mln", "dan/gacha", "от/до", "$500", "500 у.е.",
-  "kelishiladi/договорная" → salary_min/max (so'mda), currency, salary_text
-- title: "Lavozim:", "Vakansiya:", "Вакансия:", "Требуется", "ishga ... kerak" va birinchi qator evristikasi
-- region/city: config/regions.yaml (14 hudud + Toshkent tumanlari, lotin/kirill/rus variantlari),
-  "masofaviy/online/удаленно" → is_remote
-- company, schedule, requirements — kalit so'zli qatorlardan
-- confidence 0..1: title + (phone yoki username) bo'lsa ≥ 0.7
-Categorize: categories.yaml dagi kalit so'zlar, title'dagi moslik 3x ball, eng yuqori ball; teng yoki 0 → "boshqa".
-Kategoriyalarni kengaytir: sotuvchi, haydovchi, dasturchi, o'qituvchi, oshpaz/ofitsiant, buxgalter,
-operator/call-center, ombor/yuk tashuvchi, qurilish, tibbiyot, go'zallik, menejer, marketing/SMM,
-dizayner, qo'riqchi, tozalik, ishlab chiqarish, kuryer, administrator, chet elda ish, boshqa.
-Har biri uchun lotin, kirill va rus kalit so'zlari.
-Menga qaysi misollar yaxshi ishlamaganini va nima uchunligini tushuntir.
+processing/extract.py va processing/categorize.py ni yoz. tests/fixtures dagi HAMMA xfail testlar o'tishi kerak.
+SOURCE_ANALYSIS 4–7 va 9-10 bo'limlaridagi HAMMA formatlarni qo'lla:
+- aloqa 6 joydan: matndagi telefon/@username/t.me, extra.links (yashirin: "Aloqa uchun 👈", "Get the job.",
+  "havola", "Link"), extra.buttons ("Apply here", "Qiziqish bildirish"), t.me/+998... (telefon!), email,
+  forma/hh.uz/LinkedIn/telegra.ph → apply_url. own_usernames va source_rules.yaml dagi drop qoidalari —
+  aloqa emas (aniq moslik bilan).
+- telefon: 5-bo'limdagi barcha yozilishlar → +998XXXXXXXXX; operator kodlari ro'yxati + shahar kodlari (65–79);
+  noma'lum kod bo'lsa faqat yonida "tel/telefon/aloqa/bog'lanish" bo'lsa qabul qil.
+- maosh: 6-bo'limdagi barcha formatlar, salary_period (month/day/week/hour), USD alohida currency,
+  aql-hush tekshiruvi (xato raqam → faqat salary_text). "Depozit" maosh emas.
+- title, company, schedule, requirements — qolip kalitlari (Lavozim:, Position:, Job Title:, Вакансия:,
+  📊Lavozim:, 👔 Position:, ☑️ Lavozim:, 📌 ...), bo'lmasa birinchi mazmunli qator; "—" = bo'sh.
+- region/district: regions.yaml ni to'ldir (14 hudud + toshkent_vil + Toshkent tumanlari + metro/mo'ljallar,
+  lotin/kirill/rus/ingliz variantlari, xato yozilishlar: Sergili, Yunsobot, Yunusabad), ko'p shahar → "ko'p hudud",
+  Remote/online/uydan turib → is_remote.
+- multi: bir postda bir necha lavozim (ro'yxat, 1️⃣ 2️⃣, bir necha "... kerak" bloki) → positions ro'yxati.
+- confidence 0..1: title + aloqa bo'lsa ≥ 0.7.
+Categorize: title 3x ball. Kategoriyalar: sotuvchi (kassir ham), haydovchi, kuryer, dasturchi, oqituvchi,
+oshpaz (ofitsiant, kafe/restoran), buxgalter (moliya ham), operator (call-center), ombor (yuk tashuvchi,
+gruzchik, yig'uvchi), ishlab_chiqarish (sex, tikuvchi, fabrika), qurilish, tibbiyot, gozallik, menejer,
+marketing (SMM, mobilograf, videograf), dizayner, logistika (dispatcher, update/safety specialist, fleet),
+hr (recruiter), qoriqchi, tozalik, administrator, chet_el, boshqa. Lotin + kirill + rus + ingliz kalit so'zlar.
+Lavozimni o'zbekchaga o'girish: config/title_translations.yaml (exact, keyin words) — ru/en e'lonlar uchun.
+Menga qaysi misollar o'tmaganini va nima uchunligini tushuntir.
 ```
 **Commit:** `feat(processing): regex extractor and categorizer`
 
@@ -218,18 +236,27 @@ Menga qaysi misollar yaxshi ishlamaganini va nima uchunligini tushuntir.
 ## BOSQICH 6 — Tozalash, shablon, rasmlar ⏱ 1–2 soat · Model: `sonnet`
 
 ```text
-processing/clean.py: manba reklamasini olib tashla — sources.own_usernames, t.me havolalari (aloqa
-username'dan tashqari), "obuna bo'ling / kanalimizga / подписывайтесь / reklama uchun" qatorlari,
-filters.yaml dagi spam naqshlari, ortiqcha hashtaglar va bo'sh qatorlar.
-processing/formatter.py: docs/POST_EXAMPLES.md oxiridagi "KELISHILGAN SHABLON" bo'yicha HTML post.
-Bo'sh maydonlar chiqmasin. Hashtaglar: #kategoriya #hudud. Imzo shablon bo'yicha.
-Fallback: confidence past bo'lsa — kategoriya sarlavhasi + tozalangan original matn + aloqa + imzo.
-1024 belgi limiti: ARCHITECTURE 5-bo'limdagi qisqartirish tartibi. html.escape hamma user matniga.
-assets/categories/ ga har kategoriya uchun joy (hozircha oddiy placeholder rasmlar generatsiya qil,
-men keyin o'zimnikiga almashtiraman) + boshqa.jpg.
-Test: har bir fixture uchun formatter natijasini tests/snapshots/ ga yoz, men ko'rib chiqaman.
+processing/clean.py: config/source_rules.yaml ni o'qi (defaults + har kanal: cut_from, strip_lines, exact_lines,
+header_lines, header_junk_words, drop_trailing_hashtags, extra_own_usernames). Xavfsizlik: kesishdan keyin
+matnning 40% dan kami qolsa — kesma, log yoz. utm_*/text= parametrlarini havolalardan olib tashla.
+Aloqa @username va telefonlar HECH QACHON o'chmasin. Admin bot orqali qo'shgan kanalga faqat defaults.
+processing/formatter.py: docs/POST_EXAMPLES.md oxiridagi "KELISHILGAN SHABLON" — AYNAN shunday:
+bo'sh maydon chiqmaydi, maosh yo'q → "Kelishiladi", ko'p vakansiya → "📌 Lavozimlar:" ro'yxati,
+hashtaglar #kategoriya #hudud, imzo, eng oxirida <i><a href="https://t.me/<kanal>/<id>">manba</a></i>
+(faqat aggregator postlarida). 1024 belgi: avval talablar/tafsilotlar qisqaradi; lavozim, maosh, manzil,
+aloqa, imzo, manba — hech qachon. html.escape hamma matnga.
+Fallback: confidence past bo'lsa — kategoriya sarlavhasi + tozalangan matn + aloqa + imzo + manba.
+TIL QOIDASI (SOURCE_ANALYSIS 11-bo'lim): post doim o'zbekcha va lotinda.
+- uz_cyrillic → butun matn lotinga transliteratsiya (to'g'ri qoidalar: ш→sh, ч→ch, ў→o', ғ→g', қ→q, ҳ→h, ё→yo, ю→yu, я→ya,
+  е so'z boshida → ye, ц→s/ts, ъ→').
+- ru / en → faqat o'zbekcha maydonlar (lavozim lug'at orqali, maosh, manzil, ish vaqti, aloqa), erkin matn qo'yilmaydi,
+  o'rniga "📝 To'liq ma'lumot: asl e'londa" (asl postga havola). Fallback ru/en uchun ham shu.
+Tugmalar ro'yxatini ham qaytar: 📩 Murojaat (username bo'lsa), 🔗 Ariza topshirish (apply_url bo'lsa),
+⭐ Saqlash va 🔍 Boshqa ishlar (bot deep link).
+assets/categories/ ga har kategoriya uchun oddiy placeholder rasm (men keyin almashtiraman) + boshqa.jpg.
+Test: 41 fixture uchun natijani tests/snapshots/<kanal>_<id>.html ga yoz.
 ```
-**Tekshirish:** `tests/snapshots/` dagi postlarni o'qing — shunday chiqishi sizga yoqadimi?
+**Tekshirish:** `tests/snapshots/` dagi postlarni o'qing — shunday chiqishi sizga yoqadimi? Menga (chatdagi Claude'ga) 3–4 tasini tashlang, birga ko'rib chiqamiz.
 **Commit:** `feat(processing): cleaner and post formatter`
 
 ---
@@ -238,18 +265,22 @@ Test: har bir fixture uchun formatter natijasini tests/snapshots/ ga yoz, men ko
 
 ```text
 apps/worker.py ni yoz, ichida 2 ta asyncio vazifa:
+0) MUHIM: bazadagi hozirgi raw_posts (initial_backfill bilan olingan test postlari, fetched_at <= worker
+   birinchi ishga tushgan vaqt) kanalga CHIQMASIN: birinchi ishga tushishda ularni status=skipped_backfill qil
+   (bir martalik migratsiya yoki kv_store bayrog'i). Keyin backfill bilan kelgan postlar ham faqat
+   settings.publisher.publish_backfill=true bo'lsa chiqadi (standart false).
 1) pipeline: status=new va fetched_at 60 soniyadan eski raw_posts ni oladi (albom qismlari yig'ilishi uchun),
-   grouped_id bo'yicha birlashtiradi, is_job → dedup → extract → categorize → clean → format → jobs(queued).
-   Har bir raw_post statusini ARCHITECTURE 3-bo'lim bo'yicha o'zgartir. Istisno bo'lsa: status=error,
-   admin'ga xabar, sikl davom etadi. no_text postlar admin chatga forward qilinadi.
+   grouped_id bo'yicha birlashtiradi → classify → (job bo'lsa) clean → dedup → extract → categorize → format →
+   jobs(queued). Boshqa turlar: statusi not_job/resume/closed/opportunity/suspicious/duplicate/no_contact.
+   suspicious va no_text — admin chatga yuboriladi. Istisno bo'lsa: status=error, admin'ga xabar, sikl davom etadi.
 2) publisher (outbox): queued/retry jobs ni navbat bilan oladi, publish_interval_seconds ga rioya qiladi.
    Yuborishdan oldin status=sending. sendPhoto (kategoriya rasmi, category_images.telegram_file_id kesh)
-   + caption HTML + inline tugmalar (📩 Murojaat — username bo'lsa, 🔍 Boshqa ishlar — bot deep link).
+   + caption HTML + formatter bergan tugmalar. Link preview O'CHIQ (manba havolasi kartochka bo'lib chiqmasin).
    Muvaffaqiyat: published, channel_message_id. TelegramRetryAfter → kut. Tarmoq xatosi → exponential
    backoff (next_retry_at). HTML parse xatosi → oddiy matn bilan qayta urin. max_publish_attempts dan
    keyin failed + admin'ga xabar. Ishga tushganda "sending" da qolganlarni qayta navbatga qo'y.
    kv_store.publisher_paused = true bo'lsa joylamaydi.
-Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza/qayta ishga tushish.
+Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza/qayta ishga tushish/backfill skip.
 ```
 **Tekshirish:** avval test kanal oching (`CHANNEL_ID` ni test kanalga qo'ying) → collector + worker yoqing → postlar chiqyaptimi?
 **Commit:** `feat(worker): processing pipeline and reliable publisher`
@@ -269,6 +300,19 @@ Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza
    /sources (holati, oxirgi post vaqti), /queue, /failed, /retry <id|all>, /pause, /resume.
    Bu handlerlarni bot/handlers/admin.py ga yoz — ommaviy bot bilan bitta botda bo'ladi.
    Hozircha apps/bot.py faqat admin handlerlari bilan ishga tushsin.
+5) MANBALARNI BOT ORQALI BOSHQARISH (admin profildan, kodga tegmasdan):
+   - Endi manbalar ro'yxatining asosiy joyi — BAZA (sources jadvali). settings.yaml faqat boshlang'ich
+     ro'yxat (seed): yaml'dagi yangi manba bazaga qo'shiladi, lekin yaml'da YO'Q manba o'chirilmaydi.
+     sources jadvaliga added_via ('yaml'|'bot') va added_by ustunlarini qo'sh (Alembic migratsiya).
+   - Collector har siklda manbalar ro'yxatini bazadan qayta o'qisin — restart'siz yangi kanal ishlay boshlasin.
+   - /addsource <@username | t.me/kanal | t.me/+taklif_link> : bot so'rovni bazaga "pending" qilib yozadi,
+     collector uni tekshiradi (kanal bormi, o'qib bo'ladimi; taklif link bo'lsa Telethon akkaunt kanalga
+     qo'shiladi), keyin admin'ga "✅ Qo'shildi: <kanal nomi>, oxirgi post ID ..." yoki xato sababini yozadi.
+     Qo'shishda so'raladi: eski postlardan nechtasini olish (0 / 5 / 20 tugmalari).
+   - /sources — ro'yxat, har biri yonida inline tugmalar: [⏸ O'chirish] [▶️ Yoqish] [🗑 O'chirish] [📊 Statistika].
+     O'chirilgan manba bazadan o'chmaydi (enabled=false), postlari saqlanib qoladi.
+   - /addsource web:<nom> — faqat kodi yozilgan sayt turlarini yoqadi (yangi sayt = yangi parser kodi, Bosqich 16).
+   - Faqat ADMIN_IDS ishlata oladi; har o'zgarish logga yoziladi.
 ```
 **Commit:** `feat(admin): notifications, monitoring, backups, admin commands`
 
@@ -397,6 +441,8 @@ docs/ARCHITECTURE.md 7-bo'lim bo'yicha src/ayvona/ai/ ni yoz (google-genai SDK):
 - Circuit breaker: 429/5xx/timeout (10 s) → shu kalit N daqiqa/kun oxirigacha o'chiriladi → regex fallback.
   AI hech qachon e'lon chiqishini to'xtatmaydi.
 - AI natijasi regex natijasi bilan birlashtiriladi (aloqa har doim regex'dan). parse_method=gemini.
+- TARJIMA: til ru/en bo'lsa (yoki confidence past bo'lsa) Gemini talablar/vazifalar/tavsifni o'zbek lotiniga
+  qisqa va aniq o'giradi; natija keshlanadi. Gemini ishlamasa — Bosqich 6 dagi v1 til qoidasi.
 - Kunlik AI chaqiruvlari soni /stats da.
 Testlar: AI mock — muvaffaqiyat, 429, timeout, noto'g'ri JSON → hammasida e'lon chiqadi.
 ```

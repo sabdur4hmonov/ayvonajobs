@@ -1,0 +1,230 @@
+# =====================================================================
+#  Ayvona Jobs — har bir manba kanal uchun TOZALASH qoidalari
+#  (2026-09-29 da 19 kanaldan 377 ta post tahlil qilib yozildi — docs/SOURCE_ANALYSIS.md)
+#
+#  Qanday ishlaydi (processing/clean.py shu faylni o'qiydi — Bosqich 6):
+#   * Hamma solishtirish NORMALIZE qilingan matnda (kichik harf, kirill->lotin, o‘/o'/oʻ bir xil,
+#     emoji va ortiqcha bo'shliqsiz). Shuning uchun bu yerda ham oddiy kichik harfda yozilgan.
+#   * cut_from   : qator shu bo'lakni o'z ichiga olsa — SHU QATOR VA UNDAN KEYINGI HAMMASI o'chiriladi
+#                  (kanal "imzosi"/reklama bloki odatda post oxirida turadi).
+#                  Xavfsizlik: agar kesishdan keyin matnning 40% dan kami qolsa — kesilmaydi, admin'ga log.
+#   * strip_lines: qator shu bo'lakni o'z ichiga olsa — faqat SHU QATOR o'chiriladi.
+#   * exact_lines: qator (normalize qilingan) AYNAN shunga teng bo'lsa o'chiriladi (masalan yolg'iz "telegram").
+#   * header_lines: post boshidagi bezak qatorlari (masalan "✅✅✅✅").
+#   * extra_own_usernames: shu kanalning o'ziga tegishli reklama akkauntlari (aloqa emas!).
+#   * non_job_hashtags / job_hashtags: kanal o'zi qo'yadigan teglar — e'lon yoki boshqa narsa ekanini bildiradi.
+#  Admin bot orqali qo'shgan yangi kanalga faqat "defaults" qo'llanadi.
+# =====================================================================
+
+defaults:
+  # Matni faqat bo'shliq/yangi qator bo'lgan yashirin havolalar — deyarli doim yashirin reklama
+  drop_whitespace_text_links: true
+  # Bu havolalar hech qachon aloqa yoki ariza havolasi emas
+  drop_link_patterns:
+    - "t.me/addlist/"          # "kanallar to'plami" papkasi
+    - "t.me/+"                 # yopiq kanal taklif linki (lekin t.me/+998... — bu TELEFON, pastga qarang)
+    - "instagram.com"
+    - "facebook.com"
+    - "youtube.com"
+    - "youtu.be"
+    - "tiktok.com"
+  # t.me/+998XXXXXXXXX ko'rinishidagi havola — telefon raqam sifatida olinadi
+  phone_link_pattern: "t.me/\\+998\\d{9}"
+  # utm_* parametrlari va ?text=... (kanal nomi yozilgan) havolalardan olib tashlanadi
+  strip_url_params: ["utm_source", "utm_medium", "utm_campaign", "utm_content", "text", "igsh", "igshid", "si"]
+  # Ko'p kanalda uchraydigan umumiy "imzo" qatorlari
+  strip_lines:
+    - "kanalga obuna bo'ling"
+    - "obuna bo'ling:"
+    - "ish kanallari to'plami"
+    - "podborka kanalov s vakansiyami"
+    - "tanishingizga ulashing"
+    - "e'lon joylash uchun"
+    - "elon joylash uchun"
+    - "e'lon yoki rezyume joylash uchun"
+
+sources:
+  "@ishtoparuz_kanal":
+    strip_lines:
+      - "instagramdan qaysidir ishni ko'rib"
+      - "youtu.be/qkpn4_8ioew"
+    notes: "Deyarli hamma post — e'lon. Ko'p post boshqa kanallarda ham chiqadi (kross-dublikat). Ba'zan kirill."
+
+  "@beminnatvakant_ish":
+    cut_from:
+      - "ish yoki ishchi xodim topish:"
+    strip_lines:
+      - "maklersiz kvartira yoki kvartirant"
+    extra_own_usernames: ["@tilchi_tarjimon_jobs", "@Kvartira_uylar_Tashkent"]
+    notes: >
+      Bitta postda 2-3 ta vakansiya bo'lishi mumkin (har biri '📢 ... kerak' bilan boshlanadi).
+      REZYUMELAR ham chiqadi ('ish joyi kerak', 'Ism-familiya:', 'Malaka va tajriba') — vakansiya emas.
+      Albom (bir necha rasm, matnsiz) + kurs reklamasi uchraydi. Hujjat (PDF) postlari — e'lon emas.
+      Ko'rinmas havola t.me/JahongirAcademy/2432 matnsiz qatorga yopishtirilgan — reklama.
+
+  "@ishmi_ish":
+    strip_lines:
+      - "obuna bo'ling: @ishmi_ish"
+    drop_trailing_hashtags: true        # teglari noto'g'ri (ingliz tili o'qituvchisiga #IT #Dasturchi)
+    notes: >
+      hh.uz dan olingan qolip: '💰 Maosh', '💼 Tajriba', '📍 Manzil', '🌐 Format', '👉 Batafsil: Link'.
+      Aloqa YO'Q — faqat yashirin 'Link' (hh.uz) → apply_url sifatida olinadi.
+      Reklama: '#reklama', 'erid=' li havolalar, bot reklamalari (@Zehndon_bot, @TezSaqlabOlBot), so'rovnomalar.
+
+  "@ish_kerak_edu":
+    cut_from:
+      - "agar vakansiya sizga mos bo'lmasa"
+    strip_lines:
+      - "ish yoki ishchi xodim topish: @ish_kerak_edu"
+    extra_own_usernames: ["@ish_kerak_edu_admini"]
+    notes: >
+      Bir xil post bir kunda 2 marta qayta chiqadi. Ruscha va kirill postlar ko'p.
+      Ko'p vakansiyali post: har lavozim telegra.ph havolasi bilan ('Sotuv agenti — 5–15 mln').
+      Bitta uzun paragrafli (strukturasiz) e'lonlar ham bor.
+
+  "@manavakansiya_uz":
+    cut_from:
+      - "ish kanallari to'plami"
+    notes: >
+      Oxiridagi blok: kanallar papkasi + 'Diqqat: Agar ish beruvchi pul so'rasa...' + Telegram/Instagram.
+      Ikki vakansiyali postlar '1️⃣ ... 2️⃣ ...' va '______' ajratgich bilan.
+
+  "@ishlaUZ_rasmiy":
+    header_lines:
+      - "👨‍💻👨‍💻👨‍💻"
+    cut_from:
+      - "ish izlashni emas, ish tanlashni boshlang"
+      - "ish izlayabsizmi:"
+    strip_lines:
+      - "asosiy kanal"
+    exact_lines: ["instagram", "telegram"]
+    extra_own_usernames: ["@ishla_uz1"]
+    notes: >
+      '✅Suxoy arenda ... Depozit 200$' — ish emas (mashina ijarasi), filtrga tushishi kerak.
+      Bir xil post bir necha soat ichida qayta chiqadi.
+
+  "@ishtopuz_rasmiy":
+    header_lines:
+      - "✅✅✅✅"
+    cut_from:
+      - "diqqat⚠️ hurmatli obunachi"
+      - "diqqat hurmatli obunachi"
+    extra_own_usernames: ["@ishbor_ishtop_ishkerak"]
+    notes: >
+      Oxirida katta ogohlantirish bloki. Kanal menyusi posti ('Ўзингизга керакли вилоятларни танланг') — e'lon emas.
+      Faqat 'so'rovnomani to'ldiring' havolasidan iborat postlar (lavozim yo'q) — past ishonch.
+
+  "@unilance":
+    strip_lines:
+      - "@unilance - the best for you"
+      - "@unilance - eng yaxshisi siz uchun"
+      - "@unilance — eng yaxshisi siz uchun"
+    extra_own_usernames: ["@webmakon"]
+    job_hashtags: ["#job", "#hiring", "#vacancy", "#vakansiya"]
+    non_job_hashtags: ["#dasturlash", "#hazil", "#champion", "#dayjest", "#claude", "#openai", "#natija", "#socialmedia"]
+    notes: >
+      IT kanal, ko'p post inglizcha. Yarmiga yaqini e'lon EMAS (hazil, yangilik, AI dayjest, mahsulot reklamasi).
+      Aloqa ko'pincha EMAIL. Ba'zi postlar faqat LinkedIn havolasidan iborat.
+
+  "@kasbdoruz":
+    cut_from:
+      - "e'lon joylash uchun: @kasbdor_uz"
+    extra_own_usernames: ["@kasbdor_uz"]
+    job_hashtags: ["#vakansiya"]
+    notes: >
+      Juda tartibli qolip: '#vakansiya / 📌 Lavozim / • Maosh / • Manzil / • Ish vaqti / • Ish beruvchi / • Holat: #faol'.
+      Oxirida 'N3311' kabi tartib raqami — olib tashlanadi. '#vakansiya' siz postlar — maslahat/foydali post.
+
+  "@jobmakon":
+    strip_lines:
+      - "@jobmakon - center of opportunities"
+      - "@jobmakon - imkoniyatlar markazi"
+      - "@jobmakon - центр возможностей"
+    notes: >
+      IT/ofis vakansiyalari (uz/ru/en) + IMKONIYATLAR (grant, fellowship, akademiya, bepul amaliyot) aralash.
+      Aloqa: email, LinkedIn (lnkd.in), @username. '©IUT Career Center' kabi manba satrlari bor.
+
+  "@NextHireX":
+    strip_lines:
+      - "posted by: @nexthirex"
+    header_junk_words: ["new", "without"]     # birinchi qator faqat shu so'z bo'lsa — o'chiriladi
+    notes: >
+      Logistika (AQSh trucking) vakansiyalari, inglizcha. 'Code:670' kodi (dublikat uchun foydali).
+      ALOQA YASHIRIN: '📞 Contact: Get the job.' — 'Get the job.' ostida t.me/<username>.
+      Bir vakansiya 2-3 marta qayta posting qilinadi. Faqat forma havolasi/stream e'lonlari — e'lon emas.
+
+  "@huntmejob":
+    cut_from:
+      - "huntme jobs"
+      - "huntme global jobs"
+      - "huntme marketplace"
+    strip_lines:
+      - "apply via hunter ai"
+    extra_own_usernames: ["@huntmejob", "@huntmeglobal", "@huntmegroup", "@huntmesmartassistantbot", "@huntmemarketplace"]
+    notes: >
+      Qolip: '🏢 Kompaniya / 👔 Position / 🌎 Location / 💼 Experience / 💵 Salary / 💬 Contact: @x'.
+      'Apply here' tugmasi (backend.huntmegroup.com) → apply_url. Xizmat reklamalari (Huntme Marketplace) — e'lon emas.
+
+  "@huntmeglobal":
+    cut_from:
+      - "huntme global jobs"
+      - "huntme jobs"
+    extra_own_usernames: ["@huntmejob", "@huntmeglobal", "@huntmegroup", "@huntmesmartassistantbot", "@huntmemarketplace"]
+    notes: >
+      Qolip '☑️ Lavozim / ☑️ Manzil / ☑️ Maosh'. ALOQA YASHIRIN: 'Aloqa uchun 👈' yoki 'GET A JOB' ostida t.me/<username>.
+      @huntmejob bilan kross-dublikat.
+
+  "@toshkentda_ish_bor_ishchi":
+    cut_from:
+      - "siz ham ishchi yoki ish qidirayotgan bo'lsangiz"
+    exact_lines: ["#ish"]
+    notes: >
+      ENG TARTIBLI qolip: 'Tashkilot / 📊Lavozim / ⏳Ish grafigi / 📍Manzil / 📌Talablar / 📚Vazifalar / 💰Maosh /
+      📝Qo'shimchalar / 📞Bog'lanish uchun / Telegram:'. '—' belgisi = maydon bo'sh.
+
+  "@Buxgalteriyaishorinlarii":
+    cut_from:
+      - "buxgalteriya ish o'rinlar kanali"
+    job_hashtags: ["#buxgalter_kerak"]
+    notes: >
+      Faqat buxgalteriya. Aralash: kurs reklamalari ('Dars narxi', 'Video darsliklar', bot), xizmat reklamasi
+      ('БУХГАЛТЕРИЯ ХИЗМАТЛАРИ'), REZYUMELAR ('Иш излаяпман', 'Исмим:', 'Туғулган сана'). Kirill ko'p.
+      Hudud ba'zan birinchi qatorda katta harf bilan: 'SAMARQAND', 'BUXORO'.
+
+  "@edustaffs":
+    cut_from:
+      - "e'lon yoki rezyume joylash uchun"
+      - "чтобы разместить объявление"
+      - "@edustaffs —"
+    extra_own_usernames: ["@Entrepreneur_J"]
+    non_job_hashtags: ["#маьлумот", "#фойдали", "#malumot", "#foydali"]
+    notes: >
+      Ta'lim sohasi. Aralash: huquqiy maslahatlar, yangiliklar, maosh jadvallari — e'lon emas.
+      Ba'zi e'lonlarning to'liq matni faqat telegra.ph havolasida ('Описание работы').
+
+  "@Ish_Toshkent":
+    strip_lines:
+      - "@ish_toshkent - toshkentdagi eng yangi vakansiyalar"
+      - "@ish_toshkent - talabalar uchun takoy ishlar"
+    drop_trailing_hashtags: true        # '#sotuv #callcenter #IshToshkent'
+    notes: >
+      Qolip: '📌Talablar / ➖ Tashkilot / ➖ Ish vaqti / ➖ Maosh / ➖ Manzil / 📩 Telegram'.
+      Reklamalar (o'quv markaz qabuli, kanallar papkasi) aralash. Keycap raqamli maosh: '3️⃣.000.000 – 6️⃣.000.000'.
+
+  "@digitalitvacancy":
+    strip_lines:
+      - "shoshiling, bunday qulay imkoniyat"
+    exact_lines: ["telegram"]
+    notes: >
+      IT/davlat loyihalari. Ko'p post — tadbir, kurs, forum, maslahat (e'lon emas).
+      ALOQA YASHIRIN: 'Ariza topshirish uchun: havola' — 'havola' ostida t.me/<username> yoki forma.
+      Haq to'lanmaydigan amaliyot ('Amaliyot uchun haq to'lanmaydi') — alohida belgilanadi.
+
+  "@jobs_fba":
+    cut_from:
+      - "ko'proq ish o'rinlari haqida ma'lumot olish uchun"
+    closed_markers: ["#vakansiyayopildi", "vakansiya yopildi", "bu vakansiya yopilgan"]
+    notes: >
+      Moliya/buxgalteriya, kam post (oyiga bir necha). Yopilgan vakansiyalar belgilanadi — CHIQARILMAYDI.
+      'Ariza muddati: 2026-09-19' — muddati o'tgan bo'lsa chiqarilmaydi. 'Qiziqish bildirish' tugmasi → apply_url.
+      So'rovnomalar (test savollari) — e'lon emas.

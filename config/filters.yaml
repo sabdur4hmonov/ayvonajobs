@@ -1,33 +1,167 @@
 # =====================================================================
-#  Filtrlar. Hozircha namunaviy. Admin keyin /addword bilan qo'shadi (filter_words jadvali).
+#  Filtrlar va e'lon turini aniqlash belgilari.
+#  2026-09-29: 19 kanaldan 377 ta real post asosida yangilandi (docs/SOURCE_ANALYSIS.md).
+#  Hammasi normalize qilingan matnda qidiriladi (kichik harf, kirill->lotin). Rus so'zlari kirillda qoldi —
+#  normalize rus matnini o'zgartirmaydi, shuning uchun ular ham ishlaydi.
+#  Admin keyin /addword bilan qo'shadi (filter_words jadvali).
 # =====================================================================
 
-# Taqiqlangan so'zlar — bunday e'lon rad etiladi
+# Taqiqlangan so'zlar — bunday e'lon rad etiladi.
+# DIQQAT: yolg'iz "stavka" so'zi yo'q — "to'liq stavka", "0,5 stavka" oddiy ish e'lonlarida uchraydi!
 ban:
   - kazino
   - casino
   - казино
-  - stavka
-  - ставки
+  - bukmeker
+  - букмекер
+  - sport stavka
+  - ставки на спорт
+  - 1xbet
+  - narkotik
+  - закладчик
+  - kladchik
 
 # Spam belgilari
 spam:
   - pul ishlash oson
   - kuniga 100$
   - заработок без вложений
+  - investitsiya qiling
+  - kripto signal
 
-# Firibgarlik belgilari — user e'loni admin tekshiruviga yuboriladi
+# Firibgarlik belgilari — aggregator'da: e'lon chiqmaydi, admin'ga "shubhali" deb yuboriladi.
+# User e'lonida: admin tekshiruviga.
 scam:
   - oldindan to'lov
   - depozit
   - viza uchun pul
   - предоплата
   - оплата за оформление
+  - suxoy arenda                # taksi mashinasi ijarasi — ish emas
+  - mashina ijaraga beramiz
+  - hujjat uchun to'lov
+  - forma uchun pul
+  - o'qish uchun to'lov qilasiz
+  - karta raqamingizni yuboring
+  - sms kodni yuboring
 
-# Manba kanallarning reklama qatorlari (tozalashda olib tashlanadi)
+# Manba kanallarning reklama qatorlari (umumiy; kanalga xos qoidalar — config/source_rules.yaml)
 ad_patterns:
   - obuna bo'ling
   - kanalimizga
   - reklama uchun
   - подписывайтесь
   - наш канал
+  - ish kanallari to'plami
+  - kanalda xar kuni
+  - kanalda har kuni
+
+# ---------------------------------------------------------------------
+#  E'LON TURINI ANIQLASH (processing/classify.py — Bosqich 4-5)
+#  Natija: job | not_job | resume | closed | opportunity | suspicious
+# ---------------------------------------------------------------------
+
+# Ish e'loni ekanini bildiruvchi belgilar (har biri +1 ball; kamida 2 ball + aloqa/ariza havolasi = job)
+job_markers:
+  - kerak
+  - ishga taklif
+  - ishga qabul
+  - ishga olamiz
+  - vakansiya
+  - lavozim
+  - maosh
+  - oylik
+  - ish haqi
+  - daromad
+  - ish vaqti
+  - ish grafigi
+  - talablar
+  - bog'lanish
+  - murojaat uchun
+  - aloqa uchun
+  - вакансия
+  - требуется
+  - ищем
+  - зарплата
+  - график
+  - обязанности
+  - требования
+  - hiring
+  - "we're looking for"
+  - we are looking for
+  - job title
+  - position
+  - salary
+  - requirements
+  - how to apply
+
+# Aniq REKLAMA / e'lon emas (bittasi yetarli — agar job_markers kuchsiz bo'lsa)
+not_job_markers:
+  - "#reklama"
+  - "erid="
+  - dars narxi
+  - chegirma
+  - bepul dars
+  - darsga yozilish
+  - qabul ochiq            # o'quv markaz o'quvchi qabuli (ehtiyot: "ishga qabul" bilan adashtirmaslik — job_markers ustun)
+  - kursimizga
+  - video darslik
+  - video yuklab olish
+  - bot orqali test
+  - testlar shu yerda
+  - forumga taklif
+  - ro'yxatdan o'ting va tadbir
+  - vebinar
+  - webinar
+  - live stream
+  - jonli efir
+  - xizmatlarimiz
+  - бухгалтерия хизматлари
+  - хизматлари
+  - bepul maslahat
+  - viloyatlarni tanlang
+  - вилоятларни танланг
+  - "#hazil"
+  - "#dayjest"
+  - "#маьлумот"
+  - "#фойдали"
+
+# REZYUME — ish qidiruvchining e'loni (v1 da chiqarilmaydi; keyin "Rezyumelar" bo'limi uchun saqlanadi)
+resume_markers:
+  - ish qidiryapman
+  - ish izlayapman
+  - иш излаяпман
+  - ish joyi kerak
+  - ish joyi qidiryapman
+  - ism-familiya
+  - исмим
+  - tug'ilgan sana
+  - туғулган сана
+  - malaka va tajriba
+  - ищу работу
+  - резюме соискателя
+
+# YOPILGAN vakansiya — chiqarilmaydi
+closed_markers:
+  - vakansiya yopildi
+  - "#vakansiyayopildi"
+  - bu vakansiya yopilgan
+  - вакансия закрыта
+  - position closed
+
+# IMKONIYAT (grant, fellowship, bepul kurs, tadbir, haq to'lanmaydigan amaliyot) — v1 da chiqarilmaydi
+# (keyin alohida "Imkoniyatlar" rukni bo'lishi mumkin). Haq to'lanadigan stajirovka — "amaliyot" kategoriyasi, job.
+opportunity_markers:
+  - fellowship
+  - grant
+  - scholarship
+  - stipendiya
+  - dev camp
+  - akademiyasiga arizalar
+  - ishtirok etish bepul
+  - amaliyot uchun haq to'lanmaydi
+  - bepul amaliyot
+  - bepul o'qitilmoqda
+  - forum
+  - hackathon
+  - xakaton

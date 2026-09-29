@@ -197,6 +197,9 @@ class BaseSource(ABC):
 - `WebSource` (masalan `HhUzSource`, `OlxSource`) — keyin: httpx + selectolax, saytning `robots.txt` va
   qoidalariga rioya qilish, sekin so'rovlar (har bir sayt uchun 5–15 daqiqa).
 - `registry.py` config'dagi `type` bo'yicha kerakli klassni tanlaydi. Pipeline o'zgarmaydi.
+- **Manbalar ro'yxati bazada saqlanadi** (`sources` jadvali). `settings.yaml` — faqat boshlang'ich ro'yxat.
+  Admin botda `/addsource` va `/sources` orqali kanal qo'shadi/o'chiradi, collector har siklda ro'yxatni
+  bazadan o'qiydi (restart kerak emas). Yangi **sayt** turini qo'shish uchun esa baribir parser kodi kerak.
 
 ---
 
