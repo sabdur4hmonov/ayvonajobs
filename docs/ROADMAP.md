@@ -38,6 +38,7 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 
 **Aggregator (1-qism)**
 - [ ] Telegram kanallardan o'qish (Telethon), oxirgi ID, o'chib qolsa qolganlarini olish
+      _(kod tayyor, soxta manba bilan test qilingan — haqiqiy Telegram'da tekshirilgach belgilang)_
 - [ ] SQLite, dublikat tekshiruvi (4 qatlam)
 - [ ] Kategoriya (kalit so'zlar, lotin/kirill/rus) + "Boshqa"
 - [ ] Har kategoriya uchun rasm
@@ -140,6 +141,9 @@ Menga o'zbekcha tushuntir: "model", "migratsiya" nima va nega kerak.
 ---
 
 ## BOSQICH 3 — Telethon collector (BIRINCHI ASOSIY QADAM) ⏱ 1–2 soat · Model: `opus`
+
+- [x] Kod + testlar bajarildi — 2026-09-29 (soxta manba bilan; tafsilot: `docs/PROGRESS.md`)
+- [ ] Haqiqiy Telegram'da tekshirish (Sardor: login + kanal qo'shish + pastdagi "Tekshirish")
 
 ```text
 Collector'ni yoz (ARCHITECTURE 2- va 6-bo'lim). Ishonchlilik eng muhim.

@@ -47,8 +47,15 @@ class Base(DeclarativeBase):
 
 # =========================================================================== enums
 class SourceType(StrEnum):
+    """Base kind of a source; ``sources.type`` may add a suffix: ``"web:hh_uz"``."""
+
     TELEGRAM = "telegram"
     WEB = "web"
+
+    @classmethod
+    def of(cls, type_key: str) -> SourceType:
+        """``"web:hh_uz"`` -> ``WEB``. Raises ``ValueError`` for unknown kinds."""
+        return cls(type_key.split(":", 1)[0].strip().lower())
 
 
 class RawPostStatus(StrEnum):
@@ -98,7 +105,8 @@ class Source(Base):
     __tablename__ = "sources"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    type: Mapped[SourceType] = mapped_column(str_enum(SourceType), default=SourceType.TELEGRAM)
+    # Registry key: "telegram" or "web:<site>" (e.g. "web:hh_uz"). Base kind = SourceType.
+    type: Mapped[str] = mapped_column(String(64), default=SourceType.TELEGRAM.value)
     identifier: Mapped[str] = mapped_column(String(255), unique=True)
     title: Mapped[str | None] = mapped_column(String(255))
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sql_text("1"))

@@ -62,7 +62,9 @@ sources:
 ## 5. Ishga tushirish
 
 ```powershell
-uv run python -m ayvona.apps.collector    # kanallarni o'qiydi (to'xtatish: Ctrl+C)
+uv run python -m ayvona.apps.collector --once   # bitta aylanish qilib chiqadi (tekshirish uchun)
+uv run python -m ayvona.apps.collector          # doimiy ishlaydi (to'xtatish: Ctrl+C)
+uv run python scripts/show_status.py            # bazada nima bor: manbalar, heartbeat, oxirgi postlar
 ```
 
 Keyingi bosqichlarda: `uv run python -m ayvona.apps.worker` va `uv run python -m ayvona.apps.bot`.

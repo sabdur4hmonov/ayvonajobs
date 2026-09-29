@@ -9,14 +9,9 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ayvona.config import SourceConfig
-from ayvona.db.models import Source, SourceType
+from ayvona.db.models import Source
 
 MAX_ERROR_LEN = 2000
-
-
-def _source_type(value: str) -> SourceType:
-    """``"web:hh_uz"`` -> ``SourceType.WEB``; ``"telegram"`` -> ``SourceType.TELEGRAM``."""
-    return SourceType(value.split(":", 1)[0])
 
 
 async def sync_from_config(session: AsyncSession, configs: Sequence[SourceConfig]) -> list[Source]:
@@ -38,7 +33,7 @@ async def sync_from_config(session: AsyncSession, configs: Sequence[SourceConfig
         if row is None:
             row = Source(identifier=cfg.identifier)
             session.add(row)
-        row.type = _source_type(cfg.type)
+        row.type = cfg.type
         row.title = cfg.title
         row.enabled = cfg.enabled
         row.own_usernames = list(cfg.own_usernames)

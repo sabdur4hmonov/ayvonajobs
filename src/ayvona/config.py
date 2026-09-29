@@ -105,6 +105,15 @@ class SourceConfig(BaseModel):
             raise ValueError("identifier must not be empty")
         return v
 
+    @field_validator("type")
+    @classmethod
+    def _known_kind(cls, v: str) -> str:
+        """``telegram`` or ``web:<site>``."""
+        v = v.strip().lower()
+        if v.split(":", 1)[0] not in {"telegram", "web"}:
+            raise ValueError(f"unknown source type {v!r} (expected 'telegram' or 'web:<site>')")
+        return v
+
 
 class CollectorConfig(BaseModel):
     poll_interval_seconds: float = 90

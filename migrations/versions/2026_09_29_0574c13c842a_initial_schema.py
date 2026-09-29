@@ -61,11 +61,7 @@ def upgrade() -> None:
     op.create_table(
         "sources",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column(
-            "type",
-            sa.Enum("telegram", "web", name="sourcetype", native_enum=False, length=32),
-            nullable=False,
-        ),
+        sa.Column("type", sa.String(length=64), nullable=False),
         sa.Column("identifier", sa.String(length=255), nullable=False),
         sa.Column("title", sa.String(length=255), nullable=True),
         sa.Column("enabled", sa.Boolean(), server_default=sa.text("1"), nullable=False),
