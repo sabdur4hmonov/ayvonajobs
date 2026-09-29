@@ -1,8 +1,6 @@
-"""Expected extraction results of the 41 real posts (docs/POST_EXAMPLES.md).
+"""Expected extraction results of the real job posts (docs/POST_EXAMPLES.md).
 
-Bosqich 5 writes processing/extract.py and processing/categorize.py; until then every test here
-is an expected failure (xfail). When Bosqich 5 is done, remove ``pytestmark`` and adapt only
-:func:`run_extract` to the real API.
+Bosqich 4 wrote these as xfail; Bosqich 5 (processing/extract.py, categorize.py) makes them pass.
 """
 
 from __future__ import annotations
@@ -11,9 +9,9 @@ from typing import Any
 
 import pytest
 
-from tests.post_fixtures import load_dir, to_post
-
-pytestmark = pytest.mark.xfail(reason="Bosqich 5: extract.py / categorize.py hali yozilmagan")
+from ayvona.config import DEFAULT_CONFIG_DIR, load_settings
+from ayvona.processing.extract import Extraction, Extractor
+from tests.post_fixtures import REGRESSIONS_DIR, load_dir, to_post
 
 # Fields compared as-is; others need special handling below.
 EXACT_FIELDS = (
@@ -23,27 +21,32 @@ EXACT_FIELDS = (
     "salary_max",
     "currency",
     "salary_period",
+    "salary_text",
     "region",
     "district",
     "apply_url",
     "multi",
+    "publish",
 )
 SET_FIELDS = ("phones", "emails")
 
-JOBS = [fx for fx in load_dir() if fx["expected"]["kind"] == "job"]
+EXAMPLES = [fx for fx in load_dir() if fx["expected"]["kind"] == "job"]
+JOBS = EXAMPLES + load_dir(REGRESSIONS_DIR)
 
 
-def run_extract(fx: dict[str, Any]) -> Any:
-    """The one place to adapt when extract.py exists."""
-    from ayvona.processing.extract import extract  # noqa: PLC0415 — module does not exist yet
+@pytest.fixture(scope="module")
+def extractor() -> Extractor:
+    return Extractor(load_settings(DEFAULT_CONFIG_DIR, env_file=None))
 
-    return extract(to_post(fx))
+
+def run_extract(extractor: Extractor, fx: dict[str, Any]) -> Extraction:
+    return extractor.extract(to_post(fx))
 
 
 @pytest.mark.parametrize("fx", JOBS, ids=[fx["id"] for fx in JOBS])
-def test_extract_real_post(fx: dict[str, Any]) -> None:
+def test_extract_real_post(extractor: Extractor, fx: dict[str, Any]) -> None:
     exp = fx["expected"]
-    got = run_extract(fx)
+    got = run_extract(extractor, fx)
 
     for field in EXACT_FIELDS:
         if field in exp:
@@ -57,3 +60,21 @@ def test_extract_real_post(fx: dict[str, Any]) -> None:
         assert exp["company"].lower() in (got.company or "").lower()
     if "title_contains" in exp:
         assert exp["title_contains"].lower() in (got.title or "").lower()
+    if "positions_min" in exp:
+        assert len(got.positions) >= exp["positions_min"]
+
+
+def test_every_example_job_with_title_or_salary_is_published(extractor: Extractor) -> None:
+    for fx in JOBS:
+        got = run_extract(extractor, fx)
+        if fx["expected"].get("publish", True):
+            assert got.publish, (fx["id"], got.reasons)
+            if got.title_source in ("label", "phrase", "positions"):  # title + contact
+                assert got.confidence >= 0.7, fx["id"]
+
+
+def test_low_quality_post_is_not_published(extractor: Extractor) -> None:
+    fx = next(f for f in JOBS if f["id"] == "ishtopuz_rasmiy_40829")  # Crafers: only a form link
+    got = run_extract(extractor, fx)
+    assert got.low_quality and not got.publish
+    assert got.has_contact  # the form link is kept — the admin report shows it

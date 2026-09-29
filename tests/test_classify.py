@@ -6,9 +6,10 @@ from ayvona.config import DEFAULT_CONFIG_DIR, load_settings
 from ayvona.processing.boilerplate import BoilerplateRules, strip_boilerplate
 from ayvona.processing.classify import Classifier, PostInput, PostKind, find_deadline, merge_album
 from ayvona.processing.normalize import fold, normalize
-from tests.post_fixtures import LABEL_DAY, load_dir, to_post
+from tests.post_fixtures import LABEL_DAY, REGRESSIONS_DIR, load_dir, to_post
 
 POSTS = load_dir()
+REGRESSIONS = load_dir(REGRESSIONS_DIR)
 NOW = LABEL_DAY
 
 
@@ -26,6 +27,24 @@ def test_there_are_41_examples() -> None:
 def test_kind_of_real_posts(classifier: Classifier, fx: dict) -> None:
     result = classifier.classify(to_post(fx), NOW)
     assert result.kind == fx["expected"]["kind"], result.reasons
+
+
+@pytest.mark.parametrize("fx", REGRESSIONS, ids=[fx["id"] for fx in REGRESSIONS])
+def test_kind_of_regression_posts(classifier: Classifier, fx: dict) -> None:
+    result = classifier.classify(to_post(fx), NOW)
+    assert result.kind == fx["expected"]["kind"], result.reasons
+
+
+def test_vacancy_list_with_apply_links_is_a_job(classifier: Classifier) -> None:
+    lines = "\n".join(f"🔗 {t} (havola)" for t in ("Backend dasturchi", "Tizim tahlilchisi"))
+    links = [{"text": "(havola)", "url": f"https://hh.uz/vacancy/{n}"} for n in (1, 2)]
+    post = PostInput(text=f"Bank jamoasi kengaymoqda\n\n{lines}", extra={"links": links})
+    r = classifier.classify(post, NOW)
+    assert r.kind is PostKind.JOB
+    assert "positions_with_links:2" in r.reasons
+    # one link only (a course sign-up form) is not a vacancy list
+    one = PostInput(text="Bepul kurs\n🔗 Ro'yxatdan o'tish (havola)", extra={"links": links[:1]})
+    assert classifier.classify(one, NOW).kind is not PostKind.JOB
 
 
 def test_jobs_in_examples_have_contact(classifier: Classifier) -> None:

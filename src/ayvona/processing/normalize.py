@@ -113,11 +113,25 @@ def normalize(text: str) -> str:
     """Matching form of a post (see module docstring)."""
     if not text:
         return ""
+    return _collapse("\n".join(normalize_lines(text)))
+
+
+def normalize_lines(text: str) -> list[str]:
+    """:func:`normalize` line by line: exactly one (possibly empty) output line per input line.
+
+    Lets the extractor map a normalized line back to the original one.
+    """
+    if not text:
+        return []
     text = unify(text)
     language = detect_language(text)
-    text = _strip_symbols(text.lower())
-    text = _transliterate_uzbek(text, language)
-    return _collapse(text)
+    text = _transliterate_uzbek(_strip_symbols(text.lower()), language)
+    return [_HSPACE_RE.sub(" ", line).strip() for line in text.split("\n")]
+
+
+def display(text: str) -> str:
+    """Readable form of one line: NFKC, keycaps, apostrophes, no emoji; case and script kept."""
+    return _HSPACE_RE.sub(" ", _strip_symbols(unify(text))).strip()
 
 
 def fold(text: str) -> str:

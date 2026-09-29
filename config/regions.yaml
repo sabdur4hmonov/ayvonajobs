@@ -1,52 +1,209 @@
 # =====================================================================
-#  Hududlar. Hozircha namunaviy 4 ta. To'liq ro'yxat (14 hudud + Toshkent tumanlari) — Bosqich 5 da.
+#  Hududlar: 14 ta (Toshkent sh. + Toshkent viloyati + 11 viloyat + Qoraqalpog'iston).
+#  2026-09-29 (Bosqich 5): 19 kanaldagi 374 real post asosida to'ldirildi.
+#
+#  Qanday ishlaydi (processing/location.py):
+#   * Hamma so'zlar fold qilingan matnda qidiriladi (kichik harf, HAMMA kirill → lotin), shuning uchun
+#     "Юнусабад", "Yunusabad", "Юнусобод" bir xil ishlaydi. So'z boshidan (qo'shimchalar mumkin:
+#     "Toshkentda", "Chilonzorda").
+#   * keywords   — hudud nomi (shahar, viloyat).
+#   * districts  — tuman / shahar nomi → shu hududga tegishli ekanini ham bildiradi
+#                  (postda "Yunusobod tumani" bo'lsa, "Toshkent" yozilmasa ham hudud = toshkent_sh).
+#   * landmarks  — mo'ljal, metro, mahalla, bozor (district bo'lsa — tuman ham aniqlanadi).
+#   * Uzunroq moslik ustun: "Toshkent viloyati" → toshkent_vil ("Toshkent" emas),
+#     "Samarqand Darvoza" (Toshkentdagi mo'ljal) → toshkent_sh ("Samarqand" emas).
+#   * Hudud nomidan keyin "ko'chasi / street / улица" kelsa — bu ko'cha nomi, hudud emas.
+#   * Postda 2+ har xil hudud (Toshkent sh. + Toshkent vil. bitta hudud hisoblanadi) → "kop_hudud".
 # =====================================================================
+
 regions:
   toshkent_sh:
     title: "Toshkent sh."
     hashtag: "toshkent"
-    keywords:
-      - toshkent shahri
-      - toshkent sh
-      - tashkent
-      - тошкент
-      - ташкент
+    keywords: [toshkent, tashkent, тошкент, ташкент, toshkent shahri, toshkent sh, toshkent shahar, г. ташкент]
+    districts:
+      Bektemir: [bektemir, бектемир]
+      Chilonzor: [chilonzor, chilanzar, чилонзор, чиланзар]
+      Mirobod: [mirobod, mirabad, миробод, мирабад, мирабадский]
+      "Mirzo Ulug'bek": ["mirzo ulug'bek", mirzo ulugbek, mirzo-ulug'bek, мирзо улуғбек, мирзо улугбек, мирзо-улугбек, мирзо-улугбекский]
+      Olmazor: [olmazor, almazar, олмазор, алмазар, алмазарский]
+      Sergeli: [sergeli, sergili, сергели, сергелий, сергелийский]
+      Shayxontohur: [shayxontohur, shayxontoxur, shaykhontohur, шайхонтоҳур, шайхонтохур, шайхантахур, шайхантаур]
+      Uchtepa: [uchtepa, учтепа, учтепинский]
+      Yakkasaroy: [yakkasaroy, yakkasaray, яккасарой, яккасарай, яккасарайский]
+      Yangihayot: [yangihayot, yangi hayot, янгиҳаёт, янгихаёт, янгихаят, янги ҳаёт]
+      Yashnobod: [yashnobod, yashnabad, яшнобод, яшнабад, яшнабадский]
+      Yunusobod: [yunusobod, yunusabad, yunsobot, yunusabod, юнусобод, юнусабад, юнусабадский]
+    landmarks:
+      # metro / mo'ljal → tuman
+      - {keywords: [chorsu, чорсу], district: Shayxontohur}
+      - {keywords: ["samarqand darvoza", samarkand darvoza, самарқанд дарвоза, самарканд дарвоза], district: Shayxontohur}
+      - {keywords: [qoratosh, караташ], district: Shayxontohur}
+      - {keywords: ["g'afur g'ulom", gafur gulom, гафур гулям], district: Shayxontohur}
+      - {keywords: [novza, новза], district: Chilonzor}
+      - {keywords: ["qo'yliq", qoyliq, kuylyuk, куйлюк, куйлик, қўйлиқ], district: Mirobod}
+      - {keywords: [ibn sino, ибн сино], district: Olmazor}
+      - {keywords: [bodomzor, бодомзор], district: Yunusobod}
+      - {keywords: [shahriston, шахристон, шаҳристон], district: Yunusobod}
+      - {keywords: [turkiston metro, туркистон метро], district: Yunusobod}
+      - {keywords: [minor metro, минор метро], district: Yunusobod}
+      - {keywords: ["qo'shbegi", qoshbegi], district: Yunusobod}
+      - {keywords: [depo mall], district: Uchtepa}
+      - {keywords: [beshyog'och, beshyogoch, бешёғоч, бешагач], district: Yakkasaroy}
+      - {keywords: [buyuk ipak yo'li, буюк ипак йўли, буюк ипак йули], district: Mirzo Ulug'bek}
+      - {keywords: [mashinasozlar, машинасозлар], district: Yashnobod}
+      # tuman aniq emas, lekin Toshkent shahri
+      - {keywords: [rakat, ракат]}                                 # Sardor qarori (2026-09-29): "Rakat / Ракат"
+      - {keywords: [tashkent city, toshkent siti, ташкент сити]}
+      - {keywords: [magic city, мэджик сити]}
+      - {keywords: [paxtakor, pakhtakor, пахтакор]}
+      - {keywords: [bunyodkor, бунёдкор]}
+      - {keywords: [ming o'rik, мингўрик, минг ўрик]}
+      - {keywords: [hamid olimjon, ҳамид олимжон, хамид олимжон]}
+      - {keywords: [kosmonavtlar, космонавтлар]}
+      - {keywords: [sebzor, себзор]}
 
-  samarqand:
-    title: "Samarqand viloyati"
-    hashtag: "samarqand"
-    keywords:
-      - samarqand
-      - samarkand
-      - самарқанд
-      - самарканд
-
-  fargona:
-    title: "Farg'ona viloyati"
-    hashtag: "fargona"
-    keywords:
-      - farg'ona
-      - fergana
-      - фарғона
-      - фергана
+  toshkent_vil:
+    title: "Toshkent viloyati"
+    hashtag: "toshkent_viloyati"
+    keywords: [toshkent viloyati, toshkent vil, tashkent region, ташкентская область, тошкент вилояти, toshkent tumani]
+    districts:
+      Angren: [angren, ангрен]
+      Bekobod: [bekobod, bekabad, бекобод, бекабад]
+      "Bo'ka": ["bo'ka", бўка, бука]
+      "Bo'stonliq": ["bo'stonliq", bostonliq, бўстонлиқ, бостанлык]
+      Chinoz: [chinoz, чиноз, чиназ]
+      Chirchiq: [chirchiq, chirchik, чирчиқ, чирчик]
+      "G'azalkent": ["g'azalkent", gazalkent, ғазалкент, газалкент]
+      Keles: [keles, келес]
+      Nazarbek: [nazarbek, назарбек]
+      Nurafshon: [nurafshon, нурафшон]
+      Ohangaron: [ohangaron, oxangaron, ахангаран, оҳангарон]
+      Olmaliq: [olmaliq, almalyk, олмалиқ, алмалык]
+      "Oqqo'rg'on": ["oqqo'rg'on", oqqorgon, оққўрғон, аккурган]
+      Parkent: [parkent, паркент]
+      Piskent: [piskent, пискент]
+      Qibray: [qibray, kibray, қибрай, кибрай]
+      "O'rta Chirchiq": ["o'rta chirchiq", ўрта чирчиқ]
+      "Yangiyo'l": ["yangiyo'l", yangiyol, янгийўл, янгиюль]
+      Zangiota: [zangiota, zangi ota, зангиота, зангиата]
 
   andijon:
     title: "Andijon viloyati"
     hashtag: "andijon"
-    keywords:
-      - andijon
-      - andijan
-      - андижон
-      - андижан
+    keywords: [andijon, andijan, андижон, андижан]
+    districts:
+      Asaka: [asaka, асака]
+      Xonobod: [xonobod, хонобод, ханабад]
 
-# Bu so'zlar bo'lsa — masofaviy ish (is_remote = true)
+  buxoro:
+    title: "Buxoro viloyati"
+    hashtag: "buxoro"
+    keywords: [buxoro, bukhara, buhara, бухоро, бухара]
+    districts:
+      "G'ijduvon": ["g'ijduvon", gijduvon, ғиждувон, гиждуван]
+      Kogon: [kogon, kagan, когон, каган]
+
+  fargona:
+    title: "Farg'ona viloyati"
+    hashtag: "fargona"
+    keywords: ["farg'ona", fargona, fergana, фарғона, фергана]
+    districts:
+      "Qo'qon": ["qo'qon", qoqon, kokand, қўқон, коканд]
+      "Marg'ilon": ["marg'ilon", margilon, margilan, марғилон, маргилан]
+      Quvasoy: [quvasoy, кувасай, қувасой]
+
+  jizzax:
+    title: "Jizzax viloyati"
+    hashtag: "jizzax"
+    keywords: [jizzax, jizzakh, djizak, жиззах, джизак]
+
+  xorazm:
+    title: "Xorazm viloyati"
+    hashtag: "xorazm"
+    keywords: [xorazm, khorezm, хоразм, хорезм]
+    districts:
+      Urganch: [urganch, urgench, урганч, ургенч]
+      Xiva: [xiva, khiva, хива]
+
+  namangan:
+    title: "Namangan viloyati"
+    hashtag: "namangan"
+    keywords: [namangan, наманган]
+    districts:
+      Chust: [chust, чуст]
+
+  navoiy:
+    title: "Navoiy viloyati"
+    hashtag: "navoiy"
+    keywords: [navoiy, navoi, навоий, навои]
+    districts:
+      Zarafshon: [zarafshon, zarafshan, зарафшон, зарафшан]
+
+  qashqadaryo:
+    title: "Qashqadaryo viloyati"
+    hashtag: "qashqadaryo"
+    keywords: [qashqadaryo, kashkadarya, қашқадарё, кашкадарья]
+    districts:
+      Qarshi: [qarshi, karshi, қарши, карши]
+      Shahrisabz: [shahrisabz, шаҳрисабз, шахрисабз]
+
+  samarqand:
+    title: "Samarqand viloyati"
+    hashtag: "samarqand"
+    keywords: [samarqand, samarkand, самарқанд, самарканд]
+    districts:
+      "Kattaqo'rg'on": ["kattaqo'rg'on", kattaqorgon, каттақўрғон, каттакурган]
+      Urgut: [urgut, ургут]
+
+  sirdaryo:
+    title: "Sirdaryo viloyati"
+    hashtag: "sirdaryo"
+    keywords: [sirdaryo, syrdarya, сирдарё, сырдарья]
+    districts:
+      Guliston: [guliston, gulistan, гулистон, гулистан]
+      Yangiyer: [yangiyer, янгиер]
+
+  surxondaryo:
+    title: "Surxondaryo viloyati"
+    hashtag: "surxondaryo"
+    keywords: [surxondaryo, surkhandarya, сурхондарё, сурхандарья]
+    districts:
+      Termiz: [termiz, termez, термиз, термез]
+      Denov: [denov, денов, денау]
+
+  qoraqalpogiston:
+    title: "Qoraqalpog'iston"
+    hashtag: "qoraqalpogiston"
+    keywords: ["qoraqalpog'iston", qoraqalpogiston, karakalpakstan, қорақалпоғистон, каракалпакстан]
+    districts:
+      Nukus: [nukus, нукус]
+
+# Hudud nomidan keyin shu so'zlar kelsa — bu ko'cha/mo'ljal nomi ("Buxoro ko'chasi"), hudud emas.
+street_words: ["ko'cha", kocha, "ko'ch.", street, st., ulitsa, улица, ул., "кўча", darvoza, дарвоза, massiv, restoran, bozori]
+
+# Bir nechta hudud topilsa (Toshkent sh. + Toshkent vil. — bitta hudud hisoblanadi)
+multi_region: kop_hudud
+multi_region_title: "Ko'p hudud"
+
+# Bu so'zlar bo'lsa — masofaviy ish (is_remote = true).
+# Yolg'iz "online/onlayn" yo'q: "online do'kon", "onlayn savdo" masofaviy ish emas.
+# Qatorda ofis belgisi ham bo'lsa (office, ofisdan, offline) — masofaviy deyilmaydi.
 remote_keywords:
   - masofaviy
   - masofadan
-  - online
-  - onlayn
+  - uydan turib
+  - uydan ishlash
+  - online ish
+  - onlayn ish
+  - "format: online"
+  - "format: onlayn"
+  - "format: remote"
   - remote
+  - work from home
   - масофавий
   - удаленно
   - удалённо
   - удаленная работа
+  - дистанционно
+office_keywords: [office, ofis, ofisda, ofisdan, offline, oflayn, inhouse, in-house, офис, офлайн]

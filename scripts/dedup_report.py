@@ -144,6 +144,7 @@ def main() -> int:
         "--review", action="store_true", help="also list weak jobs (score <= 2 or no contact)"
     )
     args = parser.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]  # emoji on Windows
 
     settings = get_settings()
     db = settings.db_file

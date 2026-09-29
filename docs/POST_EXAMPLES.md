@@ -7,8 +7,10 @@ Tahlil va qoidalar: `docs/SOURCE_ANALYSIS.md`, `config/source_rules.yaml`, `conf
 
 **Kutilgan natija maydonlari:** `kind` (job / not_job / resume / closed / opportunity / suspicious), `category` va `profession` (`config/categories.yaml` kalitlari),
 `title_contains` (lavozimda bo'lishi kerak bo'lgan so'z), `salary_min/max` (son), `currency`, `salary_period`,
+`salary_text` (maosh asl matni; son aql-hush tekshiruvidan o'tmasa — faqat shu qoladi),
 `region` (`regions.yaml` kaliti), `district`, `phones`, `usernames`, `emails`, `apply_url`, `multi` (bir necha vakansiya),
-`strip` (olib tashlanishi kerak bo'lgan qismlar). Yozilmagan maydon = tekshirilmaydi.
+`publish` (`false` — kanalga chiqmaydi, masalan lavozim ham, maosh ham topilmagan → `low_quality`),
+`strip` (olib tashlanishi kerak bo'lgan qismlar). Yozilmagan maydon = tekshirilmaydi; `null` = bo'sh bo'lishi shart.
 
 
 ---
@@ -64,7 +66,7 @@ usernames: []
 
 ---
 
-## 2. Kunlik maosh + kanal reklama qatori
+## 2. Davrsiz maosh (250 000) + kanal reklama qatori
 
 **Manba:** [@ishtoparuz_kanal/25039](https://t.me/ishtoparuz_kanal/25039) · **Media:** photo
 
@@ -109,10 +111,10 @@ kind: job
 category: sotuv
 profession: kassir
 title_contains: kassir
-salary_min: 250000
-salary_max: 250000
-currency: UZS
-salary_period: day
+salary_min: null
+salary_max: null
+salary_text: 250 000
+currency: null
 region: toshkent_sh
 usernames:
 - '@asaminov'
@@ -1041,6 +1043,7 @@ Ogohlik-davr talabi…
 
 ```yaml
 kind: job
+publish: false
 confidence: past (fallback)
 apply_url: https://docs.google.com/forms/d/e/1FAIpQLSdS6CiLwqPRncUyjg_TYV6L7ahGcoOfmN7D3BMJGd8GANY4LQ/viewform
 strip:

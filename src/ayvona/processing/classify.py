@@ -4,7 +4,7 @@
 
 Order of rules (docs/SOURCE_ANALYSIS.md §3):
     no_text -> closed -> resume -> suspicious -> unpaid internship -> channel hashtags ->
-    opportunity / not_job (only when job evidence is weak) -> job.
+    vacancy list with apply links -> opportunity / not_job (only when job evidence is weak) -> job.
 
 Only ``job`` goes to our channel. The rest stay in the DB with their kind as status.
 A ``job`` without any contact gets ``has_contact=False``; the pipeline (Bosqich 7) turns it into
@@ -22,7 +22,7 @@ from typing import Any
 
 from ayvona.config import FiltersConfig, SourceRulesConfig
 from ayvona.processing.boilerplate import BoilerplateRules, strip_boilerplate
-from ayvona.processing.contacts import Contacts, find_contacts
+from ayvona.processing.contacts import Contacts, find_contacts, linked_positions
 from ayvona.processing.keywords import KeywordSet
 from ayvona.processing.language import Language, detect_language
 from ayvona.processing.normalize import fold, normalize
@@ -31,6 +31,8 @@ from ayvona.processing.normalize import fold, normalize
 MIN_JOB_SCORE = 2
 # With this much job evidence a stray "forum" / "chegirma" / "grant" word does not matter.
 STRONG_JOB_SCORE = 4
+# This many positions with their own apply links make a vacancy list (a job ad).
+MIN_LINKED_POSITIONS = 2
 
 
 class PostKind(StrEnum):
@@ -135,6 +137,7 @@ class Classifier:
         self.closed = KeywordSet(filters.closed_markers)
         self.opportunity = KeywordSet(filters.opportunity_markers)
         self.opportunity_strong = KeywordSet(filters.opportunity_strong_markers)
+        self.opportunity_strong_exceptions = KeywordSet(filters.opportunity_strong_exceptions)
         self.scam = KeywordSet(filters.scam)
         self.scam_exceptions = KeywordSet(filters.scam_exceptions)
         self._per_source: dict[str, _SourceRules] = {}
@@ -203,7 +206,10 @@ class Classifier:
             return result(PostKind.SUSPICIOUS, *sorted(f"scam:{h}" for h in hits))
 
         # 4. unpaid internship etc. — decisive whatever the job score
-        if hits := self.opportunity_strong.find(folded):
+        # (unless paid later: "dastlabki 2 oy bepul amaliyot, 3-oydan haq to'lanadi")
+        if (hits := self.opportunity_strong.find(folded)) and not (
+            self.opportunity_strong_exceptions.find(folded)
+        ):
             return result(PostKind.OPPORTUNITY, *sorted(f"opportunity:{h}" for h in hits))
 
         # 5. the channel's own tags
@@ -213,6 +219,16 @@ class Classifier:
         tagged_job = bool(tags & src.job_tags)
         if src.require_job_tag and not tagged_job:
             return result(PostKind.NOT_JOB, "no_job_hashtag")
+
+        # 5b. a list of positions, each with its own apply link (@digitalitvacancy/735: Anorbank,
+        # 11 vacancies, every one a hidden "(havola)" to hh.uz) — a job ad even with few markers.
+        linked = linked_positions(post.text, post.extra)
+        if len({url for _, url in linked}) >= MIN_LINKED_POSITIONS:
+            reasons = [
+                f"positions_with_links:{len(linked)}",
+                *(f"job:{h}" for h in sorted(job_hits)),
+            ]
+            return result(PostKind.JOB, *reasons)
 
         # 6. opportunity / advertisement, unless job evidence is strong.
         # Ads need at least as many ad markers as job markers: "xodimlarga 50% chegirma" in a real

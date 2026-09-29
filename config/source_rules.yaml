@@ -32,7 +32,7 @@ defaults:
   # t.me/+998XXXXXXXXX ko'rinishidagi havola — telefon raqam sifatida olinadi
   phone_link_pattern: "t.me/\\+998\\d{9}"
   # utm_* parametrlari va ?text=... (kanal nomi yozilgan) havolalardan olib tashlanadi
-  strip_url_params: ["utm_source", "utm_medium", "utm_campaign", "utm_content", "text", "igsh", "igshid", "si"]
+  strip_url_params: ["utm_source", "utm_medium", "utm_campaign", "utm_content", "text", "igsh", "igshid", "si", "source", "hhtmFrom", "hhtmFromLabel"]
   # Ko'p kanalda uchraydigan umumiy "imzo" qatorlari
   strip_lines:
     - "kanalga obuna bo'ling"

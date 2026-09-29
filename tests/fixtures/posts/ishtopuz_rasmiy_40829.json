@@ -29,6 +29,7 @@
   },
   "expected": {
     "kind": "job",
+    "publish": false,
     "confidence": "past (fallback)",
     "apply_url": "https://docs.google.com/forms/d/e/1FAIpQLSdS6CiLwqPRncUyjg_TYV6L7ahGcoOfmN7D3BMJGd8GANY4LQ/viewform",
     "strip": [

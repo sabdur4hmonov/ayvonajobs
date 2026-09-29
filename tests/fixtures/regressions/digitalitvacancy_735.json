@@ -1,0 +1,74 @@
+{
+  "title": "O'tkazib yuborilgan e'lon: 11 lavozim ro'yxati, har biri yashirin '(havola)' -> hh.uz",
+  "source": "@digitalitvacancy",
+  "external_id": "735",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-08T05:48:14+00:00",
+  "text": "ANORBANK AT jamoasi kengayishda davom etmoqda – Siz uchun yangi imkoniyatlar eshigi!\n\n📍 Joylashuv: Toshkent\n\n🔗 Tarmoq administratori (havola)\n🔗 Senior tizim tahlilchisi (havola)\n🔗 Ma’lumotlar tahlilchisi (havola)\n🔗 Java Backend dasturchisi (Middle+/Senior) | B2B to‘lovlar / BNPL (havola)\n🔗 Senior ma’lumotlar tahlilchisi (havola)\n🔗 Senior tizim tahlilchisi (havola)\n🔗 IT loyiha menejeri (Middle+/Senior) (havola)\n🔗 Ma’lumotlar bazasi administratori (Senior Oracle DBA) (havola)\n🔗 Tizim tahlilchisi (Middle+/Senior) | B2B (havola)\n🔗 Yetakchi Android dasturchisi (havola)\n🔗 Sayt ishonchliligi bo‘yicha muhandis (SRE) (havola)\n\n⌛ Shoshiling, bunday qulay imkoniyatni qo‘ldan boy bermang!\n\n🚀 Telegram",
+  "extra": {
+    "links": [
+      {
+        "text": "(havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136073673?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": "(havola)",
+        "url": "https://tashkent.hh.uz/vacancy/135556748?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": "(havola)",
+        "url": "https://tashkent.hh.uz/vacancy/135109231?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": " (havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136177074?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": " (havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136627145?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": "(havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136665938?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": " (havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136869494?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": " (havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136886585?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": "(havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136893508?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": " (havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136914320?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": " (havola)",
+        "url": "https://tashkent.hh.uz/vacancy/136933569?hhtmFromLabel=vacancy_item_title&hhtmFrom=employer_vacancies"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/digitalitvacancy"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "multi": true,
+    "category": "it",
+    "company": "ANORBANK",
+    "region": "toshkent_sh",
+    "phones": [],
+    "usernames": [],
+    "apply_url": "https://tashkent.hh.uz/vacancy/136073673",
+    "positions_min": 10,
+    "note": "Bosqich 4 da not_job edi (job ball 1). Sardor qarori: lavozimlar ro'yxati + ariza havolalari = job"
+  }
+}

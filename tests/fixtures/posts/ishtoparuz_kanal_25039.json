@@ -13,10 +13,10 @@
     "category": "sotuv",
     "profession": "kassir",
     "title_contains": "kassir",
-    "salary_min": 250000,
-    "salary_max": 250000,
-    "currency": "UZS",
-    "salary_period": "day",
+    "salary_min": null,
+    "salary_max": null,
+    "salary_text": "250 000",
+    "currency": null,
     "region": "toshkent_sh",
     "usernames": [
       "@asaminov"

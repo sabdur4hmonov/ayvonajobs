@@ -124,6 +124,8 @@ job_markers:
   - is looking for
   - duties
   - в поисках
+  # 2026-09-29 (Bosqich 5)
+  - haq to'lanadi           # "3-oydan boshlab haq to'lanadi" (haq to'lanmaydi — boshqa so'z)
 
 # Aniq REKLAMA / e'lon emas. Qoida: topilgan reklama belgilari soni >= job ball bo'lsa (va job ball < 4) — not_job.
 # ("chegirma" ish e'lonida ham uchraydi: "xodimlarga 50% chegirma" — shuning uchun bitta belgi hal qilmaydi.)
@@ -211,3 +213,12 @@ opportunity_strong_markers:
   - bepul amaliyot
   - unpaid internship
   - неоплачиваемая стажировка
+
+# Hal qiluvchi belgi bo'lsa ham, shu iboralardan biri ham bo'lsa — hal qilmaydi (Bosqich 5, 2026-09-29):
+# @digitalitvacancy/742 "Dastlabki 2 oy – bepul amaliyot; 3-oydan boshlab haq to'lanadi, rasmiy shartnoma" —
+# keyin haq to'lanadigan ishga olish, shuning uchun job (e'lon yo'qolgani ikki marta chiqqanidan yomonroq).
+opportunity_strong_exceptions:
+  - haq to'lanadi
+  - haq to'lana boshlaydi
+  - oylik to'lanadi
+  - maosh to'lanadi

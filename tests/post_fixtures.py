@@ -12,6 +12,8 @@ from ayvona.processing.classify import PostInput, merge_album
 FIXTURES = Path(__file__).parent / "fixtures"
 POSTS_DIR = FIXTURES / "posts"
 DEDUP_DIR = FIXTURES / "dedup"
+# Posts a rule once got wrong (Bosqich 5 review of every not_job / opportunity post).
+REGRESSIONS_DIR = FIXTURES / "regressions"
 
 # The day the 41 examples were collected and labelled. "Ariza muddati" is judged against it.
 LABEL_DAY = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)

@@ -1,6 +1,6 @@
 import pytest
 
-from ayvona.processing.contacts import canon_username, find_contacts, find_phones
+from ayvona.processing.contacts import canon_username, find_contacts, find_phones, linked_positions
 from ayvona.processing.normalize import normalize
 
 
@@ -81,3 +81,50 @@ def test_own_usernames_exact_match() -> None:
 def test_canon_username() -> None:
     assert canon_username("https://t.me/Foo_Bar?start=1") == "@foo_bar"
     assert canon_username("@Foo") == "@foo"
+
+
+# ------------------------------------------------------------------ Bosqich 5
+def test_unknown_code_needs_a_contact_word() -> None:
+    assert find_phones("buyurtma raqami 30 123 45 67") == []
+    assert find_phones("Tel: 30 123 45 67") == ["+998301234567"]
+    assert find_phones("+998 30 123 45 67") == ["+998301234567"]  # the prefix is proof enough
+
+
+def test_digits_inside_links_are_not_phones() -> None:
+    assert find_phones("https://tashkent.hh.uz/vacancy/137865831") == []
+
+
+def test_apply_url_choice_and_cleaning() -> None:
+    extra = {
+        "links": [
+            {"text": "Jobs", "url": "https://jobs.example.com/"},  # footer: not an apply link
+            {"text": "Instagram", "url": "https://instagram.com/x"},
+            {"text": "havola", "url": "https://t.me/naxalov/2559"},  # a channel post
+        ],
+        "buttons": [
+            {"text": "📝 Apply here", "url": "https://b.example.com/track/apply/1?source=telegram"}
+        ],
+    }
+    c = find_contacts("", extra, strip_url_params=["source"])
+    assert c.urls == ["https://b.example.com/track/apply/1"]
+    assert c.apply_url == "https://b.example.com/track/apply/1"
+
+
+def test_keep_case_usernames() -> None:
+    extra = {"links": [{"text": "Get the job.", "url": "http://t.me/HR_KONIDA"}]}
+    c = find_contacts("Telegram: @Dilnozaa_brand", extra, keep_case=True)
+    assert c.usernames == ["@Dilnozaa_brand", "@HR_KONIDA"]
+    assert c.keys == {"@dilnozaa_brand", "@hr_konida"}
+
+
+def test_linked_positions() -> None:
+    text = (
+        "Bank jamoasi\n🔗 Tarmoq administratori (havola)\n🔗 Java dasturchi (havola)\n🚀 Telegram"
+    )
+    links = [
+        {"text": "(havola)", "url": "https://hh.uz/vacancy/1"},
+        {"text": "(havola)", "url": "https://hh.uz/vacancy/2"},
+        {"text": "Telegram", "url": "https://t.me/bank"},
+    ]
+    found = linked_positions(text, {"links": links})
+    assert [u for _, u in found] == ["https://hh.uz/vacancy/1", "https://hh.uz/vacancy/2"]

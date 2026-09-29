@@ -142,22 +142,77 @@ class AppConfig(BaseModel):
         return v or []
 
 
+class ProfessionConfig(BaseModel):
+    title: str
+    keywords: list[str] = Field(default_factory=list)
+
+
 class CategoryConfig(BaseModel):
     title: str
     hashtag: str
     image: str | None = None
     keywords: list[str] = Field(default_factory=list)
+    professions: dict[str, ProfessionConfig] = Field(default_factory=dict)
+
+
+class FeatureTagConfig(BaseModel):
+    keywords: list[str] = Field(default_factory=list)
+    negations: list[str] = Field(default_factory=list)
+
+
+class LandmarkConfig(BaseModel):
+    keywords: list[str]
+    district: str | None = None
 
 
 class RegionConfig(BaseModel):
     title: str
     hashtag: str
     keywords: list[str] = Field(default_factory=list)
+    # district display name -> spellings
+    districts: dict[str, list[str]] = Field(default_factory=dict)
+    landmarks: list[LandmarkConfig] = Field(default_factory=list)
 
 
 class RegionsConfig(BaseModel):
     regions: dict[str, RegionConfig] = Field(default_factory=dict)
+    street_words: list[str] = Field(default_factory=list)
+    multi_region: str = "kop_hudud"
+    multi_region_title: str = "Ko'p hudud"
     remote_keywords: list[str] = Field(default_factory=list)
+    office_keywords: list[str] = Field(default_factory=list)
+
+
+class ExtractLabels(BaseModel):
+    title: list[str] = Field(default_factory=list)
+    company: list[str] = Field(default_factory=list)
+    salary: list[str] = Field(default_factory=list)
+    schedule: list[str] = Field(default_factory=list)
+    requirements: list[str] = Field(default_factory=list)
+    location: list[str] = Field(default_factory=list)
+
+
+class HiringPhrases(BaseModel):
+    before: list[str] = Field(default_factory=list)  # "Oshpaz kerak"
+    after: list[str] = Field(default_factory=list)  # "Требуется повар"
+
+
+class ExtractConfig(BaseModel):
+    """Content of ``config/extract.yaml`` (regex extractor words)."""
+
+    labels: ExtractLabels = Field(default_factory=ExtractLabels)
+    hiring_phrases: HiringPhrases = Field(default_factory=HiringPhrases)
+    position_list_headers: list[str] = Field(default_factory=list)
+    salary_negotiable: list[str] = Field(default_factory=list)
+    salary_periods: dict[str, list[str]] = Field(default_factory=dict)
+    salary_not_salary: list[str] = Field(default_factory=list)
+
+
+class TitleTranslations(BaseModel):
+    """Content of ``config/title_translations.yaml``."""
+
+    exact: dict[str, str] = Field(default_factory=dict)
+    words: dict[str, str] = Field(default_factory=dict)
 
 
 class FiltersConfig(BaseModel):
@@ -173,6 +228,8 @@ class FiltersConfig(BaseModel):
     closed_markers: list[str] = Field(default_factory=list)
     opportunity_markers: list[str] = Field(default_factory=list)
     opportunity_strong_markers: list[str] = Field(default_factory=list)
+    # "bepul amaliyot" + one of these ("3-oydan haq to'lanadi") -> not decisive
+    opportunity_strong_exceptions: list[str] = Field(default_factory=list)
 
 
 class SourceRule(BaseModel):
@@ -232,7 +289,11 @@ class Settings(BaseModel):
     env: EnvSettings
     app: AppConfig
     categories: dict[str, CategoryConfig]
+    feature_tags: dict[str, FeatureTagConfig] = Field(default_factory=dict)
+    negation_words: list[str] = Field(default_factory=list)
     regions: RegionsConfig
+    extract: ExtractConfig = Field(default_factory=ExtractConfig)
+    title_translations: TitleTranslations = Field(default_factory=TitleTranslations)
     filters: FiltersConfig
     source_rules: SourceRulesConfig = Field(default_factory=SourceRulesConfig)
     config_dir: Path
@@ -279,8 +340,13 @@ def load_settings(
     config_dir = Path(config_dir)
     env = EnvSettings(_env_file=env_file)  # type: ignore[call-arg]
     app = AppConfig.model_validate(_read_yaml(config_dir / "settings.yaml"))
-    categories_raw = _read_yaml(config_dir / "categories.yaml").get("categories") or {}
+    categories_yaml = _read_yaml(config_dir / "categories.yaml")
+    categories_raw = categories_yaml.get("categories") or {}
     categories = {k: CategoryConfig.model_validate(v) for k, v in categories_raw.items()}
+    feature_tags = {
+        k: FeatureTagConfig.model_validate(v)
+        for k, v in (categories_yaml.get("feature_tags") or {}).items()
+    }
     regions = RegionsConfig.model_validate(_read_yaml(config_dir / "regions.yaml"))
     filters = FiltersConfig.model_validate(_read_yaml(config_dir / "filters.yaml"))
     source_rules = SourceRulesConfig.model_validate(_read_yaml(config_dir / "source_rules.yaml"))
@@ -288,7 +354,13 @@ def load_settings(
         env=env,
         app=app,
         categories=categories,
+        feature_tags=feature_tags,
+        negation_words=categories_yaml.get("negation_words") or [],
         regions=regions,
+        extract=ExtractConfig.model_validate(_read_yaml(config_dir / "extract.yaml")),
+        title_translations=TitleTranslations.model_validate(
+            _read_yaml(config_dir / "title_translations.yaml")
+        ),
         filters=filters,
         source_rules=source_rules,
         config_dir=config_dir,

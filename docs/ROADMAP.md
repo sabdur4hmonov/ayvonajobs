@@ -205,6 +205,8 @@ Menga o'zbekcha: nechta misol o'tdi, qaysilari o'tmadi va nega.
 
 ## BOSQICH 5 — Regex extractor + kategoriya ⏱ 2–3 soat · Model: `opus`
 
+- [x] Bajarildi — 2026-09-29 (tafsilot: `docs/PROGRESS.md`; 24/24 sobiq xfail o'tdi)
+
 ```text
 processing/extract.py va processing/categorize.py ni yoz. tests/fixtures dagi HAMMA xfail testlar o'tishi kerak.
 SOURCE_ANALYSIS 4–7 va 9-10 bo'limlaridagi HAMMA formatlarni qo'lla:

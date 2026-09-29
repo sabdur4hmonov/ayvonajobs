@@ -1,0 +1,158 @@
+# =====================================================================
+#  Regex extractor so'zlari (processing/extract.py, salary.py) — Bosqich 5, 2026-09-29.
+#  19 kanaldagi 374 real post qoliplaridan yig'ildi (docs/SOURCE_ANALYSIS.md §4-7, §9-10).
+#
+#  Hammasi FOLD qilingan qatorda qidiriladi: kichik harf, HAMMA kirill → lotin, emoji yo'q.
+#  Shuning uchun "Лавозим", "Должность" ham shu yerda lotin/kirill ko'rinishida yozilishi mumkin —
+#  ikkalasi ham bir xil ishlaydi. Qator boshidagi belgilar (•, –, ☑️, 📌, 1.) e'tiborga olinmaydi.
+#
+#  labels: "Kalit: qiymat" qatorlari. Qiymat "—" yoki bo'sh bo'lsa — keyingi qatorlar olinadi
+#  (ro'yxat, bo'sh qatorgacha). Uzun kalit birinchi tekshiriladi.
+# =====================================================================
+
+labels:
+  title:
+    - lavozim nomi
+    - lavozim
+    - vakansiya nomi
+    - vakansiya
+    - job vacancy
+    - vacancy
+    - position
+    - job title
+    - role
+    - kasb
+    - talab qilinadi
+    - должность
+    - вакансия
+    - требуется
+    - позиция
+  company:
+    - kompaniya nomi
+    - kompaniya
+    - company
+    - tashkilot nomi
+    - tashkilot
+    - ish beruvchi
+    - firma
+    - korxona
+    - employer
+    - компания
+    - организация
+    - работодатель
+    - корхона
+  salary:
+    - oylik maosh
+    - oylik daromad
+    - ish haqi
+    - ish xaqi
+    - ish haki
+    - ish xaki
+    - maosh
+    - oylik
+    - daromad
+    - oklad
+    - kunlik maosh
+    - kunlik
+    - haftalik
+    - soatbay
+    - salary / rate
+    - salary
+    - rate
+    - compensation
+    - pay
+    - зарплата
+    - заработная плата
+    - оклад
+    - доход
+    - оплата
+  schedule:
+    - ish vaqti
+    - ish grafigi
+    - ish tartibi
+    - grafik
+    - smena
+    - schedule
+    - working hours
+    - work schedule
+    - график работы
+    - график
+    - режим работы
+    - время работы
+  requirements:
+    - nomzodga talablar
+    - talablar
+    - talab
+    - sizdan talab qilinadi
+    - biz kimni qidiryapmiz
+    - job requirements
+    - requirements
+    - qualifications
+    - требования
+    - кого мы ищем
+  location:
+    - manzil
+    - hudud
+    - joylashuv
+    - ish joyi
+    - ofis
+    - location
+    - address
+    - адрес
+    - локация
+    - место работы
+    - ориентир
+    - mo'ljal
+
+# "X kerak", "ищет X", "We are looking for X" — lavozim shu iboralardan olinadi.
+# before: lavozim iboradan OLDIN turadi ("Oshpaz kerak"); after: iboradan KEYIN ("Требуется повар").
+hiring_phrases:
+  before: [kerak, kk, kerakmi, izlanmoqda, qidirilmoqda, taklif etiladi, taklif etilmoqda, ishga olinadi, ishga olinmoqda, ishga qabul qilinadi, qabul qilinmoqda, ishga taklif qilinadi, qabul qilinadi, ishga olamiz, ishga taklif qilamiz, izlayapmiz, qidiryapmiz, izlaymiz, qidiramiz, требуется, нужен, нужна, нужны, wanted, needed]
+  after: [требуется, ищет, ищем, в поисках, "we are looking for", "we're looking for", "looking for", "we are hiring", "we're hiring", "is looking for", "is hiring"]
+
+# Ko'p vakansiyali postdagi ro'yxat sarlavhasi (":" bilan tugaydi): "Ochiq vakansiyalar:"
+position_list_headers:
+  - vakansiyalar
+  - ochiq vakansiyalar
+  - bo'sh ish o'rinlari
+  - ish o'rinlari
+  - vakant ish o'rinlari
+  - mavjud ish o'rinlari
+  - ish urinlari
+  - mavjud vakansiyalar
+  - lavozimlar
+  - quyidagi lavozimlarga
+  - ishga taklif qilamiz
+  - вакансии
+  - открытые вакансии
+  - open positions
+  - positions
+  - we are hiring
+  - hiring
+
+# Maosh: kelishiladi (son yo'q)
+salary_negotiable:
+  - kelishiladi
+  - kelishilgan holda
+  - kelishuv asosida
+  - kelishuv bo'yicha
+  - suhbat asosida
+  - suhbat davomida
+  - suhbatda
+  - shtat jadvali
+  - negotiable
+  - competitive
+  - обговаривается
+  - договорная
+  - по договоренности
+  - по результатам собеседования
+
+# Maosh davri (salary_period). Topilmasa va son bo'lsa — month.
+salary_periods:
+  day: [kunlik, kuniga, kunbay, "1 kunga", "bir kunga", "/kun", в день, "за день", per day, daily, a day]
+  week: [haftalik, haftasiga, "/hafta", в неделю, per week, weekly]
+  hour: [soatbay, soatiga, soatlik, "/soat", в час, per hour, hourly, an hour]
+  month: [oylik, oyiga, "/oy", в месяц, per month, monthly, a month]
+
+# "Depozit 200$" — maosh EMAS (bunday qatordagi sonlar olinmaydi)
+salary_not_salary: [depozit, депозит, zalog, залог, ijara, аренда, arenda]

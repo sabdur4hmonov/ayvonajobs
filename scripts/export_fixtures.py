@@ -8,6 +8,7 @@ Usage:
     uv run python scripts/export_fixtures.py @kanal 12345
         -> add a new fixture (fill "expected" by hand afterwards)
     uv run python scripts/export_fixtures.py @kanal 12345 --dir tests/fixtures/dedup
+    uv run python scripts/export_fixtures.py @kanal 12345 --dir tests/fixtures/regressions
 """
 
 from __future__ import annotations
@@ -22,7 +23,11 @@ from typing import Any
 from ayvona.config import PROJECT_ROOT, get_settings
 
 DEFAULT_DIR = PROJECT_ROOT / "tests" / "fixtures" / "posts"
-FIXTURE_DIRS = (DEFAULT_DIR, PROJECT_ROOT / "tests" / "fixtures" / "dedup")
+FIXTURE_DIRS = (
+    DEFAULT_DIR,
+    PROJECT_ROOT / "tests" / "fixtures" / "dedup",
+    PROJECT_ROOT / "tests" / "fixtures" / "regressions",
+)
 
 _QUERY = """
 SELECT r.external_id, r.grouped_id, r.text, r.has_media, r.media_type, r.extra, r.posted_at,

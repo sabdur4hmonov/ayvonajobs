@@ -1,0 +1,32 @@
+{
+  "title": "Amaliyot: 2 oy bepul, keyin haq to'lanadi -> job",
+  "source": "@digitalitvacancy",
+  "external_id": "742",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-11T12:31:29+00:00",
+  "text": "Full Stack dasturlash yo‘nalishida amaliyot o‘tash imkoniyati!\n\n📱Tez rivojlanayotgan startap jamoasiga 3 nafar Full Stack Developer Intern (React + Python) taklif etilmoqda.\n\n💡Amaliyot davomida real mahsulot, foydalanuvchilar va amaliy muammolar ustida ishlash orqali tajriba orttirish imkoniyati yaratiladi.\n\n📌Amaliyot shartlari:\n✔️ Dastlabki 2 oy – bepul amaliyot;\n✔️ Yuqori natija ko‘rsatgan nomzodlarga 3-oydan boshlab haq to‘lanadi;\n✔️ Real va yirik loyihalarda amaliy tajriba;\n✔️ Startap muhitida ishlash va netvorking imkoniyati;\n✔️ Rasmiy shartnoma;\n✔️ID sertifikat.\n\n💻 Asosiy texnologiyalar: React + Python\n\nAmaliyot faqat sertifikat olish emas, balki real mahsulot yaratishda ishtirok etib, portfolio uchun amaliy natijaga ega bo‘lishni istagan nomzodlar uchun mo‘ljallangan.\n\n📩CV yuborish uchun: havola\n\n⌛ Shoshiling, bunday qulay imkoniyatni qo‘ldan boy bermang!\n\n🚀 Telegram",
+  "extra": {
+    "links": [
+      {
+        "text": "havola",
+        "url": "https://t.me/adawev"
+      },
+      {
+        "text": "Telegram",
+        "url": "https://t.me/digitalitvacancy"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "job",
+    "category": "it",
+    "profession": "dasturchi",
+    "title_contains": "Full Stack Developer",
+    "usernames": [
+      "@adawev"
+    ],
+    "note": "'bepul amaliyot' hal qiluvchi belgi, lekin '3-oydan boshlab haq to'lanadi' + rasmiy shartnoma — ishga olish"
+  }
+}

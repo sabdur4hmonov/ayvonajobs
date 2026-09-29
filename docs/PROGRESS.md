@@ -9,6 +9,7 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-29 | 2 — Baza | 12 ta jadval modeli (`db/models.py`), `db/session.py` (WAL, busy_timeout, foreign_keys), Alembic (async) + birinchi migratsiya + `jobs_fts` (FTS5) triggerlari, repository'lar: sources, raw_posts, kv | 25 test ✅, ruff ✅, `alembic check` ✅ |
 | 2026-09-29 | 3 — Collector | `sources/base.py`, `telegram_source.py`, `registry.py`, `apps/collector.py` (`--once` rejimi bilan), `scripts/login_telethon.py`, `scripts/show_status.py`; soxta manba + soxta Telethon client bilan testlar | 66 test ✅ (5 marta ketma-ket), ruff ✅. Haqiqiy Telegram'da **tekshirilmagan** (session yo'q) |
 | 2026-09-29 | 4 — Normalize, classify, dedup | 41 fixture (`tests/fixtures/posts/`, bazadan aynan) + 10 dedup fixture; `processing/`: `normalize`, `language`, `keywords`, `contacts`, `boilerplate`, `classify`, `dedup`; `scripts/export_fixtures.py`, `scripts/dedup_report.py` | 251 test ✅ + 24 xfail (extract — Bosqich 5), ruff ✅. **41/41** kind to'g'ri. 377 postda: 27 dublikat guruh (14 kunlik oyna) |
+| 2026-09-29 | 5 — Extractor, kategoriya | `processing/`: `extract`, `salary`, `location`, `categorize` (+ `contacts` kengaytirildi); `config/extract.yaml` (yangi), `regions.yaml` (14 hudud, tumanlar, mo'ljallar), `categories.yaml` kalit so'zlari; `jobs.profession` + `jobs.salary_period` (migratsiya `b5e1a7c3d9f2`); `low_quality` statusi; `scripts/extract_report.py`; 735/742 qoida tuzatildi | 370 test ✅ (0 xfail — **24/24 o'tdi**), ruff ✅. 313 job'dan: 2 tasi aloqasiz, 3 tasi low_quality, 309 tasi kanalga chiqadi |
 
 ---
 
@@ -159,6 +160,84 @@ SOURCE_ANALYSIS 22 degan edi — farq ehtiyotkorlikdan: shubhali juftlar dublika
 - Ko'rib chiqish uchun: `uv run python scripts/dedup_report.py --review` (ball ≤ 2 yoki aloqasiz job'lar),
   `--kinds` (hamma e'lon bo'lmaganlar va sababi).
 
+### Bosqich 5
+Sardor qarorlari (bosqich boshida qo'llandi):
+1. **`digitalitvacancy/735` (Anorbank) endi job.** Yangi qoida (`classify.py`, 5b-qadam): **lavozimlar ro'yxati,
+   har biriga alohida ariza havolasi** (yashirin "(havola)" → hh.uz, forma, telegra.ph; kamida 2 ta har xil havola)
+   → job. Qoida closed/resume/scam/haq to'lanmaydigan amaliyotdan keyin turadi. Havolalar matndagi tartib bo'yicha
+   qatorlarga bog'lanadi (bir xil "(havola)" matni 11 marta takrorlanadi).
+   **Hamma not_job/opportunity postlar (34 + 9 = 43 ta) bittalab ko'rildi.** Yana bittasi e'lon chiqdi:
+   **`digitalitvacancy/742`** ("Dastlabki 2 oy bepul amaliyot, 3-oydan haq to'lanadi, rasmiy shartnoma") —
+   `opportunity_strong_exceptions` (filters.yaml) qo'shildi: "bepul amaliyot" + "haq to'lanadi" → hal qiluvchi emas.
+   ⚠️ Bu munozarali: faqat yaxshi natija ko'rsatganlarga to'lanadi. Yoqmasa — `filters.yaml` dan o'chiring.
+   Qolgan 41 tasi to'g'ri: hazil/AI yangiliklar (@unilance teglari), maslahat va huquqiy postlar, kurs/bot
+   reklamalari, tadbir/forum/Dev Camp, grant/fellowship/UNDP stipendiya, Uzum akademiyasi, xizmat reklamasi,
+   kanal menyusi, "vakansiyalar yopildi" e'loni, matnsiz forma havolasi (@NextHireX/2513–2514, 2531–2532).
+   Ikkala post `tests/fixtures/regressions/` ga qo'shildi (41 ta asosiy misol o'zgarmasin deb alohida papka).
+2. **POST_EXAMPLES #2 (25039)**: `salary_period` olib tashlandi, `salary_min/max: null`, `salary_text: "250 000"`.
+   Qo'shimcha qarorim: son bo'lmasa **`currency` ham `null`** (valyuta faqat son bilan ma'noli). `make_examples.py`,
+   fixture va POST_EXAMPLES.md yangilandi. ⚠️ `data/make_examples.py` gitignore'da — o'zgarish faqat kompyuteringizda.
+3. **regions.yaml**: "Rakat / Ракат" → `toshkent_sh` mo'ljali (tuman aniq emas).
+4. **`low_quality` statusi** (`RawPostStatus.LOW_QUALITY`, oddiy VARCHAR — migratsiya shart emas): job, lekin lavozim
+   ham, maosh ham topilmagan → kanalga chiqmaydi, admin hisobotida. `Extraction.publish = aloqa bor VA low_quality
+   emas`. #19 (Crafers, 40829): kind job, `publish: false`; forma havolasi `apply_url` sifatida saqlanadi (admin ko'radi).
+   Hozir 3 ta: 40829, 40838 (Crafers qayta posti), Ish_Toshkent/6745 (aslida kanallar papkasi reklamasi).
+
+Bosqich 5 ning o'z qarorlari:
+5. **Hammasi qatorma-qator.** Har qatorning 2 shakli: `display` (o'qiladigan: NFKC, emoji yo'q, harf va alifbo
+   saqlanadi) va `folded` (qidiruv uchun). So'zlar soni bir xil — folded'dagi topilma display'ga so'z o'rni bo'yicha
+   qaytariladi. Shuning uchun lavozim/kompaniya **asl alifboda** qoladi ("моддий ашёвий хисобчи") — lotinga
+   o'girish Bosqich 6 formatter'da. `normalize_lines()` va `boilerplate.keep_mask()` shu uchun qo'shildi
+   (`normalize()`/`strip_boilerplate()` natijasi o'zgarmadi — dedup soni ham o'sha 27 guruh).
+6. **Qolip kalitlari, "... kerak" iboralari, ro'yxat sarlavhalari, maosh so'zlari — `config/extract.yaml`** da (kodda
+   emas). Lavozim tartibi: `Lavozim:/Position:/Вакансия:` kaliti → "X kerak / ищет X / We are looking for X" (birinchi
+   8 qator) → "Требуется:" + keyingi qator → kasb nomi bor qisqa birinchi qator → kasb nomi (categories.yaml).
+   "Maktabga Ayol oshpaz" → "Ayol oshpaz" (joy/maqsad qismi kesiladi), "Sotuv menejer yigitlar" → "Sotuv menejer",
+   "mas'uliyatli va chaqqon xodimlar" → lavozim emas.
+7. **Maosh asl valyutada saqlanadi** (USD — USD, so'mga aylantirilmaydi). ARCHITECTURE "so'mga keltirilgan" degan edi;
+   kurs bilan qidiruv — keyin (Bosqich 12, `kv_store.usd_rate`). Aql-hush chegaralari valyuta+davr bo'yicha
+   (`salary.py: SANE_RANGES`): oylik so'm 500 ming–200 mln, kunlik 30 ming–5 mln, oylik USD 50–30 000 ...
+   Chegaradan tashqari → son yo'q, faqat `salary_text`. Davr topilmasa — `month`. "Fiks + KPI" → faqat min.
+   Diapazondagi xato yozuv ("4 000 000-10 00 0000") juftiga qarab tuzatiladi → 10 000 000.
+8. **Hudud**: eng uzun moslik ustun ("Toshkent viloyati", "Samarqand Darvoza" — Toshkentdagi mo'ljal);
+   "X ko'chasi" — hudud emas; @username/havola ichidagi "tashkent" — hudud emas. Toshkent sh. + Toshkent vil. = bitta
+   hudud (ko'p ovoz olgani); boshqa 2+ hudud → `kop_hudud` (`regions` ro'yxatida hammasi — teglar uchun).
+   `is_remote`: yolg'iz "online" emas ("online do'kon"); qatorda "office/ofisda" bo'lsa — masofaviy emas.
+9. **Kategoriya balli**: kasb = 3×(lavozimdagi so'zlar) + (matndagi so'zlar), kategoriya = eng yaxshi kasbi +
+   kategoriya darajasidagi so'zlar ("restoran", "ombor", "bank", "o'quv markaz"...); uzun moslik qisqasini yutadi
+   ("marketing manager" ichidagi "manager" hisoblanmaydi); teng bo'lsa — postda birinchi kelgani. 2 harfli so'zlar
+   ("qa", "hr", "it") faqat butun so'z ("qarashga" ≠ QA). Natijada "boshqa" 27 → 7.
+   🐞 Topilgan eski xato: `categories.yaml` da `0,5 stavka` YAML'da ikki elementga bo'linib ketgan edi — tuzatildi.
+10. **Ko'p vakansiya** (`positions`, `multi`): "Ochiq vakansiyalar:" + ro'yxat → har qatorda ariza havolasi →
+    1️⃣ 2️⃣ bloklar → har biri o'z maoshi/manzili bor bir necha "... kerak" bloki (bir lavozimning 1-/2-smenasi
+    ko'p vakansiya emas). Sarlavha = kompaniya (bitta bo'lsa) yoki "Bir nechta vakansiya".
+11. **Aloqa** (`contacts.py`): noma'lum operator kodi faqat qatorda "tel/aloqa/bog'lanish" bo'lsa; havola ichidagi
+    raqamlar telefon emas; `t.me/user?text=...` — username (Yandex Eats), `?start=` — ariza havolasi; LinkedIn post
+    havolasi — apply_url (@unilance); Instagram/Facebook/YouTube hech qachon apply_url emas; `apply_url` ball bo'yicha
+    tanlanadi (forma/hh.uz/telegra.ph/.../apply > "Apply here" tugmasi > matndagi havola), footer "Jobs/Platform" —
+    aloqa emas; `utm_*`, `hhtm*`, `source` parametrlari olib tashlanadi. Username asl yozilishida (`@HR_KONIDA`).
+12. **`confidence`**: lavozim (kalit/ibora/ro'yxat) 0.35, (kasb nomidan) 0.2, aloqa 0.35, maosh 0.1, hudud 0.1,
+    kompaniya/ish vaqti 0.1. Lavozim + aloqa ≥ 0.7 ✅.
+13. **`title_uz`**: ru/en e'lonlar uchun `title_translations.yaml` (exact, keyin so'zma-so'z). "Fleet Specialist" →
+    "Avtopark mutaxassisi".
+14. **Baza**: `jobs.profession`, `jobs.salary_period` — migratsiya `b5e1a7c3d9f2`. Oddiy `ADD COLUMN` (batch rejim
+    `jobs` ni qayta qurib FTS5 triggerlarini o'chirib yuborardi). Bazaning nusxasida upgrade/downgrade sinaldi.
+    **Sizning bazangizga hali qo'llanmagan** — pastda buyruq.
+15. `scripts/dedup_report.py` Windows konsolida emoji'da yiqilardi (cp1251) — UTF-8 chiqishga o'tkazildi.
+
+**Natija:** 24/24 sobiq xfail o'tdi (2 tasining kutilgan natijasi Sardor qarori bo'yicha o'zgardi: 25039, 40829).
+374 post (313 job): telefon 135 (job'da 129), @username 239 (223), apply_url 79 (67), email 9 (9);
+**aloqasiz: 36 post, shundan job — 2 ta** (734 maslahat, 6745 papka reklamasi — ikkalasi aslida e'lon emas).
+Job'larda: lavozim 299/313, maosh soni 190, hudud 276, ko'p vakansiyali 11, low_quality 3, kanalga chiqadi 309.
+Ko'rish: `uv run python scripts/extract_report.py` (`--jobs`, `--no-contact`, `--low`).
+
+**Ma'lum cheklovlar:**
+- 14 job'da lavozim topilmadi (faqat kategoriya) — confidence < 0.7 → Bosqich 6 fallback shablon (masalan 5555 —
+  bitta uzun paragraf, 25042 — kasb nomi yo'q kirill sarlavha).
+- Dedup hali `guess_title` ishlatadi — Bosqich 7 pipeline'da `make_entry(title=extraction.title)` beriladi.
+- "Har video uchun 50 000" kabi KPI summalar maosh bilan aralashsa, aql-hush tekshiruvi sonlarni tashlaydi (faqat matn).
+- Ko'p vakansiyali postning kategoriyasi — eng yaxshi / birinchi lavozimniki (v1 qarori, SOURCE_ANALYSIS §9).
+
 ---
 
 ## Sardor uchun
@@ -176,6 +255,9 @@ Kompyuter yoniga qaytganingizda qilishingiz kerak bo'lgan narsalar (batafsil —
 - [ ] Haqiqiy Telegram'da tekshirgach, ROADMAP'dagi Bosqich 3 "Haqiqiy Telegram'da tekshirish" katagini belgilang.
 - [ ] `docs/POST_EXAMPLES.md` ni to'ldiring — Bosqich 4 uchun kerak (har kanaldan 2–3 ta post).
 - [ ] Hali `git push` qilinmagan (siz aytgandek). Ko'rib chiqqach: `git push -u origin main`.
+- [ ] **Bosqich 5 migratsiyasi:** `uv run alembic upgrade head` (jobs jadvaliga `profession`, `salary_period`).
+- [ ] **Qaror kerak — 742** (2 oy bepul amaliyot, keyin haq): job qildim. Kerak bo'lmasa `config/filters.yaml` dagi
+      `opportunity_strong_exceptions` ni o'chiring.
 
 ---
 

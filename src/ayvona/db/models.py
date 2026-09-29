@@ -65,6 +65,9 @@ class RawPostStatus(StrEnum):
     DUPLICATE = "duplicate"
     NOT_JOB = "not_job"
     NO_TEXT = "no_text"
+    # A job ad with neither a title nor a salary found (extract.py): not published,
+    # listed in the admin report.
+    LOW_QUALITY = "low_quality"
     ERROR = "error"
 
 
@@ -173,10 +176,13 @@ class Job(Base):
     title: Mapped[str | None] = mapped_column(String(255))
     company: Mapped[str | None] = mapped_column(String(255))
     category: Mapped[str] = mapped_column(String(64), default="boshqa", server_default="boshqa")
+    # config/categories.yaml profession key ("kassir"); None = only the category is known
+    profession: Mapped[str | None] = mapped_column(String(64))
 
     salary_min: Mapped[int | None] = mapped_column(BigInteger)  # in so'm, for search
     salary_max: Mapped[int | None] = mapped_column(BigInteger)
     currency: Mapped[str | None] = mapped_column(String(8))
+    salary_period: Mapped[str | None] = mapped_column(String(8))  # month | week | day | hour
     salary_text: Mapped[str | None] = mapped_column(String(255))
 
     region: Mapped[str | None] = mapped_column(String(64))

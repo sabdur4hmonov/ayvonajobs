@@ -48,31 +48,46 @@ class BoilerplateRules:
         )
 
 
+def keep_mask(norm_lines: list[str], rules: BoilerplateRules) -> list[bool]:
+    """For every normalized line: ``True`` if it is part of the post, ``False`` if boilerplate.
+
+    Applies leading junk / cut_from (with the 40% safety rule) / exact_lines / strip_lines /
+    serial numbers / trailing hashtags.
+    """
+    keep = [True] * len(norm_lines)
+    idx = list(range(len(norm_lines)))  # indices still kept, in order
+
+    # Leading junk: empty lines (emoji-only headers become empty) and "new"/"without" words.
+    while idx and (not norm_lines[idx[0]] or norm_lines[idx[0]] in rules.header_junk_words):
+        keep[idx.pop(0)] = False
+
+    total = sum(len(norm_lines[i]) for i in idx) or 1
+    for pos, i in enumerate(idx):
+        if any(c in norm_lines[i] for c in rules.cut_from):
+            if sum(len(norm_lines[j]) for j in idx[:pos]) / total >= MIN_KEEP_RATIO:
+                for j in idx[pos:]:
+                    keep[j] = False
+                idx = idx[:pos]
+            break
+
+    for i in idx:
+        ln = norm_lines[i]
+        if (
+            ln in rules.exact_lines
+            or _SERIAL_RE.match(ln)
+            or any(s in ln for s in rules.strip_lines)
+        ):
+            keep[i] = False
+    idx = [i for i in idx if keep[i]]
+
+    if rules.drop_trailing_hashtags:
+        while idx and (not norm_lines[idx[-1]] or _HASHTAG_LINE_RE.match(norm_lines[idx[-1]])):
+            keep[idx.pop()] = False
+    return keep
+
+
 def strip_boilerplate(norm_text: str, rules: BoilerplateRules) -> str:
     """Apply cut_from / strip_lines / exact_lines / header junk to normalized text."""
     lines = norm_text.split("\n")
-
-    # Leading junk: empty lines (emoji-only headers become empty) and "new"/"without" words.
-    while lines and (not lines[0] or lines[0] in rules.header_junk_words):
-        lines.pop(0)
-
-    total = sum(len(x) for x in lines) or 1
-    for i, line in enumerate(lines):
-        if any(c in line for c in rules.cut_from):
-            if sum(len(x) for x in lines[:i]) / total >= MIN_KEEP_RATIO:
-                lines = lines[:i]
-            break
-
-    lines = [
-        ln
-        for ln in lines
-        if ln not in rules.exact_lines
-        and not _SERIAL_RE.match(ln)
-        and not any(s in ln for s in rules.strip_lines)
-    ]
-
-    if rules.drop_trailing_hashtags:
-        while lines and (not lines[-1] or _HASHTAG_LINE_RE.match(lines[-1])):
-            lines.pop()
-
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    kept = [ln for ln, k in zip(lines, keep_mask(lines, rules), strict=True) if k]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()

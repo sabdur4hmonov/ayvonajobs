@@ -81,6 +81,7 @@ new → processing → done          (job yaratildi)
                  → duplicate     (oldin chiqqan)
                  → not_job       (reklama, e'lon emas)
                  → no_text       (faqat rasm — admin'ga)
+                 → low_quality   (job, lekin lavozim ham, maosh ham topilmadi — chiqmaydi, admin hisobotida)
                  → error         (kod xatosi — admin'ga, keyin qayta ishlanadi)
 ```
 
@@ -131,7 +132,7 @@ rejected (filtr yoki admin rad etdi)
 | origin | `aggregator` / `user` |
 | raw_post_id → raw_posts (null bo'lishi mumkin), author_id → users (null bo'lishi mumkin) | |
 | title, company, category, profession | lavozim, kompaniya, kategoriya va kasb kodi (`config/categories.yaml`) |
-| salary_min, salary_max, currency, salary_text | qidiruv uchun so'mga keltirilgan son + asl matn |
+| salary_min, salary_max, currency, salary_period, salary_text | son (asl valyutada; aql-hush tekshiruvidan o'tmasa bo'sh), davr (month/week/day/hour) + asl matn |
 | region, city, is_remote | |
 | schedule, requirements, description | |
 | contact_phone, contact_username | |
