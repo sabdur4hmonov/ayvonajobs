@@ -150,6 +150,9 @@ class WorkerConfig(BaseModel):
     heartbeat_interval_seconds: float = Field(default=60, gt=0)
     # The in-memory dedup index is rebuilt from the DB this often (drops entries > 14 days old).
     dedup_reload_hours: float = Field(default=6, gt=0)
+    # On start, queued / retry jobs get the caption + buttons of the current formatter / branding
+    # (services/reformat.py) — a formatter change never publishes old texts.
+    reformat_queued_on_start: bool = True
 
 
 class MonitoringConfig(BaseModel):

@@ -381,6 +381,15 @@ Ommaviy botning asosini qur (aiogram 3, Router'lar):
 - Middleware'lar: ban tekshiruvi, throttling (1 so'rov/soniya), users.last_active_at
 - bot/texts.py — barcha matnlar bitta joyda (keyin rus tili qo'shish oson bo'lsin)
 - FSM storage: hozircha MemoryStorage (izohda: nega va keyin nimaga almashtirish mumkin)
+
+Mavjud kodni hisobga ol:
+- bot/setup.py: admin_area router public'dan oldin ulangan; admin.py dagi CommandStart adminning
+  HAR QANDAY /start ini ushlaydi. O'zgartir: admin ham asosiy menyuni va deep link'larni ko'rsin
+  (admin yordami — /help da qolsin).
+- Ban/throttling middleware'lari admin'larga (ADMIN_IDS) ta'sir qilmasin.
+- public_start va T.PUBLIC_START ("tez orada") — asosiy menyu bilan almashtiriladi.
+- Kanal tugmalari allaqachon ?start=save_<id> va ?start=search ga yuboradi — shu formatni saqla.
+- Saqlash (favorites) mantiqi services/ da, handler faqat chaqiradi.
 ```
 **Commit:** `feat(bot): public bot foundation and main menu`
 

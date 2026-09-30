@@ -1,14 +1,17 @@
-"""services/reformat.py (scripts/reformat_queued.py): queued / retry jobs get the current caption
-and buttons; published / sending / failed jobs and the dedup data are never touched."""
+"""services/reformat.py (scripts/reformat_queued.py, worker start-up): queued / retry jobs get the
+current caption and buttons; published / sending / failed jobs and the dedup data are never
+touched."""
 
 from __future__ import annotations
 
+import asyncio
 import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
 from sqlalchemy import func, select, update
 
+from ayvona.apps.worker import run_worker
 from ayvona.config import Settings
 from ayvona.db.models import Job, JobOrigin, JobStatus, ParseMethod, RawPost
 from ayvona.db.repositories import jobs_repo, kv_repo
@@ -185,6 +188,30 @@ async def test_user_job_without_raw_post_is_skipped(session_factory: SF) -> None
 
     assert report.updated == 0 and [j for j, _ in report.skipped] == [job_id]
     assert (await get_job(session_factory, job_id)).formatted_text == "old @ayvonabot"
+
+
+# ------------------------------------------------------------------ worker start-up
+async def test_worker_start_reformats_the_queue(session_factory: SF) -> None:
+    ids = await old_jobs(session_factory)
+    published = await get_job(session_factory, ids[JobStatus.PUBLISHED])
+
+    await run_worker(make_settings(), session_factory, asyncio.Event(), once=True)
+
+    queued = await get_job(session_factory, ids[JobStatus.QUEUED])
+    assert f"@{NEW_BOT}" in (queued.formatted_text or "")
+    assert f"https://t.me/{NEW_BOT}?start=save_{queued.id}" in urls(queued)
+    after = await get_job(session_factory, ids[JobStatus.PUBLISHED])
+    assert after.formatted_text == published.formatted_text
+
+
+async def test_worker_start_reformat_can_be_turned_off(session_factory: SF) -> None:
+    ids = await old_jobs(session_factory)
+    before = await get_job(session_factory, ids[JobStatus.QUEUED])
+    s = make_settings(reformat_queued_on_start=False)
+
+    await run_worker(s, session_factory, asyncio.Event(), once=True)
+
+    assert (await get_job(session_factory, before.id)).formatted_text == before.formatted_text
 
 
 # ------------------------------------------------------------------ safety checks

@@ -14,6 +14,9 @@ Step 0 (first start only): every post already in the DB becomes ``skipped_backfi
 posts collected before the worker existed never reach the channel (``kv_store`` flag
 ``worker:backfill_skipped_at``).
 
+Every start, before publishing: ``queued`` / ``retry`` jobs are re-rendered with the current
+formatter and ``branding`` (services/reformat.py; ``worker.reformat_queued_on_start``).
+
 Without ``BOT_TOKEN`` / ``CHANNEL_ID`` the worker still runs: the pipeline fills the queue, the
 publisher is off and says why. Nothing is ever sent to Telegram in that case.
 
@@ -59,6 +62,7 @@ from ayvona.publisher.outbox import ChannelSender, Publisher
 from ayvona.services.backup import BackupService
 from ayvona.services.heartbeat import Monitor
 from ayvona.services.notifier import Notifier
+from ayvona.services.reformat import ReformatReport, reformat_queued
 from ayvona.timeutil import utcnow
 
 PROCESS_NAME = "worker"
@@ -89,6 +93,32 @@ async def reset_stuck_processing(sf: SessionFactory) -> int:
     if n:
         logger.warning("{} ta post 'processing' da qolgan edi — qayta 'new' qilindi", n)
     return n
+
+
+async def reformat_queue(settings: Settings, sf: SessionFactory) -> ReformatReport | None:
+    """Start-up, before the publisher: the queue gets the current formatter / branding.
+
+    Formatter code and ``branding`` only change with a restart (deploy, settings.yaml), so doing
+    it here keeps every job still waiting in step with them. Never stops the worker: on an error
+    the jobs keep their stored text."""
+    if not settings.app.worker.reformat_queued_on_start:
+        return None
+    try:
+        report = await reformat_queued(settings, sf)
+    except Exception:
+        logger.exception("Navbatni qayta formatlashda xato — e'lonlar eski matn bilan qoladi")
+        return None
+    if report.updated or report.skipped or report.taken:
+        logger.info(
+            "Navbat hozirgi formatter bilan yangilandi: {} ta e'londan {} tasi o'zgardi, "
+            "{} tasi o'tkazib yuborildi",
+            report.total,
+            report.updated,
+            len(report.skipped),
+        )
+    for job_id, reason in report.skipped:
+        logger.warning("job #{}: qayta formatlanmadi — {}", job_id, reason)
+    return report
 
 
 async def pipeline_loop(
@@ -141,6 +171,7 @@ async def run_worker(
         )
     else:
         logger.info("--no-publish: kanalga hech narsa yuborilmaydi, faqat qayta ishlash.")
+    await reformat_queue(settings, sf)
 
     cfg = settings.app.worker
     if once:

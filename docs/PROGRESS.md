@@ -791,7 +791,7 @@ uv run python scripts/reformat_queued.py              # backup + yangilash
 uv run python -m ayvona.apps.worker
 ```
 
-**Kelajakda shu muammo bo'lmasligi uchun — qaror (bajarilmadi, Sardorning javobini kutadi):**
+**Kelajakda shu muammo bo'lmasligi uchun — qaror (bajarildi, pastda "Worker start'ida qayta formatlash"):**
 "Publisher chiqarish paytida footer va tugmalarni branding'dan qayta qo'ysin" varianti **tanlanmadi**, sabablari:
 1. Yarim yechim: bu safargi muammoning yarmi heshteg va manzil tozalash edi — publisher faqat footer/tugmani
    almashtirsa, ular baribir eski qolardi.
@@ -807,4 +807,15 @@ uv run python -m ayvona.apps.worker
 avtomatik chaqirish. Formatter kodi ham, `branding` ham faqat qayta ishga tushirishda o'zgaradi (sozlamalar
 start'da o'qiladi, deploy servislarni qayta yoqadi) — demak har qanday formatter o'zgarishi butun navbatga
 o'zi qo'llanadi, post bitta joyda yasaladi, sxema o'zgarmaydi. Narxi: start'da navbatni qayta ishlash
-(274 ta job — bir necha soniya). Tasdiqlasangiz, qo'shaman.
+(274 ta job — bir necha soniya).
+
+### Worker start'ida qayta formatlash (2026-09-30)
+- `apps/worker.py` → `reformat_queue()`: har start'da, publisher boshlanishidan oldin (`requeue_stuck` dan keyin)
+  navbatdagi `queued` / `retry` e'lonlar hozirgi formatter va `branding` bilan qayta yasaladi (xuddi skript kabi,
+  faqat backup'siz — kunlik backup bor). Xato bo'lsa worker to'xtamaydi, e'lonlar eski matnda qoladi (log'da xato).
+- O'chirish: `config\settings.yaml` → `worker.reformat_queued_on_start: false`.
+- Log'da: "Navbat hozirgi formatter bilan yangilandi: N ta e'londan M tasi o'zgardi ...".
+- `scripts/reformat_queued.py` qoladi: `--dry-run` bilan oldindan ko'rish va backup bilan qo'lda ishlatish uchun.
+- ROADMAP Bosqich 10 promptiga "Mavjud kodni hisobga ol" bo'limi qo'shildi (admin /start ushlashi, middleware
+  admin'ga ta'sir qilmasligi, deep link formati, favorites mantiqi `services/` da).
+- Testlar: +2 (`tests/test_reformat.py`). `uv run pytest` → 685 passed, `uv run ruff check .` toza.
