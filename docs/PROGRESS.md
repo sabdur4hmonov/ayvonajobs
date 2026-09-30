@@ -849,3 +849,24 @@ hisoblanadi (20 daqiqalik oyna — amalda farq qilmaydi).
 
 Testlar: +9 (`test_publisher.py` 7, `test_admin_bot.py` 1, `test_reformat.py` 1).
 `uv run pytest` → **694 passed**, `uv run ruff check .` toza.
+
+
+---
+
+## Monitoring: collector o'chiq bo'lsa — bitta xabar (2026-09-30)
+
+**Muammo:** collector to'xtasa, 24 soatdan keyin har bir kanal uchun alohida "🟡 ... dan post kelmadi" xabari kelardi
+(~20 ta), garchi sabab bitta — collector o'qimayapti.
+
+**Yechim** (`services/heartbeat.py`): kanal jimligi faqat collector **o'qib turganda** tekshiriladi:
+heartbeat yangi (≤ 10 daq) **va** `collector:last_cycle_at` yangi (collector hamma kanallarni aylanib chiqqan).
+- Collector o'chiq → faqat bitta "🔴 Collector jim" xabari (avvalgidek). Kanal-jimlik xabarlari yuborilmaydi.
+- Qaror: `last_cycle_at` ham shart — collector qayta yongan zahoti hali kanallarni o'qib ulgurmagan bo'ladi; faqat
+  heartbeat'ga qaralsa, o'sha oraliqda baribir 20 ta xabar ketishi mumkin edi.
+- Qaror: jimlik belgilari (`monitor:silent:*`) collector o'chiqligida o'zgartirilmaydi — qayta o'qiy boshlaganda
+  haqiqatan jim kanal bo'lsa, xabar keladi; "✅ tiklandi" xabarlari ham ortiqcha ketmaydi.
+- Collector hech qachon ishlamagan bo'lsa (heartbeat yo'q) — kanal jimligi tekshirilmaydi.
+- Manba xatolari ("ketma-ket N marta o'qilmadi") — o'zgarmadi (collector yozadi, haqiqiy ma'lumot).
+- `kv_repo.COLLECTOR_LAST_CYCLE`, `kv_repo.get_time()` qo'shildi (kalit avval faqat `apps/collector.py` da edi).
+
+Testlar: +2 (`test_monitoring.py`: 15 kanal + o'chiq collector → 1 xabar; haqiqatan jim kanal). 696 passed, ruff toza.

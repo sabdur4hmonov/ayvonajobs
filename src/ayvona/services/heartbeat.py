@@ -6,7 +6,9 @@ and in the bot (watches the worker), so each process is watched by another one.
 * a process whose ``heartbeat:<name>`` is older than ``heartbeat_stale_minutes`` (10);
   a process that never wrote a heartbeat (not deployed yet) is ignored;
 * an enabled source without any post for ``source_silence_hours`` (24) — the channel may be
-  deleted or has blocked our reader account;
+  deleted or has blocked our reader account. Only checked while the collector is reading
+  (fresh heartbeat and a finished round): a stopped collector gives ONE "Collector jim"
+  alert, not one "kanal jim" per channel;
 * a source failing ``source_error_threshold`` (5) polls in a row.
 
 One message when a problem starts and one "✅ ... tiklandi" when it ends (state in ``kv_store``
@@ -77,6 +79,17 @@ class Monitor:
             await self.notifier.send(text, key=f"monitor:{key}:{problem}")
         return text
 
+    async def _collector_reading(self, now: datetime, stale_after: timedelta) -> bool:
+        """The collector is alive (fresh heartbeat) AND finished a round over the sources
+        recently (``collector:last_cycle_at``) — right after a restart the channels have not
+        been read yet, so they would all still look silent."""
+        async with self.sf() as s:
+            beat = await kv_repo.read_heartbeat(s, "collector")
+            cycle = await kv_repo.get_time(s, kv_repo.COLLECTOR_LAST_CYCLE)
+        if beat is None or cycle is None:
+            return False
+        return now - ensure_utc(beat) <= stale_after and now - cycle <= stale_after
+
     async def check(self, now: datetime | None = None) -> list[str]:
         """One round of checks. Returns the messages sent (for tests / logs)."""
         now = now or utcnow()
@@ -102,24 +115,29 @@ class Monitor:
 
         if not self.watch_sources:
             return sent
+        # Silence only means something while the collector is reading: when it is down, every
+        # channel looks silent — one "Collector jim" alert (above) instead of one per channel.
+        # The silence flags are left as they are until the collector reads again.
+        check_silence = await self._collector_reading(now, stale_after)
         silence = timedelta(hours=self.cfg.source_silence_hours)
         async with self.sf() as s:
             sources = await sources_repo.list_enabled(s)
             last_posts = await sources_repo.last_post_times(s)
         for src in sources:
             name = html.escape(src.identifier)
-            last = last_posts.get(src.id) or ensure_utc(src.created_at)
-            quiet = now - last
-            msg = await self._transition(
-                f"silent:{src.id}",
-                quiet > silence,
-                f"🟡 <b>{name}</b> dan {_ago(quiet)} davomida birorta ham post kelmadi. "
-                "Kanal o'chirilgan yoki o'quvchi akkauntni bloklagan bo'lishi mumkin. "
-                "Kerak bo'lmasa: /sources → ⏸ Pauza.",
-                f"✅ {name} dan yana postlar kelyapti.",
-            )
-            if msg:
-                sent.append(msg)
+            if check_silence:
+                last = last_posts.get(src.id) or ensure_utc(src.created_at)
+                quiet = now - last
+                msg = await self._transition(
+                    f"silent:{src.id}",
+                    quiet > silence,
+                    f"🟡 <b>{name}</b> dan {_ago(quiet)} davomida birorta ham post kelmadi. "
+                    "Kanal o'chirilgan yoki o'quvchi akkauntni bloklagan bo'lishi mumkin. "
+                    "Kerak bo'lmasa: /sources → ⏸ Pauza.",
+                    f"✅ {name} dan yana postlar kelyapti.",
+                )
+                if msg:
+                    sent.append(msg)
             error = html.escape((src.last_error or "")[:300])
             msg = await self._transition(
                 f"errors:{src.id}",

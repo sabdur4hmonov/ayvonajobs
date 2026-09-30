@@ -16,6 +16,14 @@ from tests.worker_helpers import SF, RecordingNotifier, add_job, add_raw, add_so
 
 
 # ------------------------------------------------------------------ monitoring
+async def collector_reading(sf: SF, at: datetime | None = None) -> None:
+    """The collector is alive and has just finished a round over the sources."""
+    at = at or utcnow()
+    async with sf() as s, s.begin():
+        await kv_repo.write_heartbeat(s, "collector", at)
+        await kv_repo.set_value(s, kv_repo.COLLECTOR_LAST_CYCLE, at.isoformat())
+
+
 async def test_silent_process_alerts_once_and_recovers(session_factory: SF) -> None:
     notifier = RecordingNotifier()
     mon = Monitor(make_settings(), session_factory, notifier, ("collector", "bot"))  # type: ignore[arg-type]
@@ -45,6 +53,7 @@ async def test_silent_and_failing_sources(session_factory: SF) -> None:
         src = await s.get(Source, busy)
         src.error_count = 6  # type: ignore[union-attr]
         src.last_error = "ChannelPrivateError"  # type: ignore[union-attr]
+    await collector_reading(session_factory)
 
     sent = await mon.check()
     assert any("@jim_kanal" in m and "30 soat" in m for m in sent)
@@ -56,8 +65,51 @@ async def test_silent_and_failing_sources(session_factory: SF) -> None:
 async def test_new_source_without_posts_is_not_silent_yet(session_factory: SF) -> None:
     mon = Monitor(make_settings(), session_factory, RecordingNotifier(), ())  # type: ignore[arg-type]
     await add_source(session_factory, "@yangi")
+    await collector_reading(session_factory)
     assert await mon.check() == []
-    assert len(await mon.check(utcnow() + timedelta(hours=25))) == 1
+    later = utcnow() + timedelta(hours=25)
+    await collector_reading(session_factory, later)
+    assert len(await mon.check(later)) == 1
+
+
+async def test_stopped_collector_gives_one_alert_not_one_per_channel(session_factory: SF) -> None:
+    """Collector down for 30 h: every channel looks silent, but only "Collector jim" is sent."""
+    notifier = RecordingNotifier()
+    mon = Monitor(make_settings(), session_factory, notifier, ("collector",))  # type: ignore[arg-type]
+    now = utcnow()
+    for i in range(15):
+        src = await add_source(session_factory, f"@kanal_{i}")
+        await add_raw(session_factory, src, "post", posted_ago=timedelta(hours=30))
+    await collector_reading(session_factory, now - timedelta(hours=30))
+
+    sent = await mon.check(now)
+    assert len(sent) == 1 and "Collector jim" in sent[0]
+    assert await mon.check(now) == []
+
+    # collector restarted, heartbeat fresh, but its first round is not finished yet -> quiet
+    async with session_factory() as s, s.begin():
+        await kv_repo.write_heartbeat(s, "collector", now)
+    assert await mon.check(now) == ["✅ Collector yana ishlayapti."]
+
+    # a round finished and the channels got new posts -> still nothing to report
+    for src_id in range(1, 16):
+        await add_raw(session_factory, src_id, "yangi", posted_ago=timedelta(minutes=5))
+    await collector_reading(session_factory, now)
+    assert await mon.check(now) == []
+
+    # never started collector (not deployed): no channel silence alerts at all
+    async with session_factory() as s, s.begin():
+        await kv_repo.set_value(s, "heartbeat:collector", None)
+    assert await mon.check(now + timedelta(days=3)) == []
+
+
+async def test_really_silent_channel_is_reported_once_collector_reads(session_factory: SF) -> None:
+    mon = Monitor(make_settings(), session_factory, RecordingNotifier(), ("collector",))  # type: ignore[arg-type]
+    src = await add_source(session_factory, "@jim")
+    await add_raw(session_factory, src, "post", posted_ago=timedelta(hours=30))
+    await collector_reading(session_factory)
+    sent = await mon.check()
+    assert len(sent) == 1 and "@jim" in sent[0] and "post kelmadi" in sent[0]
 
 
 # ------------------------------------------------------------------ backup

@@ -9,6 +9,17 @@ Yangi sessiya yoki boshqa Windows foydalanuvchisi shu faylni birinchi o'qisin, k
 - Hozircha hamma narsa **laptopda** ishlaydi (collector + worker + bot, 3 ta PowerShell oynasi), kanalga real postlar chiqyapti.
 - Worker start'da navbatni hozirgi formatter bilan avtomatik qayta yasaydi (`worker.reformat_queued_on_start`).
 
+## Avtonom ish (2026-09-30 kechasi, Sardor dam olyapti) — tartib bilan
+Qoidalar: collector/worker/bot ISHGA TUSHIRILMAYDI, `data/ayvona.db` ga tegilmaydi (migratsiya faqat nusxada sinaladi),
+har band alohida commit + push, qarorlar PROGRESS.md ga, savol berilmaydi.
+- [x] 0. Monitoring: collector o'chiq → bitta "Collector jim" (kanal-jimlik xabarlari yo'q)
+- [ ] 1. Bosqich 10 — ommaviy bot asosi
+- [ ] 2. Bosqich 11 — e'lon joylash formasi
+- [ ] 3. Bosqich 12 — qidiruv + saqlanganlar (FTS5 uchun normalize qilingan matn ustuni)
+- [ ] 4. Bosqich 13 — obunalar
+- [ ] 5. Bosqich 14 — yopish, muddat, to'liq statistika
+Oxirida Sardorga bitta hisobot (ertalabki PowerShell buyruqlari bilan).
+
 ## Keyingi ishlar (tartib bilan — bittadan)
 1. [ ] Worker'ni qayta yoqish, kanalda yangi postlar `@ayvona_jobs_bot` / `@ayvonajobs` bilan chiqayotganini tekshirish.
 2. [x] `publisher.max_age_hours: 24` qoidasi (24 soatdan eski e'lon kanalga chiqmaydi, status `skipped_old`) — 2026-09-30, PROGRESS.md oxirida.

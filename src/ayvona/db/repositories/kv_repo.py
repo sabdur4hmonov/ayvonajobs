@@ -13,6 +13,8 @@ from ayvona.timeutil import ensure_utc, utcnow
 HEARTBEAT_PREFIX = "heartbeat:"
 # "1" = the publisher sends nothing (admin /pause); the queue keeps growing.
 PUBLISHER_PAUSED = "publisher_paused"
+# ISO time the collector finished its last round over every source (apps/collector.py).
+COLLECTOR_LAST_CYCLE = "collector:last_cycle_at"
 _TRUE = frozenset({"1", "true", "yes", "on"})
 
 
@@ -39,6 +41,15 @@ async def write_heartbeat(session: AsyncSession, process: str, now: datetime | N
 async def read_heartbeat(session: AsyncSession, process: str) -> datetime | None:
     raw = await get(session, HEARTBEAT_PREFIX + process)
     return datetime.fromisoformat(raw) if raw else None
+
+
+async def get_time(session: AsyncSession, key: str) -> datetime | None:
+    """An ISO-8601 value as an aware UTC datetime (``None`` if missing or unreadable)."""
+    raw = await get(session, key)
+    try:
+        return ensure_utc(datetime.fromisoformat(raw)) if raw else None
+    except ValueError:
+        return None
 
 
 async def get_bool(session: AsyncSession, key: str) -> bool:

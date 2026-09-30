@@ -39,7 +39,7 @@ from ayvona.sources.telegram_source import TelegramConfigError, connect_client
 from ayvona.timeutil import utcnow
 
 PROCESS_NAME = "collector"
-LAST_CYCLE_KEY = "collector:last_cycle_at"
+LAST_CYCLE_KEY = kv_repo.COLLECTOR_LAST_CYCLE
 
 SessionFactory = async_sessionmaker[AsyncSession]
 
