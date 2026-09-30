@@ -13,6 +13,10 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-29 | 6 — Tozalash, shablon, rasmlar | `processing/`: `clean`, `formatter`, `images`; `db/repositories/images_repo.py`; `images` jadvali (migratsiya `c7a4e2d8f1b6`, `category_images` o'rniga); `settings.yaml`: `branding`, `formatter`, `images`; `Extraction.address`; `scripts/make_placeholder_images.py` (Pillow), `scripts/preview_posts.py`; 43 ta snapshot `tests/snapshots/` | 524 test ✅, ruff ✅. Bazadagi 309 e'lon: 285 to'liq shablon, 24 fallback, eng uzuni 1022/1024 |
 | 2026-09-29 | 7 — Worker: pipeline + publisher | 5450 filtri (`not_job_strong_markers`); `processing/pipeline.py`, `publisher/outbox.py`, `services/notifier.py`, `botapi.py`, `apps/worker.py`, `apps/runtime.py`, `db/repositories/jobs_repo.py`; migratsiya `d3f8b1c6a2e4` (raw_posts: backfill, dedup, job_id; jobs.buttons); `settings.yaml`: `worker:`, `publisher:` kengaydi; Bot API mock (`tests/fake_bot.py`) | 582 test ✅, ruff ✅. Bazaning NUSXASIDA: 374 post → 284 job navbatga, 24 dublikat, 2 aloqasiz, 2 past sifat. Haqiqiy Telegram'ga **hech narsa yuborilmadi** |
 | 2026-09-30 | 8 — Admin, monitoring, backup | `bot/`: `setup.py`, `filters.py`, `texts.py`, `handlers/admin.py`, `admin_sources.py`, `admin_images.py`; `apps/bot.py`; `services/`: `heartbeat.py`, `backup.py`, `stats.py`, `sources_admin.py`; collector manbalarni har siklda bazadan o'qiydi + `pending` kanallarni tekshiradi; migratsiya `e5a9c2f7b3d1` (sources boshqaruvi); `scripts/find_chat_ids.py`, `scripts/backup_now.py` | 632 test ✅, ruff ✅. Haqiqiy Telegram'ga **hech narsa yuborilmadi** |
+| 2026-09-30 | 9 — Deploy hujjatlari | `deploy/SETUP_ORACLE.md`, `deploy/systemd/*.service`, `deploy/NOTES.md`, `scripts/deploy.sh` | Server hali yo'q |
+| 2026-09-30 | Tuzatish | Haqiqiy username'lar `branding` dan, matnda heshteg yo'q, manzilda vergul | 677 test ✅ |
+| 2026-09-30 | Tuzatish | `scripts/reformat_queued.py` + worker start'ida navbatni qayta formatlash | 685 test ✅. Laptopda 3 jarayon ishlayapti, kanalga real postlar chiqyapti |
+| 2026-09-30 | `max_age_hours` | 24 soatdan eski e'lon kanalga chiqmaydi (`jobs.status=skipped_old`), `/retry` va `/stats` da ko'rinadi | 694 test ✅, ruff ✅ |
 
 ---
 
@@ -469,34 +473,24 @@ Sardor reja tasdig'ini kutmaslikni aytdi — qarorlar va sabablari:
 
 ## Sardor uchun
 
-Kompyuter yoniga qaytganingizda qilishingiz kerak bo'lgan narsalar (batafsil — fayl oxirida):
+Yangilangan: 2026-09-30. Keyingi ishlar tartibi — `docs/HANDOFF.md`.
 
-- [ ] **Git muallifini sozlang** (bir marta):
-      `git config --global user.name "Sardor"` va `git config --global user.email "sizning@email"`
-- [ ] Yangi PowerShell oynasini oching va `uv --version` ishlashini tekshiring (uv PATH'ga qo'shildi).
-- [ ] **Telegram API kalitlari:** my.telegram.org → `API_ID`, `API_HASH` (tavsiya: ikkinchi akkaunt) → `.env` ga.
-- [ ] **Bir martalik login:** `uv run python scripts/login_telethon.py` (men uni ishga tushirmadim — siz aytgandek).
-- [ ] **Manba kanallarni tanlang** va `config/settings.yaml` ga yozing (qaysi kanallar — sizning qaroringiz).
-- [ ] **Qaror kerak — `initial_backfill`:** yangi kanal qo'shilganda eski postlar olinsinmi? Hozir `0`
-      (faqat bundan keyingilari). Test uchun `5` qo'yib ko'rsangiz, darhol natija ko'rasiz.
-- [ ] Haqiqiy Telegram'da tekshirgach, ROADMAP'dagi Bosqich 3 "Haqiqiy Telegram'da tekshirish" katagini belgilang.
-- [ ] `docs/POST_EXAMPLES.md` ni to'ldiring — Bosqich 4 uchun kerak (har kanaldan 2–3 ta post).
-- [ ] Hali `git push` qilinmagan (siz aytgandek). Ko'rib chiqqach: `git push -u origin main`.
-- [ ] **Bosqich 5 migratsiyasi:** `uv run alembic upgrade head` (jobs jadvaliga `profession`, `salary_period`).
+**Bajarilgan** (ro'yxatdan olib tashlandi): git muallifi, uv, Telegram API kalitlari va login, manba kanallar (~20),
+POST_EXAMPLES, barcha migratsiyalar (baza `e5a9c2f7b3d1` da), vaqtinchalik rasmlar, bot + haqiqiy kanal `.env` da,
+laptopda 3 jarayon ishlayapti, `git push` (1626806 gacha).
+
+Hali ochiq:
+- [ ] **Qaror kerak — `initial_backfill`:** yangi kanal qo'shilganda eski postlar olinsinmi? Hozir `0` (faqat keyingilari).
+- [ ] **Qaror kerak — `/addsource` dagi eski postlar** kanalga chiqsinmi? Hozir yo'q (`publisher.publish_backfill: false`).
+      Eslatma: chiqsa ham, manbada 24 soatdan oldin chiqqanlari baribir chiqmaydi (`publisher.max_age_hours`).
 - [ ] **Qaror kerak — 742** (2 oy bepul amaliyot, keyin haq): job qildim. Kerak bo'lmasa `config/filters.yaml` dagi
       `opportunity_strong_exceptions` ni o'chiring.
-- [ ] **Bosqich 6 migratsiyasi:** `uv run alembic upgrade head` (`category_images` → `images` jadvali).
-- [ ] **Vaqtinchalik rasmlar:** `uv run python scripts/make_placeholder_images.py` (allaqachon bir marta ishga tushirdim —
-      249 ta rasm `assets\images\` da; git'ga tushmaydi).
-- [ ] **Postlar ko'rinishini ko'ring:** `uv run python scripts/preview_posts.py` → `start data\preview.html`
-      (309 ta e'lon kanaldagidek). Yoki `tests\snapshots\*.html`. Yoqmagan 3–4 tasini chatdagi Claude'ga tashlang.
-- [ ] **Bosqich 7 migratsiyasi:** `uv run alembic upgrade head` (raw_posts ga backfill/dedup ustunlari, jobs.buttons).
-- [ ] ⚠️ **`.env` dagi `CHANNEL_ID` ni tekshiring:** hozir to'ldirilgan (ehtimol `@ayvona`). Token qo'shishdan OLDIN uni
-      **test kanal**ga almashtiring yoki bo'sh qoldiring — aks holda worker haqiqiy kanalga yoza boshlaydi.
-- [ ] **Bot, test kanal, admin guruh** — fayl oxiridagi "YAKUNIY XULOSA (Bosqich 7–8)" da qadam-baqadam.
-- [ ] **Bosqich 8 migratsiyasi** ham shu `uv run alembic upgrade head` bilan (sources boshqaruvi).
-- [ ] `ADMIN_IDS`, `ADMIN_CHAT_ID` — `uv run python scripts/find_chat_ids.py` bilan toping.
-- [ ] **Qaror kerak:** `/addsource` da tanlangan eski postlar kanalga chiqsinmi? Hozir yo'q (`publisher.publish_backfill: false`).
+- [ ] **`ADMIN_CHAT_ID`** to'ldirilganini tekshiring (xatolar va kunlik backup admin guruhga keladi):
+      `uv run python scripts/find_chat_ids.py` (bot jarayoni to'xtatilgan bo'lsin).
+- [ ] **Bot bilan to'liq tekshiruv** (fayl oxiridagi "Qanday sinab ko'rasiz") → ROADMAP Bosqich 8 katagi.
+- [ ] **Postlar ko'rinishi:** `uv run python scripts/preview_posts.py` → `start data\preview.html`. Yoqmaganlarini Claude'ga tashlang.
+- [ ] `.pytest_cache` papkasiga yozish ruxsati yo'q ("Access is denied" ogohlantirishi, testlarga ta'sir qilmaydi) —
+      papka boshqa Windows foydalanuvchisiniki (docs/HANDOFF.md → ruxsatlar).
 
 ---
 

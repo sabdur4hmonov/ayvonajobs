@@ -17,7 +17,7 @@ flowchart LR
       C[collector.py<br/>Telethon, har 60-120s]
     end
     subgraph Worker
-      P[pipeline<br/>dedup → extract → kategoriya → format]
+      P[pipeline<br/>classify → extract → dedup → clean → format]
       PUB[publisher<br/>navbatdan kanalga]
       AL[alerts / expiry / backup / stats]
     end
@@ -77,13 +77,21 @@ Hammasi bitta SQLite bazani ishlatadi (WAL rejimi — bir vaqtda o'qish/yozish x
 
 **raw_posts.status**
 ```
-new → processing → done          (job yaratildi)
-                 → duplicate     (oldin chiqqan)
-                 → not_job       (reklama, e'lon emas)
-                 → no_text       (faqat rasm — admin'ga)
-                 → low_quality   (job, lekin lavozim ham, maosh ham topilmadi — chiqmaydi, admin hisobotida)
-                 → error         (kod xatosi — admin'ga, keyin qayta ishlanadi)
+new → processing → done              (job yaratildi yoki to'liqroq nusxa sifatida job'ni oldi; raw_posts.job_id)
+                 → duplicate         (oldin chiqqan; raw_posts.duplicate_of)
+                 → not_job           (reklama, maslahat, yangilik — e'lon emas)
+                 → resume            (ish qidiruvchining rezyumesi)
+                 → closed            (vakansiya yopilgan / ariza muddati o'tgan)
+                 → opportunity       (grant, kurs, tadbir, haq to'lanmaydigan amaliyot)
+                 → suspicious        (firibgarlik belgilari — admin'ga)
+                 → no_text           (faqat rasm — admin'ga)
+                 → no_contact        (e'lon, lekin telefon / @username / email / havola yo'q — chiqmaydi)
+                 → low_quality       (e'lon, lekin lavozim ham, maosh ham topilmadi — chiqmaydi, admin hisobotida)
+                 → error             (kod xatosi — admin'ga; qayta ishlash uchun bazada status='new' qilinadi)
+new → skipped_backfill               (worker birinchi yonguncha bo'lgan postlar va yangi kanal tarixi — chiqmaydi,
+                                      publisher.publish_backfill: true bo'lmasa)
 ```
+Sababi (`not_job` ... `low_quality`) `raw_posts.error` ustuniga yoziladi (masalan `job:kerak, ad:chegirma`).
 
 **jobs.status**
 ```
@@ -171,17 +179,21 @@ created_at, last_active_at
 ## 5. Qayta ishlash konveyeri (pipeline)
 
 ```
-xom matn
+xom matn (albom qismlari birlashtirilgan)
+  → backfill?   : is_backfill va publish_backfill=false → skipped_backfill
   → normalize   : kichik harf, kirill→lotin, o‘/g‘ bir xil, emoji/ortiqcha bo'shliq olib tashlash
-  → is_job?     : e'lonmi yoki reklama/yangilik (kalit so'zlar: "vakansiya", "ishga taklif", "talab qilinadi", "вакансия", "требуется"...)
-  → dedup       : 1) UNIQUE(source, external_id)  2) content_hash  3) fingerprint  4) rapidfuzz ≥ 90% (oxirgi 7 kun)
+  → classify    : e'lonmi yoki reklama/rezyume/yopilgan/imkoniyat/shubhali (config/filters.yaml)
   → extract     : regex — lavozim, kompaniya, maosh, manzil, ish vaqti, talablar, telefon, @username
-  → confidence  : lavozim + aloqa topildi → yuqori; bo'lmasa → fallback (keyin: Gemini)
+                  (aloqa yo'q → no_contact; lavozim ham, maosh ham yo'q → low_quality)
+  → confidence  : lavozim + aloqa topildi → yuqori; < 0.7 → fallback shablon (keyin: Gemini)
   → categorize  : categories.yaml dagi kalit so'zlar bo'yicha ball; lavozimdagi so'z 3x og'irroq; topilmasa "boshqa"
+  → dedup       : 1) UNIQUE(source, external_id)  2) content_hash  3) fingerprint  4) rapidfuzz ≥ 90% (oxirgi 14 kun)
   → clean       : manba kanal reklamasi, havolalar, "obuna bo'ling", hashtaglar olib tashlanadi (aloqa @username qoladi!)
   → format      : shablon (HTML) + #kategoriya #hudud hashtaglari + imzo; ≤1024 belgi (rasm ostidagi matn limiti)
-  → jobs (queued)
+  → jobs (queued, next_retry_at = e'lon vaqti + hold_minutes — yig'ish oynasi)
 ```
+**Nega extract dedup'dan oldin:** dedup'ga extract topgan lavozim kerak, va dedup indeksiga faqat kanalga chiqadigan
+e'lonlar kiradi — aks holda oldin kelgan ALOQASIZ nusxa keyingi aloqali nusxani "dublikat" qilib qo'yardi.
 
 **1024 belgi muammosi:** Telegram rasm ostidagi matnni 1024 belgi bilan cheklaydi. Qisqartirish tartibi:
 avval "Tafsilotlar" qismi qisqartiriladi → keyin "Talablar". **Aloqa, lavozim, maosh, manzil hech qachon kesilmaydi.**
@@ -193,7 +205,7 @@ avval "Tafsilotlar" qismi qisqartiriladi → keyin "Talablar". **Aloqa, lavozim,
 ```python
 class BaseSource(ABC):
     type: str
-    async def fetch_new(self, since: str | None) -> list[RawItem]: ...
+    async def fetch_new(self, since: str | None) -> FetchResult: ...  # items + yangi kursor
 ```
 - `TelegramSource` — hozir.
 - `WebSource` (masalan `HhUzSource`, `OlxSource`) — keyin: httpx + selectolax, saytning `robots.txt` va

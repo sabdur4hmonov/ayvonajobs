@@ -37,16 +37,14 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 ## Funksiyalar ro'yxati (kelishilgan)
 
 **Aggregator (1-qism)**
-- [ ] Telegram kanallardan o'qish (Telethon), oxirgi ID, o'chib qolsa qolganlarini olish
-      _(kod tayyor, soxta manba bilan test qilingan — haqiqiy Telegram'da tekshirilgach belgilang)_
-- [ ] SQLite, dublikat tekshiruvi (4 qatlam)
-- [ ] Kategoriya (kalit so'zlar, lotin/kirill/rus) + "Boshqa"
-- [ ] Har kategoriya uchun rasm
-- [ ] Regex bilan bezash (lavozim, maosh, manzil, aloqa...) yoki tozalangan fallback
-- [ ] Avtomatik joylash (navbat, qayta urinish, admin'ga xabar)
-      _(kod tayyor, Bot API mock bilan test qilingan — test kanalda tekshirilgach belgilang)_
-- [ ] Hashtaglar: `#dasturchi #toshkent` — kanal ichida bosib qidirish uchun
-- [ ] Kengaytiriladigan manbalar (keyin 2–3 sayt)
+- [x] Telegram kanallardan o'qish (Telethon), oxirgi ID, o'chib qolsa qolganlarini olish (laptopda ishlayapti)
+- [x] SQLite, dublikat tekshiruvi (4 qatlam)
+- [x] Kategoriya (kalit so'zlar, lotin/kirill/rus) + "Boshqa"
+- [ ] Har kategoriya uchun rasm _(hozir vaqtinchalik rangli rasmlar; haqiqiylari — docs/IMAGES.md)_
+- [x] Regex bilan bezash (lavozim, maosh, manzil, aloqa...) yoki tozalangan fallback
+- [x] Avtomatik joylash (navbat, qayta urinish, admin'ga xabar, 24 soatdan eskisi chiqmaydi)
+- [x] Hashtaglar: `#dasturchi #toshkent` — kanal ichida bosib qidirish uchun
+- [ ] Kengaytiriladigan manbalar (keyin 2–3 sayt) _(`BaseSource` + registry tayyor; saytlar — Bosqich 16)_
 
 **Ommaviy bot @ayvona_jobs_bot (2-qism)** — asosiy menyu: 📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar
 - [ ] E'lon joylash: qadamma-qadam forma, **aloqa majburiy** (telefon tugmasi yoki @username), ko'rib chiqish, tasdiqlash
@@ -56,9 +54,11 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] 🔔 Ish obunasi: "dasturchi, Toshkent, 5 mln+" → yangi mos e'lon chiqsa bot xabar beradi
 - [ ] E'lonni yopish ("Ish topildi" tugmasi) + 30 kundan keyin qidiruvdan avtomatik chiqish
 - [ ] Admin: `/stats /queue /failed /retry /pause /resume /ban /unban /addword /delword`
+      _(birinchi oltitasi tayyor — Bosqich 8; `/ban /unban /addword /delword` — Bosqich 11)_
 - [ ] Manbalarni bot orqali boshqarish: `/addsource /sources` (qo'shish, o'chirish, pauza — kodga tegmasdan)
       _(kod tayyor — haqiqiy botda tekshirilgach belgilang)_
-- [ ] Kanal postida tugmalar: "📩 Murojaat" · "⭐ Saqlash" · "🔍 Boshqa ishlar" (botga deep link)
+- [x] Kanal postida tugmalar: "📩 Murojaat" · "⭐ Saqlash" · "🔍 Boshqa ishlar" (botga deep link)
+      _(tugmalar chiqyapti; "Saqlash" / "Boshqa ishlar" bot tomoni — Bosqich 10–12)_
 
 **AI (3-qism, ixtiyoriy)** — Gemini faqat regex uddalay olmaganda, kesh, fallback.
 
@@ -67,21 +67,22 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 ## BOSQICH 0 — Tayyorgarlik (qo'lda, AI'siz) ⏱ 1–2 soat
 
 **Kompyuterga o'rnating:**
-- [ ] Python 3.12 — python.org (o'rnatishda "Add to PATH" belgisini qo'ying)
-- [ ] Git — git-scm.com
-- [ ] VS Code — code.visualstudio.com
+- [x] Python 3.12 — uv o'zi boshqaradi (python.org shart emas; ikkinchi Windows foydalanuvchisi — docs/HANDOFF.md)
+- [x] Git — git-scm.com
+- [x] VS Code — code.visualstudio.com
 - [x] uv (2026-09-29, Claude o'rnatdi; Python 3.12 ni uv o'zi boshqaradi) — PowerShell'da: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-- [ ] Claude Code — docs.claude.com'dagi Windows ko'rsatmasi bo'yicha, keyin `claude` bilan Pro akkauntga kiring
+- [x] Claude Code — docs.claude.com'dagi Windows ko'rsatmasi bo'yicha, keyin `claude` bilan Pro akkauntga kiring
 
 **Telegram:**
-- [ ] Kanal yarating: nomi **Ayvona Jobs**, username **@ayvonajobs** (bo'sh bo'lsa)
-- [ ] @BotFather → `/newbot` → username **@ayvona_jobs_bot**.
+- [x] Kanal yarating: nomi **Ayvona Jobs**, username **@ayvonajobs** (bo'sh bo'lsa)
+- [x] @BotFather → `/newbot` → username **@ayvona_jobs_bot**.
       ⚠️ Bot username'i albatta `bot` bilan tugashi kerak, shuning uchun `@ayvonajobs` faqat kanalga bo'ladi.
-- [ ] Botni kanalga **admin** qiling (post joylash + tahrirlash huquqi)
+- [x] Botni kanalga **admin** qiling (post joylash + tahrirlash huquqi)
 - [ ] Admin chat: o'zingiz uchun yopiq guruh yarating, botni qo'shing (xatolar, backup shu yerga keladi)
-- [ ] my.telegram.org → API development tools → `API_ID` va `API_HASH` oling
+      _(`.env` → `ADMIN_CHAT_ID` to'ldirilganini tekshirib belgilang)_
+- [x] my.telegram.org → API development tools → `API_ID` va `API_HASH` oling
       (tavsiya: alohida SIM'dagi ikkinchi Telegram akkaunt bilan)
-- [ ] O'z Telegram ID'ingizni biling (@userinfobot)
+- [x] O'z Telegram ID'ingizni biling (@userinfobot)
 
 **Git:**
 ```powershell
@@ -146,7 +147,7 @@ Menga o'zbekcha tushuntir: "model", "migratsiya" nima va nega kerak.
 ## BOSQICH 3 — Telethon collector (BIRINCHI ASOSIY QADAM) ⏱ 1–2 soat · Model: `opus`
 
 - [x] Kod + testlar bajarildi — 2026-09-29 (soxta manba bilan; tafsilot: `docs/PROGRESS.md`)
-- [ ] Haqiqiy Telegram'da tekshirish (Sardor: login + kanal qo'shish + pastdagi "Tekshirish")
+- [x] Haqiqiy Telegram'da tekshirish — 2026-09-30 (laptopda ~20 kanalni o'qiyapti)
 
 ```text
 Collector'ni yoz (ARCHITECTURE 2- va 6-bo'lim). Ishonchlilik eng muhim.
@@ -279,7 +280,8 @@ Test: 41 fixture uchun natijani tests/snapshots/<kanal>_<id>.html ga yoz.
 ## BOSQICH 7 — Worker: pipeline + publisher ⏱ 2 soat · Model: `opus`
 
 - [x] Kod + testlar bajarildi — 2026-09-29 (Bot API mock bilan; tafsilot: `docs/PROGRESS.md`)
-- [ ] Test kanalda tekshirish (Sardor: bot + test kanal + `.env`, pastdagi "Tekshirish")
+- [x] Kanalda tekshirish — 2026-09-30 (real postlar @ayvonajobs ga chiqyapti)
+- [x] `publisher.max_age_hours` (24 soatdan eski e'lon chiqmaydi, `skipped_old`) — 2026-09-30
 
 ```text
 apps/worker.py ni yoz, ichida 2 ta asyncio vazifa:
@@ -350,6 +352,9 @@ Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza
 ---
 
 ## BOSQICH 9 — Oracle serverga chiqarish (MVP JONLI!) ⏱ 2–3 soat · Model: `sonnet`
+
+- [x] Hujjat va fayllar tayyor — 2026-09-30 (`deploy/SETUP_ORACLE.md`, `deploy/systemd/`, `scripts/deploy.sh`)
+- [ ] Oracle akkaunt + server, serverga chiqarish (docs/HANDOFF.md → keyingi ishlar)
 
 ```text
 deploy/ papkasini tayyorla:

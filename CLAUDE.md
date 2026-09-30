@@ -62,7 +62,8 @@ src/ayvona/
   services/            alerts, expiry, stats, backup, notifier (admin alerts), heartbeat
   ai/                  gemini client + cache (later)
   apps/                entrypoints: collector.py, worker.py, bot.py
-config/                settings.yaml, categories.yaml, regions.yaml, filters.yaml
+config/                settings.yaml, categories.yaml, regions.yaml, filters.yaml, source_rules.yaml,
+                       extract.yaml, title_translations.yaml
 assets/images/         <category>/<profession>/ 3–4 variants each, rotated (docs/IMAGES.md)
 tests/                 fixtures/posts/*.txt + unit tests
 deploy/                systemd units + Oracle setup guide
