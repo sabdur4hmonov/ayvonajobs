@@ -172,3 +172,12 @@ search:
   usd_rate_fallback: 12800           # cbu.uz dan kurs olinmasa shu ishlatiladi (USD maoshni so'mga solishtirish)
   usd_rate_url: "https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/"   # Markaziy bank ochiq API (bepul)
   usd_rate_refresh_hours: 24         # worker kursni kuniga 1 marta yangilaydi
+
+# --- 🔔 Obunalar (services/alerts.py, worker ichida) ------------------------
+alerts:
+  max_per_user: 5                    # bitta foydalanuvchida nechta obuna
+  daily_limit: 20                    # 24 soatda ko'pi bilan nechta xabar; qolganlari kechki dayjestga
+  digest_hour: 20                    # dayjest Toshkent vaqti bilan shu soatda
+  digest_max_items: 20               # dayjestda ko'pi bilan nechta e'lon
+  per_second: 25                     # Bot API chegarasi (~30/s) — sekundiga shundan ko'p yubormaydi
+  poll_seconds: 30                   # kanalga yangi chiqqan e'lonlar shuncha soniyada bir tekshiriladi

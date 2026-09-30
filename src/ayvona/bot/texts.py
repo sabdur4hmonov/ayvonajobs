@@ -148,6 +148,38 @@ SEARCH_EMPTY = "😕 {summary} bo'yicha hozircha e'lon yo'q.\nFiltrlarni kengayt
 SEARCH_EVERYTHING = "barcha e'lonlar"
 SEARCH_EXPIRED = "Qidiruv eskirdi — «🔍 Ish qidirish» ni qayta bosing."
 
+# ------------------------------------------------------------------ public: 🔔 Obunalar
+SUBS_HEAD = "🔔 <b>Obunalar</b> ({n}/{max})\nMos yangi e'lon kanalga chiqishi bilan xabar beraman."
+SUBS_EMPTY = (
+    "🔔 <b>Obunalar</b>\nHali obuna yo'q. Masalan: «Oshpaz, Toshkent sh., 4 mln+» — shunday e'lon "
+    "chiqishi bilan xabar beraman."
+)
+SUBS_ITEM = "{n}. {summary} — {state}"
+SUBS_ACTIVE = "✅ faol"
+SUBS_PAUSED = "⏸ pauza"
+SUBS_NEW = "➕ Yangi obuna"
+SUBS_PAUSE = "⏸ {n}"
+SUBS_RESUME = "▶️ {n}"
+SUBS_DELETE = "🗑 {n}"
+SUBS_FROM_SEARCH = "🔔 Shu qidiruvga obuna bo'lish"
+SUBS_ASK_CATEGORY = "🔔 <b>Yangi obuna</b>\nQaysi soha? 👇"
+SUBS_ASK_KEYWORD = (
+    "🔔 {summary}\nQo'shimcha kalit so'z? (masalan: <i>python</i>, <i>ingliz tili</i>) "
+    "yoki «{skip}»."
+)
+SUBS_CREATED = "✅ Obuna yaratildi: {summary}\nMos e'lon chiqishi bilan xabar beraman."
+SUBS_LIMIT = "Ko'pi bilan {max} ta obuna bo'lishi mumkin. Keraksizini 🗑 bilan o'chiring."
+SUBS_DUPLICATE = "Bunday obuna allaqachon bor."
+SUBS_EMPTY_FILTERS = "Obuna uchun kamida bitta filtr (soha, hudud, maosh yoki so'z) tanlang."
+SUBS_PAUSED_OK = "⏸ Obuna to'xtatildi."
+SUBS_RESUMED_OK = "▶️ Obuna yoqildi."
+SUBS_DELETED_OK = "🗑 Obuna o'chirildi."
+ALERT_HEAD = "🔔 <b>Yangi e'lon</b> — obunangiz: {summary}\n\n"
+ALERT_STOP = "🔕 Obunani to'xtatish"
+DIGEST_HEAD = (
+    "📬 <b>Obunalaringiz bo'yicha yana {n} ta e'lon</b> (bugungi limitdan keyin chiqqanlar):"
+)
+
 # ------------------------------------------------------------------ admin: moderation
 MOD_HEAD = (
     "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"

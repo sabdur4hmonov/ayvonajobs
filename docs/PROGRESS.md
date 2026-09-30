@@ -17,6 +17,11 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-30 | Tuzatish | Haqiqiy username'lar `branding` dan, matnda heshteg yo'q, manzilda vergul | 677 test ✅ |
 | 2026-09-30 | Tuzatish | `scripts/reformat_queued.py` + worker start'ida navbatni qayta formatlash | 685 test ✅. Laptopda 3 jarayon ishlayapti, kanalga real postlar chiqyapti |
 | 2026-09-30 | `max_age_hours` | 24 soatdan eski e'lon kanalga chiqmaydi (`jobs.status=skipped_old`), `/retry` va `/stats` da ko'rinadi | 694 test ✅, ruff ✅ |
+| 2026-09-30 | Monitoring | Collector o'chiq → bitta "Collector jim" (kanal-jimlik xabarlari yo'q) | 696 test ✅ |
+| 2026-09-30 | 10 — Ommaviy bot asosi | /start + users, menyu, deep link'lar, ⭐ saqlanganlar, middleware'lar (throttling, ban) | 711 test ✅ |
+| 2026-09-30 | 11 — E'lon joylash | 8 qadamli forma, aloqa majburiy, limitlar, filtrlar, moderatsiya, muallifga havola | 747 test ✅ |
+| 2026-09-30 | 12 — Qidiruv | Usta + so'z bilan (FTS5, kirill/lotin), USD kursi; migratsiya `f2b6d8a4c1e3` | 762 test ✅ |
+| 2026-10-01 | 13 — Obunalar | Obuna ustasi, worker'da yuborish, kunlik limit + dayjest; migratsiya `a7c3e9f1b5d8` | 771 test ✅ |
 
 ---
 
@@ -991,3 +996,32 @@ Qarorlar (Sardor yo'qligida):
 ⚠️ **Ertalab kerak:** `uv run alembic upgrade head` (jarayonlar to'xtatilgan holda).
 
 Testlar: `tests/test_search.py` (+15), `test_db.py` FTS testi yangilandi.
+
+
+---
+
+## Bosqich 13 — 🔔 Ish obunalari (2026-10-01, avtonom)
+
+Nima qilindi:
+- **"🔔 Obunalar"** (`bot/handlers/alerts.py`): ro'yxat (n/5, ✅ faol / ⏸ pauza) + har biriga [⏸/▶️ N] [🗑 N],
+  [➕ Yangi obuna]. Yangi obuna ustasi qidiruvnikining o'zi: soha → kasb → hudud → maosh → ixtiyoriy kalit so'z
+  (⏭ o'tkazib yuborish). Qidiruv natijalari ostida **"🔔 Shu qidiruvga obuna bo'lish"** tugmasi.
+- **Yuborish — worker ichida** (`services/alerts.py → AlertService`, har 30 s): kanalga yangi chiqqan e'lonlar
+  (`kv_store alerts:cursor` dan keyin) faol obunalar bilan solishtiriladi — **qidiruvning aynan o'sha qoidalari**
+  (`services/search.job_matches`). Xabar: "🔔 Yangi e'lon — obunangiz: ..." + e'lon + [📩] [⭐] [📤] [🔕 Obunani to'xtatish].
+- **Ikki marta yuborilmaydi:** avval `alert_deliveries` qatori yoziladi (kompozit PK), keyin xabar. Bir foydalanuvchining
+  bir nechta obunasi mos kelsa — **bitta** xabar (hamma obunalar uchun qator yoziladi).
+- **Kuniga 20 ta** (24 soat): qolganlari `status=digest` → kechqurun **20:00 da bitta ro'yxat** ("📬 ... yana N ta").
+- **Bot API chegarasi:** sekundiga ≤ 25 xabar; "retry after" kutiladi va qayta uriniladi; foydalanuvchi botni bloklagan
+  bo'lsa (Forbidden) — uning hamma obunalari o'chadi (qayta yoqsa ishlaydi).
+- Migratsiya **`a7c3e9f1b5d8`**: `subscriptions.profession`, `alert_deliveries.status`.
+
+Qarorlar (Sardor yo'qligida):
+1. **Birinchi ishga tushishda eski e'lonlar yuborilmaydi** (kursor = hozir) — faqat bundan keyin chiqqanlar.
+2. **Filtrsiz obuna ("hamma e'lonlar") mumkin emas** — kuniga yuzlab xabar bo'lardi; kamida bitta filtr.
+3. **Qator avval yoziladi, keyin xabar yuboriladi** (at-most-once): yuborish paytida worker o'chsa, o'sha bitta xabar
+   ketmay qolishi mumkin — ikki marta yuborishdan yaxshiroq (e'lonning o'zi kanalda va qidiruvda bor).
+4. Dayjestda faqat hali ochiq e'lonlar (yopilgan/muddati o'tganlari tashlanadi), ko'pi bilan 20 ta.
+5. Obuna xabarlari faqat token bor va `--no-publish` bo'lmaganda (worker loop rejimida) yuboriladi.
+
+Testlar: `tests/test_alerts.py` (+9).

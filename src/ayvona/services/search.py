@@ -97,6 +97,33 @@ def conditions(f: SearchFilters, now: datetime, usd_rate: float) -> list[Any] | 
     return conds
 
 
+def job_matches(f: SearchFilters, job: Job, now: datetime, usd_rate: float) -> bool:
+    """:func:`conditions` for one job in Python (alerts check each newly published job)."""
+    if job.status != JobStatus.PUBLISHED or (job.expires_at is not None and job.expires_at <= now):
+        return False
+    if f.category and job.category != f.category:
+        return False
+    if f.profession and job.profession != f.profession:
+        return False
+    if f.region == REMOTE and not job.is_remote:
+        return False
+    if f.region and f.region != REMOTE and job.region != f.region:
+        return False
+    if f.min_salary:
+        if job.currency not in (UZS, USD) or job.salary_period not in (None, "month"):
+            return False
+        rate = usd_rate if job.currency == USD else 1
+        amounts = [a * rate for a in (job.salary_min, job.salary_max) if a is not None]
+        if not any(a >= f.min_salary for a in amounts):
+            return False
+    if f.keyword:
+        words = [w for w in _WORD_RE.findall(search_text(f.keyword)) if len(w) >= 2]
+        tokens = _WORD_RE.findall(job.search_text or "")
+        if not words or not all(any(t.startswith(w) for t in tokens) for w in words):
+            return False
+    return True
+
+
 async def search(
     session: AsyncSession,
     f: SearchFilters,

@@ -452,6 +452,9 @@ USD maoshlar uchun kurs: kv_store.usd_rate (kunda 1 marta cbu.uz ochiq API'dan y
 
 ## BOSQICH 13 — 🔔 Ish obunalari ⏱ 1–2 soat · Model: `sonnet`
 
+- [x] Kod + testlar bajarildi — 2026-10-01 (migratsiya `a7c3e9f1b5d8`; tafsilot: `docs/PROGRESS.md`)
+- [ ] `alembic upgrade head` + haqiqiy botda tekshirish
+
 ```text
 bot/handlers/alerts.py: obuna yaratish (qidiruv ustasi bilan bir xil qadamlar: kategoriya → KASB → hudud → maosh + ixtiyoriy kalit so'z),
 ro'yxat, o'chirish, pauza. Foydalanuvchiga max 5 ta obuna.

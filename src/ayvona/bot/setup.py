@@ -19,6 +19,7 @@ from ayvona.bot.handlers import (
     admin,
     admin_images,
     admin_sources,
+    alerts,
     favorites,
     post_job,
     search,
@@ -91,7 +92,7 @@ def build_dispatcher(
     public_area.message.filter(F.chat.type == "private")
     # start first: its menu buttons work from any step (they leave a half-filled form)
     public_area.include_routers(
-        *_detached(start.router, favorites.router, search.router, post_job.router)
+        *_detached(start.router, favorites.router, search.router, alerts.router, post_job.router)
     )
 
     dp.include_routers(*_detached(admin_area, public_area))

@@ -162,7 +162,8 @@ created_at, last_active_at
 
 **subscriptions** (ish obunasi / alert) — id, user_id, category, profession, region, min_salary, keyword, is_active, created_at
 
-**alert_deliveries** — subscription_id, job_id, sent_at · UNIQUE(subscription_id, job_id) → bir xabar ikki marta ketmaydi
+**alert_deliveries** — subscription_id, job_id, sent_at, status (`sent` / `digest` — kunlik limitdan oshgan, kechki
+dayjestga / `digest_sent`) · UNIQUE(subscription_id, job_id) → bir xabar ikki marta ketmaydi (services/alerts.py)
 
 **search_logs** — user_id, filtrlar (json), natija soni, created_at (statistika va "nimani qidirishyapti" uchun)
 

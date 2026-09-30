@@ -315,15 +315,23 @@ class Subscription(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.tg_id", ondelete="CASCADE"), index=True)
     category: Mapped[str | None] = mapped_column(String(64))
-    region: Mapped[str | None] = mapped_column(String(64))
+    region: Mapped[str | None] = mapped_column(String(64))  # regions.yaml key or "remote"
     min_salary: Mapped[int | None] = mapped_column(BigInteger)
     keyword: Mapped[str | None] = mapped_column(String(255))
+    # False = paused by the user, or the user blocked the bot (Forbidden)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sql_text("1"))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    profession: Mapped[str | None] = mapped_column(String(64))  # Bosqich 13
+
+
+class AlertStatus(StrEnum):
+    SENT = "sent"
+    DIGEST = "digest"  # over the user's daily limit: waits for the evening digest
+    DIGEST_SENT = "digest_sent"
 
 
 class AlertDelivery(Base):
-    """One alert sent. The composite PK guarantees a job is never alerted twice per subscription."""
+    """One alert. The composite PK guarantees a job is never alerted twice per subscription."""
 
     __tablename__ = "alert_deliveries"
 
@@ -334,6 +342,9 @@ class AlertDelivery(Base):
         ForeignKey("jobs.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     sent_at: Mapped[datetime] = mapped_column(default=utcnow)
+    status: Mapped[AlertStatus] = mapped_column(
+        str_enum(AlertStatus, 16), default=AlertStatus.SENT, server_default=AlertStatus.SENT.value
+    )
 
 
 class SearchLog(Base):

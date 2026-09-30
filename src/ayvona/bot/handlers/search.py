@@ -6,6 +6,7 @@ after a restart the pages fall back to the user's last search (``search_logs``).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from aiogram import F, Router
@@ -16,7 +17,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.bot import texts as T
-from ayvona.bot.callbacks import JobCb, SearchCb
+from ayvona.bot.callbacks import JobCb, SearchCb, SubCb
 from ayvona.bot.cards import filters_summary, short_line
 from ayvona.bot.keyboards import main_menu, share_url
 from ayvona.config import Settings
@@ -35,6 +36,9 @@ class SearchStates(StatesGroup):
     keyword = State()
 
 
+MakeCb = Callable[[str, str], str]
+
+
 def _cb(step: str, value: str = "") -> str:
     return SearchCb(step=step, value=value).pack()
 
@@ -44,57 +48,61 @@ def _grid(buttons: list[InlineKeyboardButton], width: int = 2) -> list[list[Inli
 
 
 # ------------------------------------------------------------------ wizard keyboards
-def category_kb(settings: Settings, has_last: bool) -> InlineKeyboardMarkup:
+def category_kb(
+    settings: Settings, has_last: bool, cb: MakeCb = _cb, *, extras: bool = True
+) -> InlineKeyboardMarkup:
+    """``cb``: the callback data maker (the alert wizard reuses these keyboards)."""
     buttons = [
-        InlineKeyboardButton(text=cat.title, callback_data=_cb("cat", key))
+        InlineKeyboardButton(text=cat.title, callback_data=cb("cat", key))
         for key, cat in settings.categories.items()
     ]
     rows = _grid(buttons)
-    rows.append([InlineKeyboardButton(text=T.SEARCH_ALL, callback_data=_cb("cat", ALL))])
-    rows.append([InlineKeyboardButton(text=T.SEARCH_BY_WORD, callback_data=_cb("kw"))])
-    if has_last:
+    rows.append([InlineKeyboardButton(text=T.SEARCH_ALL, callback_data=cb("cat", ALL))])
+    if extras:
+        rows.append([InlineKeyboardButton(text=T.SEARCH_BY_WORD, callback_data=_cb("kw"))])
+    if extras and has_last:
         rows.append([InlineKeyboardButton(text=T.SEARCH_LAST, callback_data=_cb("last"))])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def profession_kb(settings: Settings, category: str) -> InlineKeyboardMarkup:
+def profession_kb(settings: Settings, category: str, cb: MakeCb = _cb) -> InlineKeyboardMarkup:
     profs = settings.categories[category].professions
     buttons = [
-        InlineKeyboardButton(text=p.title, callback_data=_cb("prof", key))
+        InlineKeyboardButton(text=p.title, callback_data=cb("prof", key))
         for key, p in profs.items()
     ]
     rows = [
-        [InlineKeyboardButton(text=T.SEARCH_ALL, callback_data=_cb("prof", ALL))],
+        [InlineKeyboardButton(text=T.SEARCH_ALL, callback_data=cb("prof", ALL))],
         *_grid(buttons),
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def region_kb(settings: Settings) -> InlineKeyboardMarkup:
+def region_kb(settings: Settings, cb: MakeCb = _cb) -> InlineKeyboardMarkup:
     buttons = [
-        InlineKeyboardButton(text=reg.title, callback_data=_cb("reg", key))
+        InlineKeyboardButton(text=reg.title, callback_data=cb("reg", key))
         for key, reg in settings.regions.regions.items()
     ]
     rows = [
         [
-            InlineKeyboardButton(text=T.SEARCH_ALL, callback_data=_cb("reg", ALL)),
-            InlineKeyboardButton(text=T.BTN_REMOTE, callback_data=_cb("reg", REMOTE)),
+            InlineKeyboardButton(text=T.SEARCH_ALL, callback_data=cb("reg", ALL)),
+            InlineKeyboardButton(text=T.BTN_REMOTE, callback_data=cb("reg", REMOTE)),
         ],
         *_grid(buttons),
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def salary_kb(settings: Settings) -> InlineKeyboardMarkup:
+def salary_kb(settings: Settings, cb: MakeCb = _cb) -> InlineKeyboardMarkup:
     steps = [
         InlineKeyboardButton(
             text=T.SEARCH_SALARY_STEP.format(mln=f"{v / 1_000_000:g}"),
-            callback_data=_cb("sal", str(v)),
+            callback_data=cb("sal", str(v)),
         )
         for v in settings.app.search.salary_steps
     ]
     rows = [
-        [InlineKeyboardButton(text=T.SEARCH_ANY_SALARY, callback_data=_cb("sal", "0"))],
+        [InlineKeyboardButton(text=T.SEARCH_ANY_SALARY, callback_data=cb("sal", "0"))],
         *_grid(steps),
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -129,8 +137,16 @@ def results_kb(
 
 
 def results_extra_buttons(f: SearchFilters) -> list[Any]:
-    """Rows added under the results (Bosqich 13: "🔔 Shu qidiruvga obuna bo'lish")."""
-    return []
+    """Rows under the results: "🔔 Shu qidiruvga obuna bo'lish" (not for "everything")."""
+    if f.empty:
+        return []
+    return [
+        [
+            InlineKeyboardButton(
+                text=T.SUBS_FROM_SEARCH, callback_data=SubCb(action="fromsearch").pack()
+            )
+        ]
+    ]
 
 
 # ------------------------------------------------------------------ results

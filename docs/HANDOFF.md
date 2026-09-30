@@ -16,7 +16,7 @@ har band alohida commit + push, qarorlar PROGRESS.md ga, savol berilmaydi.
 - [x] 1. Bosqich 10 — ommaviy bot asosi (menyu, deep link'lar, ⭐ saqlanganlar, middleware'lar)
 - [x] 2. Bosqich 11 — e'lon joylash formasi (limitlar, filtrlar, moderatsiya, muallifga havola)
 - [x] 3. Bosqich 12 — qidiruv + saqlanganlar (migratsiya `f2b6d8a4c1e3`: `jobs.search_text`, FTS5 qayta qurildi)
-- [ ] 4. Bosqich 13 — obunalar
+- [x] 4. Bosqich 13 — obunalar (migratsiya `a7c3e9f1b5d8`; yuborish worker ichida)
 - [ ] 5. Bosqich 14 — yopish, muddat, to'liq statistika
 Oxirida Sardorga bitta hisobot (ertalabki PowerShell buyruqlari bilan).
 

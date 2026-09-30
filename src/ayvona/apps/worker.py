@@ -9,7 +9,8 @@ Tasks running side by side:
 * monitoring — every 5 min: collector / bot silent? sources silent or failing?
   (services/heartbeat.py);
 * backup — daily 03:00 Asia/Tashkent copy of the DB, sent to the admin chat (services/backup.py);
-* USD rate — once a day from cbu.uz for the salary search filter (services/currency.py).
+* USD rate — once a day from cbu.uz for the salary search filter (services/currency.py);
+* alerts — newly published jobs -> subscribers, evening digest (services/alerts.py).
 
 Step 0 (first start only): every post already in the DB becomes ``skipped_backfill`` — the test
 posts collected before the worker existed never reach the channel (``kv_store`` flag
@@ -47,6 +48,7 @@ from ayvona.apps.runtime import (
     stop_aware_sleep,
     write_heartbeat,
 )
+from ayvona.bot.alerts_render import render_alert, render_digest
 from ayvona.botapi import (
     BAD_TOKEN,
     NO_ADMIN_CHAT,
@@ -61,6 +63,7 @@ from ayvona.db.session import create_engine, create_session_factory, schema_is_r
 from ayvona.logging_setup import setup_logging
 from ayvona.processing.pipeline import Pipeline
 from ayvona.publisher.outbox import ChannelSender, Publisher, skip_old_jobs
+from ayvona.services.alerts import AlertService
 from ayvona.services.backup import BackupService
 from ayvona.services.currency import run_usd_rate
 from ayvona.services.heartbeat import Monitor
@@ -228,6 +231,9 @@ async def run_worker(
         )
         jobs.append(BackupService(settings, sf, notifier).run(stop_aware_sleep(stop)))
         jobs.append(run_usd_rate(settings, sf, stop_aware_sleep(stop)))
+    if bot is not None and publish:
+        alerts = AlertService(settings, sf, bot, render_alert, render_digest)
+        jobs.append(alerts.run(stop_aware_sleep(stop)))
     tasks = [asyncio.create_task(j) for j in jobs]
     try:
         await stop.wait()

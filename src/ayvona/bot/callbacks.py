@@ -28,6 +28,20 @@ class SearchCb(CallbackData, prefix="sq"):
     value: str = ""
 
 
+class AlertCb(CallbackData, prefix="al"):
+    """🔔 new-subscription wizard: cat | prof | reg | sal <value> ("*" = all)."""
+
+    step: str
+    value: str = ""
+
+
+class SubCb(CallbackData, prefix="sub"):
+    """🔔 subscription list: new | fromsearch | pause | resume | del | list <id>."""
+
+    action: str
+    id: int = 0
+
+
 class ModCb(CallbackData, prefix="mod"):
     """Admin decision on a user job waiting for review: ok | no | ban."""
 

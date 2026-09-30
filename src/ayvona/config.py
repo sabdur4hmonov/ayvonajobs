@@ -242,6 +242,18 @@ class SearchConfig(BaseModel):
     usd_rate_refresh_hours: float = Field(default=24, gt=0)
 
 
+class AlertsConfig(BaseModel):
+    """🔔 Job alerts (services/alerts.py, runs in the worker)."""
+
+    max_per_user: int = Field(default=5, ge=1)  # subscriptions per user
+    # alert messages per user per 24 h; the rest go to the evening digest
+    daily_limit: int = Field(default=20, ge=1)
+    digest_hour: int = Field(default=20, ge=0, le=23)  # Asia/Tashkent
+    digest_max_items: int = Field(default=20, ge=1)
+    per_second: float = Field(default=25, gt=0, le=30)  # Bot API: ~30 messages/s in total
+    poll_seconds: float = Field(default=30, gt=0)  # how often newly published jobs are checked
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -268,6 +280,7 @@ class AppConfig(BaseModel):
     bot: BotConfig = Field(default_factory=BotConfig)
     posting: PostingConfig = Field(default_factory=PostingConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
+    alerts: AlertsConfig = Field(default_factory=AlertsConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 
