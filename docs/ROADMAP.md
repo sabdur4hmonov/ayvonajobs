@@ -514,9 +514,31 @@ Saqlangan javob (JSON yoki HTML) namunasi bilan test. Bot orqali /addsource web:
 
 ---
 
+## BOSQICH 17 — Ayvona Jobs O'Z VEB-SAYTI ⏱ 3–4 soat · Model: `opusplan`
+**Qachon:** Bosqich 9 (server jonli) va 10–14 (ommaviy bot) barqaror ishlagandan keyin. Bot va sayt BITTA biznes-mantiq
+(qidiruv, e'lon joylash, filtrlar, saqlanganlar) va BITTA baza ishlatadi — mantiq `services/` da, bot va sayt uni chaqiradi.
+**Xavfsizlik:** alohida `web` jarayoni; yiqilsa collector/worker/publisher'ga ta'sir qilmaydi. Sayt bazadan faqat o'qiydi,
+yozish (e'lon joylash, saqlash) faqat `services/` orqali.
+**Bepul:** FastAPI + Jinja2 (server tomonda chiziladi, React yo'q), Caddy (avto HTTPS), boshida DuckDNS manzili; ayvona.uz domeni — keyin, ixtiyoriy.
+
+```text
+Bosqich 17: Ayvona Jobs veb-sayti. Avval CLAUDE.md, docs/ARCHITECTURE.md va services/ ni o'qi.
+1) src/ayvona/apps/web.py — FastAPI + Jinja2 jarayoni (4-jarayon), deploy/systemd/ayvona-web.service, Caddy sozlamasi qo'llanmasi.
+2) Sahifalar: bosh sahifa (yangi e'lonlar), qidiruv+filtr (kategoriya/kasb/hudud/maosh/kalit so'z, eng yangisi tepada),
+   e'lon sahifasi /ish/<id>-<slug> ("Ariza topshirish" + "manba" havolasi), kategoriya/kasb/hudud sahifalari.
+3) SEO: sitemap.xml, robots.txt, har e'londa JSON-LD JobPosting, sarlavha/description, muddati o'tgan e'londa valid_through.
+4) E'lon joylash formasi: bot bilan BIR XIL qoidalar (limit, spam/scam filtr, aloqa majburiy) — kod takrorlanmasin, services/ dan foydalan.
+   Telegram Login Widget bilan kirish (spam himoyasi). Saytdan joylangan e'lon ham kanalga chiqadi.
+5) Saqlanganlar va ish alertlari: Telegram akkaunt orqali bog'lanadi, bildirishnoma botga keladi.
+6) Admin panel (faqat ADMIN_IDS): manbalar, rasmlar, statistika (botdagi /sources, /images, /stats ning veb varianti).
+7) Testlar, 1 GB dan kam xotira, sahifa tez (SQLite indekslar/FTS5). Real e'lonlar bilan sinab ko'r, natijani ayt.
+```
+
+---
+
 ## KELAJAK (startap bosqichi) — hozir qilmaymiz, faqat yo'nalish
 - **Telegram Mini App** — chiroyli qidiruv interfeysi (bepul: GitHub Pages / Cloudflare Pages)
-- **Veb-sayt** ayvona.uz — SEO orqali Google'dan trafik
+- **ayvona.uz domeni** (pullik, yiliga bir necha dollar) — sayt Bosqich 17 da tayyor bo'ladi
 - **PostgreSQL** — foydalanuvchilar ko'payganda (SQLAlchemy tufayli ko'chish oson)
 - **Rus tili** interfeysi (`texts.py` tayyor)
 - **Rezyume bo'limi** — ish qidiruvchilar profili, ish beruvchilar ko'radi

@@ -1,0 +1,35 @@
+# Ayvona Jobs — worker: bazadagi yangi postlarni qayta ishlaydi (pipeline), kanalga joylaydi (publisher)
+# va har kuni 03:00 (Toshkent) da bazani backup qiladi.
+#
+# BOT_TOKEN bo'lmasa ham ishlaydi: pipeline yuradi, postlar navbatda kutadi, faqat kanalga joylanmaydi.
+# Baza eng oxirgi migratsiyada bo'lmasa ishga tushmaydi — avval: uv run alembic upgrade head.
+#
+# Yoqish:
+#   sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-worker.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ayvona-worker
+# Loglar:  journalctl -u ayvona-worker -f
+
+[Unit]
+Description=Ayvona Jobs - worker (qayta ishlash va kanalga joylash)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ayvona
+Group=ayvona
+WorkingDirectory=/home/ayvona/ayvona
+ExecStart=/home/ayvona/.local/bin/uv run --no-sync python -m ayvona.apps.worker
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

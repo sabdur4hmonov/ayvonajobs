@@ -1,0 +1,37 @@
+# Ayvona Jobs — collector: manba kanallardan yangi postlarni o'qib, bazaga (raw_posts) yozadi.
+#
+# O'rnatish (serverda, ubuntu foydalanuvchisidan) — batafsil: deploy/SETUP_ORACLE.md
+#   sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-*.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ayvona-collector
+# Loglar:  journalctl -u ayvona-collector -f
+#
+# `uv run --no-sync`: kutubxonalarni faqat scripts/deploy.sh o'rnatadi (uv sync).
+# Servis ishga tushayotganda .venv'ga tegmaydi — 3 ta servis bir vaqtda sync qilib, bir-birini buzmaydi.
+
+[Unit]
+Description=Ayvona Jobs - collector (Telegram kanallarni o'qish)
+Wants=network-online.target
+After=network-online.target
+# Hech qachon "taslim bo'lmasin": necha marta yiqilsa ham qayta ishga tushsin.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ayvona
+Group=ayvona
+WorkingDirectory=/home/ayvona/ayvona
+ExecStart=/home/ayvona/.local/bin/uv run --no-sync python -m ayvona.apps.collector
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+# Collector SIGTERM'da toza to'xtaydi (joriy tranzaksiyani tugatadi); 30 soniya kutamiz.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+# Himoya: tizim fayllarini o'zgartira olmasin, root huquqini ololmasin.
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

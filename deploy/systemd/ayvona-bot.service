@@ -1,0 +1,36 @@
+# Ayvona Jobs — bot: @ayvona_jobs_bot (admin buyruqlari, keyin ommaviy bot).
+#
+# ⚠️ .env da BOT_TOKEN bo'sh bo'lsa, bot xabar yozib chiqib ketadi va har 10 soniyada qayta yonib turadi —
+#    token qo'yilmaguncha bu servisni YOQMANG.
+# ⚠️ Bitta bot tokeni bilan faqat BITTA joyda polling bo'lishi mumkin: server bot ishlayotganda
+#    kompyuteringizda xuddi shu tokenli botni ishga tushirmang (TelegramConflictError).
+#
+# Yoqish:
+#   sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ayvona-bot
+# Loglar:  journalctl -u ayvona-bot -f
+
+[Unit]
+Description=Ayvona Jobs - Telegram bot (@ayvona_jobs_bot)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ayvona
+Group=ayvona
+WorkingDirectory=/home/ayvona/ayvona
+ExecStart=/home/ayvona/.local/bin/uv run --no-sync python -m ayvona.apps.bot
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

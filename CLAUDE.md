@@ -36,6 +36,7 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
    Uzbek Cyrillic → transliterated; Russian/English → Uzbek fields only (see docs/SOURCE_ANALYSIS.md §11).
 9. **Admin manages sources from the bot, never by editing code/YAML**: add/remove/pause Telegram channels
    and websites (`/addsource`, `/sources`). DB is the source of truth. Every new source type must be manageable this way.
+- The public bot and the future website (Phase 17) share ONE business logic: search, posting rules, filters and favorites live in `services/` (no logic inside handlers), so the website reuses it.
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)
