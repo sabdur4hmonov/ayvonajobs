@@ -378,6 +378,9 @@ admin chatdagi xatolarga qarab kalit so'zlar va regex'ni sozlang.
 
 ## BOSQICH 10 — Ommaviy bot asosi ⏱ 1–2 soat · Model: `sonnet`
 
+- [x] Kod + testlar bajarildi — 2026-09-30 (Bot API mock bilan; tafsilot: `docs/PROGRESS.md`)
+- [ ] Haqiqiy botda tekshirish (telefonda /start, kanal postidagi ⭐ Saqlash)
+
 ```text
 Ommaviy botning asosini qur (aiogram 3, Router'lar):
 - /start: users jadvaliga yozish/yangilash, salomlashish, asosiy menyu (reply keyboard):

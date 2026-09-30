@@ -145,3 +145,8 @@ formatter:
 images:
   root: "assets/images"              # <kategoriya>/<kasb>/ papkalari
   fallback_category: "boshqa"        # hech narsa topilmasa shu papka
+
+# --- Ommaviy bot (@ayvona_jobs_bot, bot/) ---------------------------------
+bot:
+  throttle_seconds: 1                # bitta foydalanuvchidan 1 soniyada 1 ta so'rov (ortig'i e'tiborsiz). Adminlarga ta'sir qilmaydi
+  touch_interval_seconds: 60         # users.last_active_at shuncha vaqtda bir yangilanadi

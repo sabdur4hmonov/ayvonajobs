@@ -5,12 +5,60 @@ HTML parse mode: values put into these templates must be ``html.escape``-d by th
 
 from __future__ import annotations
 
-# ------------------------------------------------------------------ public (Bosqich 10 later)
-PUBLIC_START = (
-    "Assalomu alaykum! 👋\n"
-    "<b>Ayvona Jobs</b> boti tez orada ishga tushadi: e'lon joylash, ish qidirish, obunalar.\n"
-    "Hozircha e'lonlar kanalimizda: @{channel}"
+# ------------------------------------------------------------------ public: main menu
+MENU_POST = "📢 E'lon joylash"
+MENU_SEARCH = "🔍 Ish qidirish"
+MENU_FAVORITES = "⭐ Saqlanganlar"
+MENU_ALERTS = "🔔 Obunalar"
+MENU_HELP = "ℹ️ Yordam"
+MENU_PLACEHOLDER = "Bo'limni tanlang"
+
+WELCOME = (
+    "Assalomu alaykum, {name}! 👋\n"
+    "<b>Ayvona Jobs</b> — O'zbekiston bo'ylab ish e'lonlari. Hammasi bepul.\n\n"
+    "📢 <b>E'lon joylash</b> — xodim qidiryapsizmi? E'loningizni kanalga chiqaramiz.\n"
+    "🔍 <b>Ish qidirish</b> — kasb, hudud va maosh bo'yicha.\n"
+    "⭐ <b>Saqlanganlar</b> — yoqqan e'lonlaringiz.\n"
+    "🔔 <b>Obunalar</b> — mos yangi e'lon chiqsa, darhol xabar beraman.\n\n"
+    "Barcha e'lonlar: @{channel}"
 )
+HELP_PUBLIC = (
+    "ℹ️ <b>Yordam</b>\n\n"
+    "📢 <b>E'lon joylash</b> — bosqichma-bosqich forma. "
+    "Aloqa (telefon yoki @username) majburiy. E'lon tekshirilgach kanalga chiqadi.\n"
+    "🔍 <b>Ish qidirish</b> — kategoriya → kasb → hudud → maosh, yoki so'z bilan qidirish.\n"
+    "⭐ <b>Saqlanganlar</b> — kanal postidagi yoki qidiruvdagi «⭐ Saqlash» tugmasi bilan.\n"
+    "🔔 <b>Obunalar</b> — «dasturchi, Toshkent, 5 mln+» kabi obuna; "
+    "mos e'lon chiqsa xabar keladi.\n\n"
+    "/start — bosh menyu · /cancel — boshlangan amalni bekor qilish\n"
+    "Kanal: @{channel}"
+)
+SOON = "⏳ Bu bo'lim tez orada ishga tushadi."
+BANNED = "🚫 Siz botdan foydalana olmaysiz."
+THROTTLED = "⏳ Sekinroq, iltimos."
+
+# ------------------------------------------------------------------ public: jobs, favorites
+JOB_NOT_FOUND = "😕 E'lon topilmadi yoki hali kanalga chiqmagan."
+JOB_CLOSED_MARK = "❌ <b>YOPILGAN</b>\n\n"
+SAVED = "⭐ Saqlandi. Ro'yxat: «⭐ Saqlanganlar»."
+ALREADY_SAVED = "⭐ Bu e'lon allaqachon saqlangan."
+SAVE_CLOSED = "❌ Bu e'lon yopilgan — saqlab bo'lmaydi."
+UNSAVED = "Saqlanganlardan olib tashlandi."
+BTN_SAVE = "⭐ Saqlash"
+BTN_UNSAVE = "✅ Saqlangan"
+BTN_SHARE = "📤 Ulashish"
+BTN_DETAILS = "Batafsil"
+BTN_PREV = "⬅️"
+BTN_NEXT = "➡️"
+BTN_REMOVE = "🗑 Olib tashlash"
+FAV_EMPTY = (
+    "⭐ Saqlangan e'lonlar yo'q.\n"
+    "Kanal postidagi yoki qidiruvdagi «⭐ Saqlash» tugmasini bosing."
+)
+FAV_HEAD = "⭐ <b>Saqlanganlar</b> — {total} ta (sahifa {page}/{pages})"
+CARD_CLOSED = " ❌ Yopilgan"
+SALARY_NEGOTIABLE = "Kelishiladi"
+REMOTE = "Masofaviy"
 
 # ------------------------------------------------------------------ admin: general
 ADMIN_HELP = (

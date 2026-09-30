@@ -100,7 +100,8 @@ class BotHarness:
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     s = make_settings(tmp_path / "images", db_file=tmp_path / "data" / "ayvona.db")
-    return s.model_copy(update={"env": s.env.model_copy(update={"admin_ids": [ADMIN]})})
+    app = s.app.model_copy(update={"bot": s.app.bot.model_copy(update={"throttle_seconds": 0})})
+    return s.model_copy(update={"env": s.env.model_copy(update={"admin_ids": [ADMIN]}), "app": app})
 
 
 @pytest.fixture
@@ -116,7 +117,7 @@ async def test_only_admins_get_admin_commands(harness: BotHarness) -> None:
     await harness.send(message_update("/stats", uid=STRANGER))
     await harness.send(message_update("/start", uid=STRANGER))
     texts = harness.texts()
-    assert len(texts) == 1 and "tez orada" in texts[0]  # public /start only, /stats ignored
+    assert len(texts) == 1 and "Assalomu alaykum" in texts[0]  # public /start only, no /stats
 
     await harness.send(message_update("/help"))
     assert "Admin buyruqlari" in harness.texts()[-1]

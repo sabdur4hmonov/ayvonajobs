@@ -870,3 +870,39 @@ heartbeat yangi (≤ 10 daq) **va** `collector:last_cycle_at` yangi (collector h
 - `kv_repo.COLLECTOR_LAST_CYCLE`, `kv_repo.get_time()` qo'shildi (kalit avval faqat `apps/collector.py` da edi).
 
 Testlar: +2 (`test_monitoring.py`: 15 kanal + o'chiq collector → 1 xabar; haqiqatan jim kanal). 696 passed, ruff toza.
+
+
+---
+
+## Bosqich 10 — Ommaviy bot asosi (2026-09-30, avtonom)
+
+Nima qilindi:
+- **/start** — `users` jadvaliga yozadi/yangilaydi, salom + asosiy menyu (reply keyboard):
+  📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar · ℹ️ Yordam. `/start` har doim yarim qolgan formani
+  tozalaydi. `/help` (va ℹ️ Yordam), `/cancel`.
+- **Deep link'lar** (kanal tugmalari formati o'zgarmadi): `?start=save_<id>` — saqlaydi va e'lonni ko'rsatadi;
+  `?start=job_<id>` — e'lonni ko'rsatadi; `?start=search` — qidiruv (Bosqich 12).
+- **E'lon kartochkasi** botda = kanaldagi matn (`jobs.formatted_text`) + tugmalar: [📩 Murojaat]/[🔗 Ariza] (kanal
+  postidagi), [⭐ Saqlash ↔ ✅ Saqlangan], [📤 Ulashish] (Telegram'ning `t.me/share/url` oynasi, kanal posti havolasi bilan).
+- **⭐ Saqlanganlar** — 5 tadan sahifa (⬅️ ➡️), eng oxirgi saqlangan tepada, yopilganlari "❌ Yopilgan" belgisi bilan,
+  har biriga "N. Batafsil" tugmasi.
+- **Middleware** (`bot/middlewares.py`, faqat shaxsiy chat): throttling (`bot.throttle_seconds: 1`), `users` yozuvi
+  (`last_active_at` — `bot.touch_interval_seconds: 60` da bir marta, har xabarda emas), ban (🚫 xabari 10 daqiqada 1 marta).
+  **Adminlarga ta'sir qilmaydi** (throttling ham, ban ham). Adminlar `trust_level=2` bo'ladi.
+- **Mantiq `services/` da** (veb-sayt ham ishlatadi): `services/users.py`, `services/favorites.py`,
+  `services/jobs_public.py` (nimani ko'rsatish mumkin: faqat kanalga chiqqan `published`; `closed`/`expired` —
+  saqlanganlarda belgi bilan). Handler'lar faqat chaqiradi.
+- `bot/setup.py`: admin router'lar oldin (faqat `ADMIN_IDS`), keyin ommaviy (faqat shaxsiy chat). `admin.py` endi
+  `/start` ni ushlamaydi — admin ham menyu va deep link'larni ko'radi; admin yordami `/help` da.
+  "/" menyusi: hammaga `/start /help /cancel`, adminlarga — admin buyruqlari ham.
+
+Qarorlar (Sardor yo'qligida):
+1. **FSM storage — MemoryStorage** (ROADMAP aytgandek). Restart faqat yarim to'ldirilgan formani unutadi (yuborilgan
+   e'lon bazada). Keyin bir nechta server bo'lsa — RedisStorage yoki `kv_store` ustidagi SQLite storage.
+2. **Throttling'da tashlangan xabarga javob yo'q** (flood'ga flood bilan javob bermaslik); bosilgan tugmaga "⏳ Sekinroq"
+   (aks holda tugma aylanib turadi).
+3. **Guruh chatlari** (admin guruh): ommaviy handler'lar ishlamaydi, `users` ga yozilmaydi.
+4. Yopilgan e'lonni saqlab bo'lmaydi; kartochkasi "❌ YOPILGAN" bilan, tugmalarsiz.
+5. "📢 E'lon joylash" va "🔔 Obunalar" — hozircha "tez orada" (Bosqich 11 va 13).
+
+Testlar: `tests/test_public_bot.py` (+15). Baza o'zgarmadi (migratsiya yo'q).

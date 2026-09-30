@@ -13,7 +13,7 @@ Yangi sessiya yoki boshqa Windows foydalanuvchisi shu faylni birinchi o'qisin, k
 Qoidalar: collector/worker/bot ISHGA TUSHIRILMAYDI, `data/ayvona.db` ga tegilmaydi (migratsiya faqat nusxada sinaladi),
 har band alohida commit + push, qarorlar PROGRESS.md ga, savol berilmaydi.
 - [x] 0. Monitoring: collector o'chiq → bitta "Collector jim" (kanal-jimlik xabarlari yo'q)
-- [ ] 1. Bosqich 10 — ommaviy bot asosi
+- [x] 1. Bosqich 10 — ommaviy bot asosi (menyu, deep link'lar, ⭐ saqlanganlar, middleware'lar)
 - [ ] 2. Bosqich 11 — e'lon joylash formasi
 - [ ] 3. Bosqich 12 — qidiruv + saqlanganlar (FTS5 uchun normalize qilingan matn ustuni)
 - [ ] 4. Bosqich 13 — obunalar

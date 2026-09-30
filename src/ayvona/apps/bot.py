@@ -1,5 +1,4 @@
-"""Bot process (@ayvona_jobs_bot). For now only the admin commands (Bosqich 8); the public menu
-comes in Bosqich 10.
+"""Bot process (@ayvona_jobs_bot): the public menu (Bosqich 10+) and the admin commands.
 
 Also: ``heartbeat:bot`` every minute and a monitor that watches the worker (the worker watches
 collector and bot, so every process is watched by another one).
@@ -20,7 +19,7 @@ from aiogram.types import BotCommandScopeChat
 from loguru import logger
 
 from ayvona.apps.runtime import SessionFactory, heartbeat_loop, stop_aware_sleep
-from ayvona.bot.setup import ADMIN_COMMANDS, BOT_DEFAULTS, build_dispatcher
+from ayvona.bot.setup import ADMIN_COMMANDS, BOT_DEFAULTS, PUBLIC_COMMANDS, build_dispatcher
 from ayvona.botapi import BAD_TOKEN, BotConfigError, create_bot
 from ayvona.config import Settings, get_settings
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
@@ -36,7 +35,12 @@ NO_ADMINS = (
 
 
 async def set_admin_commands(bot: Bot, admin_ids: list[int]) -> None:
-    """The "/" menu shows the admin commands to admins only. Best effort."""
+    """The "/" menu: /start /help /cancel for everyone, the admin commands to admins only.
+    Best effort."""
+    try:
+        await bot.set_my_commands(PUBLIC_COMMANDS)
+    except Exception as e:
+        logger.info("Umumiy buyruqlar menyusi qo'yilmadi: {}", e)
     for admin_id in admin_ids:
         try:
             await bot.set_my_commands(ADMIN_COMMANDS, scope=BotCommandScopeChat(chat_id=admin_id))

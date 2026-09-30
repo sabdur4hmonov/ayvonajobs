@@ -11,7 +11,7 @@ import re
 from datetime import datetime, timedelta
 
 from aiogram import Router
-from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from loguru import logger
@@ -68,9 +68,9 @@ def log_admin(message: Message, action: str) -> None:
 
 
 # ------------------------------------------------------------------ general
-@router.message(CommandStart())
 @router.message(Command("help"))
 async def help_cmd(message: Message) -> None:
+    """Admin help. /start is not caught here: admins get the public menu and deep links too."""
     await message.answer(T.ADMIN_HELP)
 
 

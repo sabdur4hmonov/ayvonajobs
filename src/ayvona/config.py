@@ -200,6 +200,15 @@ class BrandingConfig(BaseModel):
         return v.strip().lstrip("@")
 
 
+class BotConfig(BaseModel):
+    """The public bot (bot/): middlewares and menus."""
+
+    # A user's updates closer than this are dropped (flood protection). Admins are never limited.
+    throttle_seconds: float = Field(default=1.0, ge=0)
+    # users.last_active_at / username are written at most this often per user.
+    touch_interval_seconds: float = Field(default=60, ge=0)
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -223,6 +232,7 @@ class AppConfig(BaseModel):
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
     backup: BackupConfig = Field(default_factory=BackupConfig)
     branding: BrandingConfig
+    bot: BotConfig = Field(default_factory=BotConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 
