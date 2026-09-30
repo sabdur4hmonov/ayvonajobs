@@ -49,6 +49,7 @@ from ayvona.processing.clean import Cleaner
 from ayvona.processing.dedup import WINDOW, DedupEntry, DedupIndex, DedupMatch, make_entry
 from ayvona.processing.extract import Extraction, Extractor
 from ayvona.processing.formatter import FormattedPost, Formatter, telegram_post_url
+from ayvona.processing.normalize import search_text
 from ayvona.services.notifier import Notifier
 from ayvona.timeutil import ensure_utc, utcnow
 
@@ -184,6 +185,9 @@ def job_fields(ex: Extraction, description: str, out: FormattedPost) -> dict[str
         "parse_method": ParseMethod.FALLBACK if out.fallback else ParseMethod.REGEX,
         "confidence": ex.confidence,
         "formatted_text": out.html,
+        "search_text": search_text(
+            ex.title_uz or ex.title, ex.company, ex.district or ex.address, description
+        ),
     }
 
 

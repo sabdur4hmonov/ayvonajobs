@@ -430,6 +430,9 @@ Testlar: har bir filtr, limit, aloqa majburiyligi.
 
 ## BOSQICH 12 — 🔍 Ish qidirish + ⭐ Saqlanganlar ⏱ 2 soat · Model: `opusplan`
 
+- [x] Kod + testlar bajarildi — 2026-09-30 (migratsiya `f2b6d8a4c1e3`; tafsilot: `docs/PROGRESS.md`)
+- [ ] `alembic upgrade head` + haqiqiy botda tekshirish
+
 ```text
 bot/handlers/search.py:
 - Qidiruv ustasi: Kategoriya (yoki "Hammasi") → Kasb (shu kategoriyadagi kasblar tugmalari yoki "Hammasi") → Hudud (yoki "Hammasi", "Masofaviy") → Maosh

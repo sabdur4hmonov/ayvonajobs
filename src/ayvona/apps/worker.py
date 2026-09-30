@@ -8,7 +8,8 @@ Tasks running side by side:
 * heartbeat — ``kv_store`` ``heartbeat:worker`` every minute;
 * monitoring — every 5 min: collector / bot silent? sources silent or failing?
   (services/heartbeat.py);
-* backup — daily 03:00 Asia/Tashkent copy of the DB, sent to the admin chat (services/backup.py).
+* backup — daily 03:00 Asia/Tashkent copy of the DB, sent to the admin chat (services/backup.py);
+* USD rate — once a day from cbu.uz for the salary search filter (services/currency.py).
 
 Step 0 (first start only): every post already in the DB becomes ``skipped_backfill`` — the test
 posts collected before the worker existed never reach the channel (``kv_store`` flag
@@ -61,9 +62,11 @@ from ayvona.logging_setup import setup_logging
 from ayvona.processing.pipeline import Pipeline
 from ayvona.publisher.outbox import ChannelSender, Publisher, skip_old_jobs
 from ayvona.services.backup import BackupService
+from ayvona.services.currency import run_usd_rate
 from ayvona.services.heartbeat import Monitor
 from ayvona.services.notifier import Notifier
 from ayvona.services.reformat import ReformatReport, reformat_queued
+from ayvona.services.search import fill_search_text
 from ayvona.timeutil import utcnow
 
 PROCESS_NAME = "worker"
@@ -106,6 +109,23 @@ async def skip_old_queue(settings: Settings, sf: SessionFactory) -> list[int]:
             "Eskirgan e'lonlarni belgilashda xato — publisher keyinroq qayta tekshiradi"
         )
         return []
+
+
+async def backfill_search_text(sf: SessionFactory) -> int:
+    """Jobs from before Bosqich 12 get ``search_text`` (keyword search). Never stops the worker."""
+    total = 0
+    try:
+        while True:
+            async with sf() as s, s.begin():
+                n = await fill_search_text(s)
+            total += n
+            if n == 0:
+                break
+    except Exception:
+        logger.exception("search_text to'ldirishda xato — keyingi ishga tushishda davom etadi")
+    if total:
+        logger.info("Qidiruv uchun {} ta e'lon matni tayyorlandi (search_text)", total)
+    return total
 
 
 async def reformat_queue(settings: Settings, sf: SessionFactory) -> ReformatReport | None:
@@ -186,6 +206,7 @@ async def run_worker(
         logger.info("--no-publish: kanalga hech narsa yuborilmaydi, faqat qayta ishlash.")
     await skip_old_queue(settings, sf)
     await reformat_queue(settings, sf)
+    await backfill_search_text(sf)
 
     cfg = settings.app.worker
     if once:
@@ -206,6 +227,7 @@ async def run_worker(
             Monitor(settings, sf, notifier, ("collector", "bot")).run(stop_aware_sleep(stop))
         )
         jobs.append(BackupService(settings, sf, notifier).run(stop_aware_sleep(stop)))
+        jobs.append(run_usd_rate(settings, sf, stop_aware_sleep(stop)))
     tasks = [asyncio.create_task(j) for j in jobs]
     try:
         await stop.wait()

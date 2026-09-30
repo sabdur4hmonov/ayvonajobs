@@ -35,7 +35,7 @@ def make_settings(
     **worker: Any,
 ) -> Settings:
     """Test settings. Never points at the real data/ayvona.db: the backup is off unless
-    ``db_file`` + ``backup_dir`` (temporary paths) are given."""
+    ``db_file`` + ``backup_dir`` (temporary paths) are given. No network: the USD rate is off."""
     s = load_settings(DEFAULT_CONFIG_DIR, env_file=None)
     env = s.env.model_copy(update={"db_path": str(db_file or "/nonexistent/test.db")})
     app = s.app.model_copy(
@@ -54,6 +54,8 @@ def make_settings(
                 }
             ),
             "worker": s.app.worker.model_copy(update={"album_wait_seconds": 60, **worker}),
+            # never call cbu.uz from tests
+            "search": s.app.search.model_copy(update={"usd_rate_url": ""}),
             "images": s.app.images.model_copy(
                 update={"root": str(images_root) if images_root else "/nonexistent-images"}
             ),

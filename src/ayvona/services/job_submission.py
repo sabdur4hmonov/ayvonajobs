@@ -35,7 +35,7 @@ from ayvona.processing.extract import Extraction
 from ayvona.processing.formatter import FormattedPost, Formatter
 from ayvona.processing.keywords import KeywordSet
 from ayvona.processing.language import detect_language
-from ayvona.processing.normalize import fold, normalize
+from ayvona.processing.normalize import fold, normalize, search_text
 from ayvona.processing.pipeline import buttons_json
 from ayvona.processing.salary import SalaryBlock, SalaryParser
 from ayvona.services.users import TRUST_ADMIN, TRUST_NEW, TRUST_TRUSTED
@@ -403,6 +403,7 @@ async def submit(
         parse_method=ParseMethod.FORM,
         confidence=1.0,
         formatted_text=out.html,
+        search_text=search_text(draft.title, draft.company, draft.city, draft.text()),
         status=JobStatus.PENDING_REVIEW if reasons else JobStatus.QUEUED,
         attempts=0,
         next_retry_at=now,

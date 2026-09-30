@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from ayvona.bot import texts as T
 from ayvona.bot.callbacks import JobCb
 from ayvona.bot.cards import full_card
+from ayvona.bot.handlers.search import open_search
 from ayvona.bot.keyboards import job_keyboard, main_menu
 from ayvona.config import Settings
 from ayvona.db.models import User
@@ -54,11 +55,6 @@ async def send_job(
         ),
     )
     return True
-
-
-async def open_search(message: Message, state: FSMContext, **data: object) -> None:
-    """Entry of the search (``?start=search`` and the menu). Bosqich 12 replaces it."""
-    await message.answer(T.SOON)
 
 
 @router.message(CommandStart())

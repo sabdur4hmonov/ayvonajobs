@@ -125,6 +125,29 @@ POST_APPROVED_USER = "✅ E'loningiz tasdiqlandi va tez orada kanalga chiqadi."
 POST_REJECTED_USER = "❌ Afsuski, e'loningiz tasdiqlanmadi (kanal qoidalariga mos emas)."
 POST_PUBLISHED_USER = "📢 E'loningiz kanalga chiqdi: {url}"
 
+# ------------------------------------------------------------------ public: 🔍 Ish qidirish
+SEARCH_ASK_CATEGORY = "🔍 <b>Ish qidirish</b>\nQaysi soha? 👇"
+SEARCH_ASK_PROFESSION = "🔍 {category}\nQaysi kasb? 👇"
+SEARCH_ASK_REGION = "🔍 {summary}\nQaysi hudud? 👇"
+SEARCH_ASK_SALARY = "🔍 {summary}\nMaosh (oyiga)? 👇"
+SEARCH_ASK_KEYWORD = (
+    "🔤 Qidiriladigan so'zni yozing (masalan: <i>oshpaz</i>, <i>sotuv menejeri</i>, "
+    "<i>python</i>). Lotin yoki kirill — farqi yo'q."
+)
+SEARCH_BAD_KEYWORD = "Kamida 2 harfli so'z yozing."
+SEARCH_ALL = "Hammasi"
+SEARCH_ANY_SALARY = "Farqi yo'q"
+SEARCH_SALARY_STEP = "{mln} mln+"
+SEARCH_BY_WORD = "🔤 So'z bilan qidirish"
+SEARCH_LAST = "🔁 Oxirgi qidiruv"
+SEARCH_NEW = "🔄 Yangi qidiruv"
+SEARCH_HEAD = (
+    "🔍 <b>Natijalar</b>: {total} ta · {summary}\n(sahifa {page}/{pages}, eng yangisi tepada)"
+)
+SEARCH_EMPTY = "😕 {summary} bo'yicha hozircha e'lon yo'q.\nFiltrlarni kengaytirib ko'ring."
+SEARCH_EVERYTHING = "barcha e'lonlar"
+SEARCH_EXPIRED = "Qidiruv eskirdi — «🔍 Ish qidirish» ni qayta bosing."
+
 # ------------------------------------------------------------------ admin: moderation
 MOD_HEAD = (
     "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"

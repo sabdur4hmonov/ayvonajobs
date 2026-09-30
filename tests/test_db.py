@@ -29,6 +29,7 @@ from ayvona.db.models import (
 )
 from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
 from ayvona.db.session import create_engine, schema_is_ready, sqlite_url
+from ayvona.processing.normalize import search_text
 from ayvona.sources.base import RawItem
 from ayvona.timeutil import utcnow
 from tests.conftest import run_alembic
@@ -204,21 +205,25 @@ async def _fts(session: AsyncSession, query: str) -> list[int]:
     return [r[0] for r in rows]
 
 
-async def test_fts_follows_jobs_via_triggers(session: AsyncSession) -> None:
+async def test_fts_follows_search_text_via_triggers(session: AsyncSession) -> None:
+    """jobs_fts indexes only ``jobs.search_text`` (migration f2b6d8a4c1e3)."""
     job = Job(
         origin=JobOrigin.AGGREGATOR,
         parse_method=ParseMethod.REGEX,
-        title="Sotuvchi-konsultant",
+        title="Сотувчи-консультант",
         company="Texnomart",
         city="Toshkent",
         status=JobStatus.PUBLISHED,
     )
+    job.search_text = search_text(job.title, job.company, job.city)
     session.add(job)
     await session.commit()
     assert await _fts(session, "texnomart") == [job.id]
+    # the Cyrillic title is found with a Latin query (and a Cyrillic one, folded the same way)
     assert await _fts(session, "sotuvchi") == [job.id]
+    assert await _fts(session, search_text("СОТУВЧИ")) == [job.id]
 
-    job.title = "Haydovchi"
+    job.search_text = search_text("Haydovchi")
     await session.commit()
     assert await _fts(session, "sotuvchi") == []
     assert await _fts(session, "haydovchi") == [job.id]

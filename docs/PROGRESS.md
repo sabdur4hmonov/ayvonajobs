@@ -480,6 +480,8 @@ POST_EXAMPLES, barcha migratsiyalar (baza `e5a9c2f7b3d1` da), vaqtinchalik rasml
 laptopda 3 jarayon ishlayapti, `git push` (1626806 gacha).
 
 Hali ochiq:
+- [ ] ⚠️ **Migratsiya (Bosqich 12+):** jarayonlarni to'xtatib `uv run alembic upgrade head`, keyin qayta yoqish
+      (batafsil — fayl oxiridagi tungi ish hisobotida).
 - [ ] **Qaror kerak — `initial_backfill`:** yangi kanal qo'shilganda eski postlar olinsinmi? Hozir `0` (faqat keyingilari).
 - [ ] **Qaror kerak — `/addsource` dagi eski postlar** kanalga chiqsinmi? Hozir yo'q (`publisher.publish_backfill: false`).
       Eslatma: chiqsa ham, manbada 24 soatdan oldin chiqqanlari baribir chiqmaydi (`publisher.max_age_hours`).
@@ -949,3 +951,43 @@ Qarorlar (Sardor yo'qligida):
 7. User e'loniga yig'ish oynasi (`hold_minutes`) va `max_age_hours` qo'llanmaydi (raw post yo'q) — darhol chiqadi.
 
 Testlar: `tests/test_job_submission.py` (+25), `tests/test_post_job.py` (+11). Baza o'zgarmadi (migratsiya yo'q).
+
+
+---
+
+## Bosqich 12 — 🔍 Ish qidirish + ⭐ Saqlanganlar (2026-09-30, avtonom)
+
+Nima qilindi:
+- **Qidiruv ustasi** (`bot/handlers/search.py`): Soha (yoki "Hammasi") → Kasb (shu sohaning kasblari yoki "Hammasi";
+  kasbi yo'q soha / "Hammasi" bo'lsa o'tkaziladi) → Hudud ("Hammasi", "🏠 Masofaviy", 14 hudud) → Maosh ("Farqi yo'q",
+  2/4/6/10 mln+) → natijalar. Hammasi bitta xabarda (tugmalar bilan tahrirlanadi).
+- **"🔤 So'z bilan qidirish"** — FTS5. **Kirill/lotin muammosi hal qilindi** (PROGRESS Bosqich 2, №9): yangi ustun
+  `jobs.search_text` = `fold(lavozim + kompaniya + manzil + matn)` apostrofsiz; `jobs_fts` endi faqat shu ustunni
+  indekslaydi (migratsiya **`f2b6d8a4c1e3`**). So'rov ham xuddi shunday o'giriladi → "СОТУВЧИ" ham, "sotuvchi" ham,
+  "o'qituvchi" ham "oqituvchi" ham topiladi; har so'z prefiks ("sotuv" → "sotuvchi"). So'rov har doim xavfsiz
+  (faqat harf-raqam so'zlar, qo'shtirnoqda).
+- **Natijalar**: faqat `published` va muddati o'tmagan, `published_at` bo'yicha eng yangisi tepada, 5 tadan (⬅️ ➡️),
+  har biri qisqa kartochka + [N. Batafsil] [⭐ Saqlash] [📤 Ulashish] + [🔄 Yangi qidiruv].
+- **"🔁 Oxirgi qidiruv"** — `search_logs` dan (restart'dan keyin ham ishlaydi). Har qidiruv `search_logs` ga yoziladi
+  (sahifalash yozilmaydi). Bot qayta ishga tushsa sahifa tugmasi oxirgi qidiruvdan davom etadi.
+- **Maosh filtri**: `salary_max ≥ X` yoki `salary_min ≥ X`; USD — `kv_store.usd_rate` bilan so'mga.
+  **Kurs** (`services/currency.py`): worker kuniga 1 marta Markaziy bankning ochiq API'sidan oladi (cbu.uz, bepul);
+  xato bo'lsa eski qiymat, umuman bo'lmasa `search.usd_rate_fallback: 12800`.
+- **⭐ Saqlanganlar** — Bosqich 10 da qilingan (sahifalash, o'chirish, "❌ Yopilgan" belgisi); qidiruvdagi ⭐ ham shu.
+- Mantiq `services/search.py` da (veb-sayt ham ishlatadi).
+
+Qarorlar (Sardor yo'qligida):
+1. **Eski e'lonlarning `search_text`i** migratsiyada emas, **worker start'ida** to'ldiriladi (`fill_search_text`,
+   500 tadan) — migratsiya app kodini import qilmasligi kerak (Bosqich 2 qarori). Worker qayta yongunicha eski e'lonlar
+   faqat so'z bilan qidirishda chiqmaydi (filtrlar ishlaydi). Log: "Qidiruv uchun N ta e'lon matni tayyorlandi".
+2. **Maosh filtri faqat oylik maoshlarga** (`salary_period` bo'sh yoki `month`); kunlik/soatbay e'lonlar va maoshi son
+   bo'lmaganlar faqat "Farqi yo'q" da chiqadi (ROADMAP: "maoshi yo'q e'lonlar Farqi yo'q da chiqadi"). EUR/RUB — filtrda yo'q.
+3. **"Ko'p hudud" e'lonlari** aniq bir hudud tanlanganda chiqmaydi (qaysi hududlar ekani saqlanmaydi) — "Hammasi" da chiqadi.
+4. **Qidiruv filtrlari** FSM'da (`search`) — callback'da faqat sahifa raqami (64 bayt chegarasi).
+5. Testlar hech qachon cbu.uz ga chiqmaydi (`make_settings` da `usd_rate_url: ""` — bo'sh URL = kurs yangilanmaydi).
+6. Migratsiya **vaqtinchalik bazada** sinaldi (eski versiya + ma'lumot → head → FTS ishladi → integrity-check toza →
+   downgrade → qayta upgrade). **Sizning `data/ayvona.db` ga tegilmadi.**
+
+⚠️ **Ertalab kerak:** `uv run alembic upgrade head` (jarayonlar to'xtatilgan holda).
+
+Testlar: `tests/test_search.py` (+15), `test_db.py` FTS testi yangilandi.

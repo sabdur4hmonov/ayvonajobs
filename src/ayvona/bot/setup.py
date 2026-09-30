@@ -15,7 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.bot import moderation
 from ayvona.bot.filters import IsAdmin
-from ayvona.bot.handlers import admin, admin_images, admin_sources, favorites, post_job, start
+from ayvona.bot.handlers import (
+    admin,
+    admin_images,
+    admin_sources,
+    favorites,
+    post_job,
+    search,
+    start,
+)
 from ayvona.bot.middlewares import UserMiddleware
 from ayvona.config import Settings
 
@@ -82,7 +90,9 @@ def build_dispatcher(
     public_area = Router(name="public_area")
     public_area.message.filter(F.chat.type == "private")
     # start first: its menu buttons work from any step (they leave a half-filled form)
-    public_area.include_routers(*_detached(start.router, favorites.router, post_job.router))
+    public_area.include_routers(
+        *_detached(start.router, favorites.router, search.router, post_job.router)
+    )
 
     dp.include_routers(*_detached(admin_area, public_area))
     return dp

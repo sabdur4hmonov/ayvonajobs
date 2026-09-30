@@ -21,6 +21,13 @@ class PostCb(CallbackData, prefix="pj"):
     value: str = ""
 
 
+class SearchCb(CallbackData, prefix="sq"):
+    """🔍 search wizard: cat | prof | reg | sal <value> ("*" = all), kw, last, new, page <n>."""
+
+    step: str
+    value: str = ""
+
+
 class ModCb(CallbackData, prefix="mod"):
     """Admin decision on a user job waiting for review: ok | no | ban."""
 

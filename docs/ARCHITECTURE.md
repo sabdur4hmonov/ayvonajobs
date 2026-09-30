@@ -150,6 +150,7 @@ rejected (filtr yoki admin rad etdi)
 | parse_method, confidence | `regex` / `fallback` / `gemini` / `form`, 0–1 |
 | formatted_text | kanalga chiqadigan tayyor HTML |
 | fingerprint | dublikat uchun (lavozim + telefon + qisqa matn) |
+| search_text | so'z bilan qidiruv uchun o'girilgan matn (jobs_fts shu ustunda) |
 | status, attempts, next_retry_at, last_error | outbox navbati |
 | channel_message_id, published_at, expires_at, closed_at | |
 
@@ -174,7 +175,8 @@ created_at, last_active_at
 
 **kv_store** — key, value (masalan: `publisher_paused`, `usd_rate`, heartbeat'lar)
 
-**jobs_fts** — FTS5 virtual jadval (title, company, description, city) — kalit so'z bo'yicha tez qidiruv
+**jobs_fts** — FTS5 virtual jadval, faqat `jobs.search_text` ustunini indekslaydi (fold: kirill→lotin, kichik harf,
+apostrofsiz — migratsiya `f2b6d8a4c1e3`), triggerlar bilan sinxron. So'rov ham shunday o'giriladi (services/search.py)
 
 ---
 

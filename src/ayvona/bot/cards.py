@@ -12,6 +12,7 @@ from ayvona.db.models import Job
 from ayvona.processing.formatter import CURRENCY_NAMES, PERIOD_NAMES, format_amount
 from ayvona.processing.salary import UZS
 from ayvona.services.jobs_public import is_open
+from ayvona.services.search import REMOTE, SearchFilters
 
 MAX_TITLE = 60
 
@@ -59,6 +60,34 @@ def short_line(job: Job, settings: Settings, n: int, now: datetime) -> str:
     if place := place_short(job, settings):
         details.append(f"📍 {html.escape(place)}")
     return f"{n}. <b>{title}</b>{company}{closed}\n    " + " · ".join(details)
+
+
+def profession_title(settings: Settings, category: str | None, profession: str | None) -> str:
+    if not profession:
+        return ""
+    for key, cat in settings.categories.items():
+        if (category is None or key == category) and profession in cat.professions:
+            return cat.professions[profession].title
+    return profession
+
+
+def filters_summary(f: SearchFilters, settings: Settings) -> str:
+    """``Sotuv va savdo › Sotuvchi · Toshkent sh. · 4 mln+ · «kassir»`` (HTML-escaped)."""
+    parts: list[str] = []
+    if f.category and (cat := settings.categories.get(f.category)):
+        head = cat.title
+        if f.profession:
+            head += f" › {profession_title(settings, f.category, f.profession)}"
+        parts.append(head)
+    if f.region == REMOTE:
+        parts.append(T.REMOTE)
+    elif f.region and (reg := settings.regions.regions.get(f.region)):
+        parts.append(reg.title)
+    if f.min_salary:
+        parts.append(T.SEARCH_SALARY_STEP.format(mln=f"{f.min_salary / 1_000_000:g}"))
+    if f.keyword:
+        parts.append(f"«{f.keyword}»")
+    return html.escape(" · ".join(parts)) if parts else T.SEARCH_EVERYTHING
 
 
 def full_card(job: Job, now: datetime) -> str:

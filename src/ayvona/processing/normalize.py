@@ -143,3 +143,9 @@ def fold(text: str) -> str:
     if not text:
         return ""
     return _collapse(to_latin(_strip_symbols(unify(text).lower())))
+
+
+def search_text(*parts: str | None) -> str:
+    """The form stored in ``jobs.search_text`` (FTS5) and used for keyword queries:
+    :func:`fold` without apostrophes ("o'qituvchi" -> "oqituvchi": one token, not "o" + ...)."""
+    return fold("\n".join(p for p in parts if p)).replace("'", "")

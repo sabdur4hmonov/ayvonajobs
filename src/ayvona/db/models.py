@@ -256,6 +256,9 @@ class Job(Base):
 
     formatted_text: Mapped[str | None] = mapped_column(Text)
     fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    # Folded title + company + city + description (Cyrillic -> Latin, lowercase, no apostrophes):
+    # the only column jobs_fts indexes (normalize.search_text); keyword queries are folded the same.
+    search_text: Mapped[str | None] = mapped_column(Text)
 
     # Inline keyboard of the channel post: [[{"text": ..., "url": ...}, ...], ...]
     buttons: Mapped[list[Any] | None]

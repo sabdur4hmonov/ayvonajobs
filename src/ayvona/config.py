@@ -228,6 +228,20 @@ class PostingConfig(BaseModel):
     max_requirements: int = Field(default=600, ge=50)
 
 
+class SearchConfig(BaseModel):
+    """🔍 Ish qidirish (services/search.py) and the USD rate for salary filters."""
+
+    page_size: int = Field(default=5, ge=1, le=10)
+    # "2 mln+" ... buttons of the salary step (so'm per month)
+    salary_steps: list[int] = Field(
+        default_factory=lambda: [2_000_000, 4_000_000, 6_000_000, 10_000_000]
+    )
+    # USD salaries are compared in so'm: kv_store.usd_rate (cbu.uz, once a day), else this.
+    usd_rate_fallback: float = Field(default=12_800, gt=0)
+    usd_rate_url: str = "https://cbu.uz/uz/arkhiv-kursov-valyut/json/USD/"
+    usd_rate_refresh_hours: float = Field(default=24, gt=0)
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -253,6 +267,7 @@ class AppConfig(BaseModel):
     branding: BrandingConfig
     bot: BotConfig = Field(default_factory=BotConfig)
     posting: PostingConfig = Field(default_factory=PostingConfig)
+    search: SearchConfig = Field(default_factory=SearchConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 
