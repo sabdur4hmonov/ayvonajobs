@@ -47,14 +47,14 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] Kengaytiriladigan manbalar (keyin 2–3 sayt) _(`BaseSource` + registry tayyor; saytlar — Bosqich 16)_
 
 **Ommaviy bot @ayvona_jobs_bot (2-qism)** — asosiy menyu: 📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar
-- [ ] E'lon joylash: qadamma-qadam forma, **aloqa majburiy** (telefon tugmasi yoki @username), ko'rib chiqish, tasdiqlash
-- [ ] Limitlar (masalan kuniga 2 e'lon), spam / taqiqlangan so'z / **firibgarlik** filtrlari ("oldindan to'lov", "chet elga viza uchun pul"...)
-- [ ] Ish qidirish: kategoriya → hudud → maosh → natijalar (eng yangisi birinchi), kalit so'z bilan qidirish
-- [ ] ⭐ Saqlanganlar + ulashish
-- [ ] 🔔 Ish obunasi: "dasturchi, Toshkent, 5 mln+" → yangi mos e'lon chiqsa bot xabar beradi
-- [ ] E'lonni yopish ("Ish topildi" tugmasi) + 30 kundan keyin qidiruvdan avtomatik chiqish
-- [ ] Admin: `/stats /queue /failed /retry /pause /resume /ban /unban /addword /delword`
-      _(birinchi oltitasi tayyor — Bosqich 8; `/ban /unban /addword /delword` — Bosqich 11)_
+- [x] E'lon joylash: qadamma-qadam forma, **aloqa majburiy** (telefon tugmasi yoki @username), ko'rib chiqish, tasdiqlash
+- [x] Limitlar (masalan kuniga 2 e'lon), spam / taqiqlangan so'z / **firibgarlik** filtrlari ("oldindan to'lov", "chet elga viza uchun pul"...)
+- [x] Ish qidirish: kategoriya → hudud → maosh → natijalar (eng yangisi birinchi), kalit so'z bilan qidirish
+- [x] ⭐ Saqlanganlar + ulashish
+- [x] 🔔 Ish obunasi: "dasturchi, Toshkent, 5 mln+" → yangi mos e'lon chiqsa bot xabar beradi
+- [x] E'lonni yopish ("Ish topildi" tugmasi) + 30 kundan keyin qidiruvdan avtomatik chiqish
+- [x] Admin: `/stats /queue /failed /retry /pause /resume /ban /unban /addword /delword`
+      _(Bosqich 8 + 14; kod tayyor, haqiqiy botda tekshirilishi kerak)_
 - [ ] Manbalarni bot orqali boshqarish: `/addsource /sources` (qo'shish, o'chirish, pauza — kodga tegmasdan)
       _(kod tayyor — haqiqiy botda tekshirilgach belgilang)_
 - [x] Kanal postida tugmalar: "📩 Murojaat" · "⭐ Saqlash" · "🔍 Boshqa ishlar" (botga deep link)
@@ -468,6 +468,9 @@ o'chiradi.
 ---
 
 ## BOSQICH 14 — E'lonni yopish, muddat, to'liq statistika ⏱ 1–2 soat · Model: `sonnet`
+
+- [x] Kod + testlar bajarildi — 2026-10-01 (migratsiya `b8d4f0a2c6e9`; tafsilot: `docs/PROGRESS.md`)
+- [ ] `alembic upgrade head` + haqiqiy botda tekshirish
 
 ```text
 - User e'lonlari: "📋 Mening e'lonlarim" (menyuga qo'sh) → [✅ Ish topildi / yopish]. Yopilganda kanal posti

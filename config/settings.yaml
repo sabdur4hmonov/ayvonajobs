@@ -181,3 +181,14 @@ alerts:
   digest_max_items: 20               # dayjestda ko'pi bilan nechta e'lon
   per_second: 25                     # Bot API chegarasi (~30/s) — sekundiga shundan ko'p yubormaydi
   poll_seconds: 30                   # kanalga yangi chiqqan e'lonlar shuncha soniyada bir tekshiriladi
+
+# --- E'lon muddati (services/expiry.py, worker ichida) ------------------------
+expiry:
+  aggregator_days: 21                # kanallardan olingan e'lon shuncha kundan keyin qidiruvdan chiqadi
+  user_days: 30                      # foydalanuvchi e'loni — shuncha kun (uzaytirsa yana shuncha)
+  remind_days_before: 2              # foydalanuvchiga "Uzaytirasizmi?" — tugashidan shuncha kun oldin
+  check_minutes: 30                  # shuncha daqiqada bir tekshiriladi (kanaldagi postga tegilmaydi)
+
+# --- /broadcast (admin: hamma foydalanuvchilarga xabar) -------------------------
+broadcast:
+  per_second: 20                     # sekundiga shuncha xabar (Bot API chegarasidan past)

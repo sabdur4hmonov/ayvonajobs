@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from aiogram import Router
@@ -22,7 +23,14 @@ from ayvona.config import Settings
 from ayvona.db.models import JobStatus
 from ayvona.db.repositories import jobs_repo, kv_repo
 from ayvona.publisher.outbox import skip_old_jobs, too_old_reason
-from ayvona.services.stats import day_start, failed_jobs, period_stats, queue_overview
+from ayvona.services.stats import (
+    BotStats,
+    bot_stats,
+    day_start,
+    failed_jobs,
+    period_stats,
+    queue_overview,
+)
 from ayvona.timeutil import ensure_utc, to_local, utcnow
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -93,6 +101,7 @@ async def stats_cmd(message: Message, sf: SessionFactory, settings: Settings) ->
         today = await period_stats(s, day_start(now, tz))
         week = await period_stats(s, now - timedelta(days=7))
         queue = await queue_overview(s, now, limit=0)
+        extra = await bot_stats(s, now, day_start(now, tz))
         processes: list[str] = []
         for key, name in PROCESSES:
             beat = await kv_repo.read_heartbeat(s, key)
@@ -117,6 +126,32 @@ async def stats_cmd(message: Message, sf: SessionFactory, settings: Settings) ->
             categories=cats or T.STATS_NO_CATEGORIES,
             processes=", ".join(processes),
         )
+        + _extra_stats(extra, settings)
+    )
+
+
+def _extra_stats(st: BotStats, settings: Settings) -> str:
+    def cat(key: str) -> str:
+        return settings.categories[key].title if key in settings.categories else key
+
+    def reg(key: str) -> str:
+        if key == "remote":
+            return T.REMOTE
+        return settings.regions.regions[key].title if key in settings.regions.regions else key
+
+    def top(items: list[tuple[str, int]], name: Callable[[str], str]) -> str:
+        return ", ".join(f"{html.escape(name(k))} ({n})" for k, n in items) or "—"
+
+    sources = "\n".join(f"  {html.escape(k)}: {n}" for k, n in st.sources_week) or "  —"
+    return T.STATS_EXTRA.format(
+        users=st.users,
+        new_today=st.new_today,
+        active=st.active_week,
+        subs=st.subscriptions,
+        user_jobs=st.user_jobs_week,
+        categories=top(st.top_categories, cat),
+        regions=top(st.top_regions, reg),
+        sources=sources,
     )
 
 

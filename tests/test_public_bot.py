@@ -57,7 +57,14 @@ async def test_start_registers_user_and_shows_the_menu(
     assert "Assalomu alaykum" in msg.text and "@ayvonajobs" in msg.text
     assert isinstance(msg.reply_markup, ReplyKeyboardMarkup)
     buttons = [b.text for row in msg.reply_markup.keyboard for b in row]
-    assert buttons == [T.MENU_POST, T.MENU_SEARCH, T.MENU_FAVORITES, T.MENU_ALERTS, T.MENU_HELP]
+    assert buttons == [
+        T.MENU_POST,
+        T.MENU_SEARCH,
+        T.MENU_FAVORITES,
+        T.MENU_ALERTS,
+        T.MENU_MY_JOBS,
+        T.MENU_HELP,
+    ]
     async with session_factory() as s:
         user = await s.get(User, USER)
     assert user is not None and user.username == f"u{USER}" and user.last_active_at is not None

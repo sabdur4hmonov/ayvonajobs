@@ -45,7 +45,7 @@ systemd uni avtomatik qayta yoqadi:
 | Jarayon | Vazifasi | Kutubxona |
 |---|---|---|
 | `collector` | Manbalardan yangi postlarni olib, **xom holda** bazaga yozadi | Telethon |
-| `worker` | Xom postlarni qayta ishlaydi, navbatdagi e'lonlarni kanalga joylaydi, obunachilarga xabar, eskirgan e'lonlar, backup | aiogram (Bot API) |
+| `worker` | Xom postlarni qayta ishlaydi, navbatdagi e'lonlarni kanalga joylaydi, obunachilarga xabar (`services/alerts.py`), muddati o'tgan e'lonlar (`services/expiry.py`), USD kursi, monitoring, backup | aiogram (Bot API) |
 | `bot` | Ommaviy bot: e'lon joylash, qidiruv, saqlanganlar, obunalar, admin buyruqlari | aiogram |
 
 Hammasi bitta SQLite bazani ishlatadi (WAL rejimi — bir vaqtda o'qish/yozish xavfsiz).
@@ -98,7 +98,9 @@ Sababi (`not_job` ... `low_quality`) `raw_posts.error` ustuniga yoziladi (masala
 pending_review → queued          (faqat user e'lonlari: scam so'z / yangi foydalanuvchi / moderation: all;
                → rejected         admin [✅]/[❌]/[🚫] tugmasi — bot/moderation.py)
                                  (ban/spam/dublikat user e'loni bazaga umuman yozilmaydi)
-queued → sending → published → closed / expired
+queued → sending → published → closed   (muallif "✅ Ish topildi": kanal posti "❌ YOPILDI", tugmalarsiz)
+                             → expired  (expires_at o'tdi: 21 / 30 kun — faqat qidiruvdan chiqadi; muallif uzaytirsa
+                                         yana published)
                ↘ retry (next_retry_at) → sending
                ↘ failed (admin: /retry)
 queued / retry → skipped_old     (manba posti publisher.max_age_hours dan eski — kanalga chiqmaydi, bazada qoladi)
@@ -152,7 +154,8 @@ rejected (filtr yoki admin rad etdi)
 | fingerprint | dublikat uchun (lavozim + telefon + qisqa matn) |
 | search_text | so'z bilan qidiruv uchun o'girilgan matn (jobs_fts shu ustunda) |
 | status, attempts, next_retry_at, last_error | outbox navbati |
-| channel_message_id, published_at, expires_at, closed_at | |
+| channel_message_id, published_at, expires_at, closed_at | expires_at — publisher qo'yadi (settings.yaml → expiry) |
+| reminded_at | foydalanuvchi e'loni: "Uzaytirasizmi?" yuborilgan vaqt |
 
 ### Ommaviy bot uchun
 **users** — `tg_id` PK, username, full_name, phone, lang, is_banned, trust_level (0 yangi / 1 ishonchli / 2 admin),

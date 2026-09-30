@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ayvona.db.models import User
@@ -69,6 +70,17 @@ async def set_banned(session: AsyncSession, tg_id: int, banned: bool, now: datet
     user.is_banned = banned
     await session.flush()
     return user
+
+
+async def find_user(session: AsyncSession, ref: str) -> User | None:
+    """``123456789`` or ``@username`` (only users who wrote to the bot have a username row)."""
+    ref = ref.strip()
+    if ref.lstrip("-").isdigit():
+        return await session.get(User, int(ref))
+    name = ref.lstrip("@").lower()
+    if not name:
+        return None
+    return await session.scalar(select(User).where(func.lower(User.username) == name).limit(1))
 
 
 async def set_phone(session: AsyncSession, tg_id: int, phone: str) -> None:

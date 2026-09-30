@@ -273,8 +273,10 @@ class Job(Base):
 
     channel_message_id: Mapped[int | None] = mapped_column(BigInteger)
     published_at: Mapped[datetime | None]
-    expires_at: Mapped[datetime | None]
+    expires_at: Mapped[datetime | None]  # out of search after this (services/expiry.py)
     closed_at: Mapped[datetime | None]
+    # user jobs: when the "Uzaytirasizmi?" reminder was sent (Bosqich 14)
+    reminded_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

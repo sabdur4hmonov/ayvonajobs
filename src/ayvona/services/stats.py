@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ayvona.db.models import Job, JobStatus, RawPost, RawPostStatus, Source
+from ayvona.db.models import (
+    Job,
+    JobOrigin,
+    JobStatus,
+    RawPost,
+    RawPostStatus,
+    SearchLog,
+    Source,
+    Subscription,
+    User,
+)
 from ayvona.db.repositories import jobs_repo, kv_repo, sources_repo
 from ayvona.timeutil import to_local
 
@@ -138,6 +150,72 @@ async def failed_jobs(session: AsyncSession, limit: int = 20) -> list[Job]:
             )
         ).all()
     )
+
+
+@dataclass(slots=True)
+class BotStats:
+    """/stats, Bosqich 14: users, subscriptions, what people search, sources."""
+
+    users: int = 0
+    new_today: int = 0
+    active_week: int = 0
+    subscriptions: int = 0
+    user_jobs_week: int = 0
+    top_categories: list[tuple[str, int]] = field(default_factory=list)
+    top_regions: list[tuple[str, int]] = field(default_factory=list)
+    sources_week: list[tuple[str, int]] = field(default_factory=list)  # published per source
+
+
+async def bot_stats(
+    session: AsyncSession, now: datetime, today_start: datetime, top: int = 5
+) -> BotStats:
+    week_ago = now - timedelta(days=7)
+    st = BotStats()
+
+    async def count(stmt: Any) -> int:
+        return int(await session.scalar(stmt) or 0)
+
+    st.users = await count(select(func.count()).select_from(User))
+    st.new_today = await count(
+        select(func.count()).select_from(User).where(User.created_at >= today_start)
+    )
+    st.active_week = await count(
+        select(func.count()).select_from(User).where(User.last_active_at >= week_ago)
+    )
+    st.subscriptions = await count(
+        select(func.count()).select_from(Subscription).where(Subscription.is_active.is_(True))
+    )
+    st.user_jobs_week = await count(
+        select(func.count())
+        .select_from(Job)
+        .where(Job.origin == JobOrigin.USER, Job.created_at >= week_ago)
+    )
+    cats: Counter[str] = Counter()
+    regions: Counter[str] = Counter()
+    for (filters,) in (
+        await session.execute(select(SearchLog.filters).where(SearchLog.created_at >= week_ago))
+    ).all():
+        if isinstance(filters, dict):
+            if filters.get("category"):
+                cats[str(filters["category"])] += 1
+            if filters.get("region"):
+                regions[str(filters["region"])] += 1
+    st.top_categories = cats.most_common(top)
+    st.top_regions = regions.most_common(top)
+    rows = (
+        await session.execute(
+            select(Source.identifier, func.count())
+            .select_from(Job)
+            .join(RawPost, RawPost.id == Job.raw_post_id)
+            .join(Source, Source.id == RawPost.source_id)
+            .where(Job.published_at >= week_ago)
+            .group_by(Source.identifier)
+            .order_by(func.count().desc(), Source.identifier)
+            .limit(10)
+        )
+    ).all()
+    st.sources_week = [(str(ident), int(n)) for ident, n in rows]
+    return st
 
 
 @dataclass(slots=True)

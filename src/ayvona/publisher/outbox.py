@@ -332,7 +332,12 @@ class Publisher:
             return await self._attempt_failed(job, f"{type(e).__name__}: {e}", exc=e)
 
         async with self.sf() as s, s.begin():
-            await jobs_repo.mark_published(s, job.id, result.message_id, utcnow())
+            published = utcnow()
+            exp = self.settings.app.expiry
+            days = exp.user_days if job.origin == JobOrigin.USER else exp.aggregator_days
+            await jobs_repo.mark_published(
+                s, job.id, result.message_id, published, published + timedelta(days=days)
+            )
             if (
                 image is not None
                 and result.photo_file_id

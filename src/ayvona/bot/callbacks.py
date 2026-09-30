@@ -42,6 +42,17 @@ class SubCb(CallbackData, prefix="sub"):
     id: int = 0
 
 
+class MyJobCb(CallbackData, prefix="my"):
+    """📋 own jobs: close (ask) | closeok | extend | list <job id>."""
+
+    action: str
+    id: int = 0
+
+
+class BroadcastCb(CallbackData, prefix="bc"):
+    action: str  # send | cancel
+
+
 class ModCb(CallbackData, prefix="mod"):
     """Admin decision on a user job waiting for review: ok | no | ban."""
 

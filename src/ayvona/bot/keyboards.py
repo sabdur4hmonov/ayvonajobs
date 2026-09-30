@@ -22,7 +22,7 @@ def main_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=T.MENU_POST), KeyboardButton(text=T.MENU_SEARCH)],
             [KeyboardButton(text=T.MENU_FAVORITES), KeyboardButton(text=T.MENU_ALERTS)],
-            [KeyboardButton(text=T.MENU_HELP)],
+            [KeyboardButton(text=T.MENU_MY_JOBS), KeyboardButton(text=T.MENU_HELP)],
         ],
         resize_keyboard=True,
         is_persistent=True,

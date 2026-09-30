@@ -140,6 +140,18 @@ async def test_daily_limit_then_evening_digest(session_factory: SF) -> None:
     assert await alerts.send_digests(force=False) == 0  # once a day
 
 
+async def test_banned_user_gets_no_alerts(session_factory: SF) -> None:
+    sf = session_factory
+    await users(sf, ALI)
+    await subscribe(sf, ALI, category="sotuv")
+    async with sf() as s, s.begin():
+        await users_svc.set_banned(s, ALI, True, utcnow())
+    alerts, session = service(sf)
+    await alerts.process_once(utcnow() - timedelta(minutes=5))
+    await job(sf, "Sotuvchi", minutes_ago=0)
+    assert await alerts.process_once() == 0 and to(session, ALI) == []
+
+
 async def test_blocked_user_loses_subscriptions(session_factory: SF) -> None:
     sf = session_factory
     await users(sf, ALI)

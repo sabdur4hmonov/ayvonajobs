@@ -10,7 +10,8 @@ Tasks running side by side:
   (services/heartbeat.py);
 * backup — daily 03:00 Asia/Tashkent copy of the DB, sent to the admin chat (services/backup.py);
 * USD rate — once a day from cbu.uz for the salary search filter (services/currency.py);
-* alerts — newly published jobs -> subscribers, evening digest (services/alerts.py).
+* alerts — newly published jobs -> subscribers, evening digest (services/alerts.py);
+* expiry — ``expires_at`` passed -> out of search, "Uzaytirasizmi?" to authors (services/expiry.py).
 
 Step 0 (first start only): every post already in the DB becomes ``skipped_backfill`` — the test
 posts collected before the worker existed never reach the channel (``kv_store`` flag
@@ -49,6 +50,7 @@ from ayvona.apps.runtime import (
     write_heartbeat,
 )
 from ayvona.bot.alerts_render import render_alert, render_digest
+from ayvona.bot.handlers.my_jobs import reminder_view
 from ayvona.botapi import (
     BAD_TOKEN,
     NO_ADMIN_CHAT,
@@ -66,6 +68,7 @@ from ayvona.publisher.outbox import ChannelSender, Publisher, skip_old_jobs
 from ayvona.services.alerts import AlertService
 from ayvona.services.backup import BackupService
 from ayvona.services.currency import run_usd_rate
+from ayvona.services.expiry import ExpiryService
 from ayvona.services.heartbeat import Monitor
 from ayvona.services.notifier import Notifier
 from ayvona.services.reformat import ReformatReport, reformat_queued
@@ -234,6 +237,9 @@ async def run_worker(
     if bot is not None and publish:
         alerts = AlertService(settings, sf, bot, render_alert, render_digest)
         jobs.append(alerts.run(stop_aware_sleep(stop)))
+    if monitor:  # search life time: works without a token too (reminders need the bot)
+        expiry = ExpiryService(settings, sf, bot if publish else None, reminder_view)
+        jobs.append(expiry.run(stop_aware_sleep(stop)))
     tasks = [asyncio.create_task(j) for j in jobs]
     try:
         await stop.wait()

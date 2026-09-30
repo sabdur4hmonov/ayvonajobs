@@ -254,6 +254,21 @@ class AlertsConfig(BaseModel):
     poll_seconds: float = Field(default=30, gt=0)  # how often newly published jobs are checked
 
 
+class ExpiryConfig(BaseModel):
+    """Job life time in search (services/expiry.py, a worker task). The channel post stays."""
+
+    aggregator_days: int = Field(default=21, ge=1)
+    user_days: int = Field(default=30, ge=1)
+    remind_days_before: float = Field(default=2, ge=0)  # user jobs: "Uzaytirasizmi?"
+    check_minutes: float = Field(default=30, gt=0)
+
+
+class BroadcastConfig(BaseModel):
+    """/broadcast (admin): a message to every user of the bot, slowly."""
+
+    per_second: float = Field(default=20, gt=0, le=30)
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -281,6 +296,8 @@ class AppConfig(BaseModel):
     posting: PostingConfig = Field(default_factory=PostingConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     alerts: AlertsConfig = Field(default_factory=AlertsConfig)
+    expiry: ExpiryConfig = Field(default_factory=ExpiryConfig)
+    broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 

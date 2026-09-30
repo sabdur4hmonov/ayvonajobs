@@ -32,7 +32,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.config import Settings
-from ayvona.db.models import AlertDelivery, AlertStatus, Job, JobStatus, Subscription
+from ayvona.db.models import AlertDelivery, AlertStatus, Job, JobStatus, Subscription, User
 from ayvona.db.repositories import kv_repo
 from ayvona.services import search as search_svc
 from ayvona.services.search import SearchFilters
@@ -154,7 +154,11 @@ async def plan_job(
     """Match ``job`` with every active subscription, write the ``alert_deliveries`` rows (only
     new ones) and return one :class:`Delivery` per user. Does not commit."""
     subs = (
-        await session.scalars(select(Subscription).where(Subscription.is_active.is_(True)))
+        await session.scalars(
+            select(Subscription)
+            .join(User, User.tg_id == Subscription.user_id)
+            .where(Subscription.is_active.is_(True), User.is_banned.is_(False))
+        )
     ).all()
     by_user: dict[int, Delivery] = {}
     for sub in subs:

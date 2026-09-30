@@ -17,10 +17,12 @@ from ayvona.bot import moderation
 from ayvona.bot.filters import IsAdmin
 from ayvona.bot.handlers import (
     admin,
+    admin_extra,
     admin_images,
     admin_sources,
     alerts,
     favorites,
+    my_jobs,
     post_job,
     search,
     start,
@@ -51,6 +53,12 @@ ADMIN_COMMANDS = [
     BotCommand(command="addsource", description="Manba qo'shish"),
     BotCommand(command="images", description="Rasmlar"),
     BotCommand(command="addimage", description="Rasm qo'shish"),
+    BotCommand(command="addword", description="Filtr so'zi qo'shish"),
+    BotCommand(command="delword", description="Filtr so'zini o'chirish"),
+    BotCommand(command="words", description="Filtr so'zlari"),
+    BotCommand(command="ban", description="Bloklash: /ban <id|@username>"),
+    BotCommand(command="unban", description="Blokdan chiqarish"),
+    BotCommand(command="broadcast", description="Hammaga xabar"),
     BotCommand(command="cancel", description="Bekor qilish"),
     BotCommand(command="help", description="Admin yordami"),
 ]
@@ -85,14 +93,27 @@ def build_dispatcher(
     admin_area.message.filter(is_admin)
     admin_area.callback_query.filter(is_admin)
     admin_area.include_routers(
-        *_detached(admin.router, admin_sources.router, admin_images.router, moderation.router)
+        *_detached(
+            admin.router,
+            admin_sources.router,
+            admin_images.router,
+            admin_extra.router,
+            moderation.router,
+        )
     )
 
     public_area = Router(name="public_area")
     public_area.message.filter(F.chat.type == "private")
     # start first: its menu buttons work from any step (they leave a half-filled form)
     public_area.include_routers(
-        *_detached(start.router, favorites.router, search.router, alerts.router, post_job.router)
+        *_detached(
+            start.router,
+            favorites.router,
+            search.router,
+            alerts.router,
+            my_jobs.router,
+            post_job.router,
+        )
     )
 
     dp.include_routers(*_detached(admin_area, public_area))

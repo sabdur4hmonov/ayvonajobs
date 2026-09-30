@@ -49,7 +49,11 @@ async def claim(session: AsyncSession, job: Job) -> bool:
 
 
 async def mark_published(
-    session: AsyncSession, job_id: int, message_id: int, now: datetime
+    session: AsyncSession,
+    job_id: int,
+    message_id: int,
+    now: datetime,
+    expires_at: datetime | None = None,
 ) -> None:
     """Does not commit."""
     await session.execute(
@@ -59,6 +63,7 @@ async def mark_published(
             status=JobStatus.PUBLISHED,
             channel_message_id=message_id,
             published_at=now,
+            expires_at=expires_at,
             last_error=None,
             next_retry_at=None,
         )

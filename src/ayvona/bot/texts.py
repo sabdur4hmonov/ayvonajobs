@@ -11,6 +11,7 @@ MENU_SEARCH = "🔍 Ish qidirish"
 MENU_FAVORITES = "⭐ Saqlanganlar"
 MENU_ALERTS = "🔔 Obunalar"
 MENU_HELP = "ℹ️ Yordam"
+MENU_MY_JOBS = "📋 Mening e'lonlarim"
 MENU_PLACEHOLDER = "Bo'limni tanlang"
 
 WELCOME = (
@@ -180,6 +181,67 @@ DIGEST_HEAD = (
     "📬 <b>Obunalaringiz bo'yicha yana {n} ta e'lon</b> (bugungi limitdan keyin chiqqanlar):"
 )
 
+# ------------------------------------------------------------------ public: 📋 Mening e'lonlarim
+MY_EMPTY = "📋 Sizda hali e'lon yo'q. «📢 E'lon joylash» bilan qo'shing."
+MY_HEAD = "📋 <b>Mening e'lonlarim</b> (oxirgi {n} ta):"
+MY_ITEM = "{n}. <b>{title}</b> — {state}"
+MY_STATES = {
+    "pending_review": "🕵️ tekshiruvda",
+    "queued": "⏳ navbatda",
+    "retry": "⏳ navbatda",
+    "sending": "⏳ chiqmoqda",
+    "published": "✅ kanalda, {until} gacha qidiruvda",
+    "closed": "❌ yopilgan",
+    "expired": "⌛ muddati tugagan",
+}
+BTN_MY_CLOSE = "✅ Ish topildi {n}"
+BTN_MY_EXTEND = "🔄 Uzaytirish {n}"
+MY_CLOSE_CONFIRM = (
+    "«{title}» e'lonini yopamizmi?\nKanal postiga «❌ YOPILDI» yoziladi, tugmalari olinadi, "
+    "qidiruvdan chiqadi."
+)
+BTN_YES_CLOSE = "✅ Ha, yopish"
+BTN_NO = "↩️ Yo'q"
+MY_CLOSED = "✅ E'lon yopildi. Omad!"
+MY_CLOSE_FAIL = "Bu e'lonni hozir yopib bo'lmaydi (allaqachon yopilgan yoki kanalga chiqmoqda)."
+MY_EXTENDED = "🔄 Uzaytirildi: {until} gacha qidiruvda."
+MY_EXTEND_FAIL = "Bu e'lonni uzaytirib bo'lmaydi."
+REMIND_TEXT = "⏳ «{title}» e'loningiz {until} da qidiruvdan chiqadi. Uzaytirasizmi?"
+BTN_REMIND_EXTEND = "🔄 Uzaytirish (+{days} kun)"
+BTN_REMIND_CLOSE = "✅ Ish topildi, yopish"
+
+# ------------------------------------------------------------------ admin: extended
+STATS_EXTRA = (
+    "\n\n👥 Foydalanuvchilar: {users} (bugun yangi: {new_today}, 7 kunda faol: {active})\n"
+    "🔔 Faol obunalar: {subs} · 📢 Foydalanuvchi e'lonlari (7 kun): {user_jobs}\n"
+    "🔍 Ko'p qidirilgan sohalar (7 kun): {categories}\n"
+    "📍 Ko'p qidirilgan hududlar (7 kun): {regions}\n"
+    "📡 Manbalar (7 kun, kanalga chiqqan):\n{sources}"
+)
+ADDWORD_USAGE = "Ishlatish: /addword ban|spam|scam so'z yoki ibora"
+ADDWORD_OK = "✅ Qo'shildi ({kind}): {word}"
+ADDWORD_EXISTS = "Bu so'z allaqachon bor."
+DELWORD_USAGE = "Ishlatish: /delword so'z yoki ibora"
+DELWORD_OK = "🗑 O'chirildi: {word}"
+DELWORD_NONE = "Bunday so'z topilmadi (filters.yaml dagilar faqat faylda o'zgaradi)."
+WORDS_HEAD = "🧾 <b>Qo'shimcha filtr so'zlari</b> (filters.yaml dan tashqari):"
+WORDS_EMPTY = "Qo'shimcha so'z yo'q. Qo'shish: /addword ban|spam|scam so'z"
+BAN_USAGE = "Ishlatish: /ban 123456789 yoki /ban @username (xuddi shunday /unban)"
+BAN_OK = "🚫 Bloklandi: {who}"
+UNBAN_OK = "✅ Blokdan chiqarildi: {who}"
+BAN_NOT_FOUND = "Foydalanuvchi topilmadi (@username faqat botga yozgan bo'lsa topiladi)."
+BAN_ADMIN = "Adminni bloklab bo'lmaydi."
+BROADCAST_USAGE = (
+    "Ishlatish: /broadcast xabar matni (Telegram'dagi qalin / kursiv / havola formatlari saqlanadi)"
+)
+BROADCAST_CONFIRM = (
+    "📣 Shu xabar <b>{n}</b> ta foydalanuvchiga yuboriladi:\n➖➖➖➖➖➖➖➖\n{text}"
+)
+BROADCAST_STARTED = "📣 Yuborish boshlandi: {n} ta, sekundiga {rate} ta. Tugagach yozaman."
+BROADCAST_DONE = "📣 Tayyor: {ok} ta yuborildi, {failed} tasiga yetmadi (botni bloklagan va h.k.)."
+BROADCAST_EXPIRED = "Xabar eskirdi — /broadcast ni qayta yozing."
+BROADCAST_BAD_HTML = "HTML xato: {error}"
+
 # ------------------------------------------------------------------ admin: moderation
 MOD_HEAD = (
     "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"
@@ -203,6 +265,9 @@ ADMIN_HELP = (
     "❌ /failed — chiqmay qolgan e'lonlar\n"
     "🔁 /retry &lt;id | all&gt; — chiqmay qolganini qayta navbatga\n"
     "⏸ /pause — kanalga joylashni to'xtatish · ▶️ /resume — davom ettirish\n\n"
+    "🧾 /addword ban|spam|scam so'z · /delword so'z · /words — filtr so'zlari\n"
+    "🚫 /ban &lt;id | @username&gt; · /unban — foydalanuvchini bloklash\n"
+    "📣 /broadcast matn — hamma foydalanuvchilarga (tasdiqlash bilan)\n\n"
     "📡 /sources — manbalar (kanallar, saytlar): pauza, yoqish, o'chirish, statistika\n"
     "➕ /addsource &lt;@kanal | t.me/kanal | t.me/+taklif | web:nom | rss:URL&gt;\n\n"
     "🖼 /images — rasm bo'shliqlari · /images &lt;kasb&gt; — rasmlar ro'yxati\n"

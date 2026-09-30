@@ -22,6 +22,7 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-30 | 11 — E'lon joylash | 8 qadamli forma, aloqa majburiy, limitlar, filtrlar, moderatsiya, muallifga havola | 747 test ✅ |
 | 2026-09-30 | 12 — Qidiruv | Usta + so'z bilan (FTS5, kirill/lotin), USD kursi; migratsiya `f2b6d8a4c1e3` | 762 test ✅ |
 | 2026-10-01 | 13 — Obunalar | Obuna ustasi, worker'da yuborish, kunlik limit + dayjest; migratsiya `a7c3e9f1b5d8` | 771 test ✅ |
+| 2026-10-01 | 14 — Yopish, muddat, statistika | 📋 Mening e'lonlarim, kanal posti "YOPILDI", 21/30 kun muddat + eslatma, /stats, /addword /delword /words /ban /unban /broadcast; migratsiya `b8d4f0a2c6e9` | 783 test ✅ |
 
 ---
 
@@ -1025,3 +1026,103 @@ Qarorlar (Sardor yo'qligida):
 5. Obuna xabarlari faqat token bor va `--no-publish` bo'lmaganda (worker loop rejimida) yuboriladi.
 
 Testlar: `tests/test_alerts.py` (+9).
+
+
+---
+
+## Bosqich 14 — Yopish, muddat, to'liq statistika (2026-10-01, avtonom)
+
+Nima qilindi:
+- **"📋 Mening e'lonlarim"** (menyuga qo'shildi, `bot/handlers/my_jobs.py`): oxirgi 10 ta e'lon holati bilan
+  (🕵️ tekshiruvda / ⏳ navbatda / ✅ kanalda, DD.MM gacha / ❌ yopilgan / ⌛ muddati tugagan) + [✅ Ish topildi N]
+  (tasdiq so'raydi) va [🔄 Uzaytirish N]. Yopilganda **kanal posti tahrirlanadi**: boshiga "❌ YOPILDI", tugmalar olinadi
+  (`services/channel.py`: rasmli post — caption, matnli — text; 1024 dan oshsa — "❌ YOPILDI" + lavozim), qidiruvdan chiqadi.
+  Hali kanalga chiqmagan (tekshiruvda/navbatda) e'lonni ham yopish mumkin — u kanalga chiqmaydi.
+- **Muddat** (`services/expiry.py`, worker ichida, har 30 daq): publisher endi `expires_at` qo'yadi (kanal e'loni
+  **21 kun**, foydalanuvchi e'loni **30 kun**, `settings.yaml → expiry`); eski e'lonlarga worker o'zi qo'yadi
+  (`published_at + kun`). Muddati o'tgani → `expired`, **qidiruvdan chiqadi, kanal postiga tegilmaydi**. Foydalanuvchiga
+  **2 kun oldin** bir marta "⏳ ... Uzaytirasizmi?" [🔄 Uzaytirish (+30 kun)] [✅ Ish topildi, yopish]
+  (`jobs.reminded_at`, migratsiya **`b8d4f0a2c6e9`**). Muddati tugagan e'lonni ham uzaytirsa bo'ladi.
+- **/stats kengaydi:** foydalanuvchilar (jami, bugun yangi, 7 kunda faol), faol obunalar, foydalanuvchi e'lonlari,
+  eng ko'p qidirilgan sohalar va hududlar (`search_logs`), manbalar bo'yicha kanalga chiqqan e'lonlar (7 kun).
+- **/addword ban|spam|scam so'z**, **/delword so'z**, **/words** — `filter_words` jadvali (forma filtri darhol ishlatadi).
+- **/ban &lt;id | @username&gt;**, **/unban** — admin'ni bloklab bo'lmaydi; botga hech yozmagan ID ham bloklanadi.
+- **/broadcast matn** → ko'rinishi + "N ta foydalanuvchiga" → [✅ Yuborish] [❌ Bekor qilish] → fonda sekundiga 20 ta,
+  bloklanganlar o'tkaziladi, tugagach hisobot. Telegram formatlari (qalin, kursiv, havola) saqlanadi.
+
+Qarorlar (Sardor yo'qligida):
+1. **Ish topildi = `closed`** (qidiruvdan chiqadi, saqlanganlarda "❌ Yopilgan"). Kanal posti o'chirilmaydi — tahrirlanadi.
+2. **Muddat tugashi kanalga ta'sir qilmaydi** (ROADMAP) — faqat qidiruv, saqlanganlar belgisi, obuna xabarlari.
+3. **Eslatma bir marta** yuboriladi (xato bo'lsa ham qayta urinmaydi — spam bo'lmasin); uzaytirilsa yana eslatiladi.
+4. **Broadcast** bot jarayonining ichida fonda ketadi — restart bo'lsa to'xtaydi (qayta yuborish admin qaroriga).
+5. `/ban` qilingan foydalanuvchining obunalari o'chirilmaydi, lekin **obuna xabarlari unga ketmaydi**
+   (`services/alerts.plan_job` bloklanganlarni o'tkazib yuboradi); `/unban` dan keyin yana keladi.
+
+Testlar: `tests/test_lifecycle.py` (+11), `test_alerts.py` (+1). **783 passed**, ruff toza.
+
+
+---
+
+## TUNGI ISH HISOBOTI — ertalab nima qilish kerak (2026-10-01)
+
+### 1) Jarayonlarni to'xtatish
+Uchala PowerShell oynasida (collector, worker, bot) **Ctrl+C** bosing va "... to'xtadi." chiqishini kuting.
+
+### 2) Bazani yangilash (avval nusxa)
+```powershell
+cd "D:\Coding projects\ayvona"
+uv sync
+uv run python scripts/backup_now.py
+uv run alembic upgrade head
+```
+`alembic` oxirida shu 3 qator chiqishi kerak: `e5a9c2f7b3d1 -> f2b6d8a4c1e3`, `f2b6d8a4c1e3 -> a7c3e9f1b5d8`,
+`a7c3e9f1b5d8 -> b8d4f0a2c6e9`. Xato chiqsa — hech narsani yoqmang, xabarni Claude'ga yuboring (nusxa
+`data\backups\` da).
+
+### 3) Qayta yoqish — uchta alohida oynada
+```powershell
+uv run python -m ayvona.apps.collector
+```
+```powershell
+uv run python -m ayvona.apps.worker
+```
+```powershell
+uv run python -m ayvona.apps.bot
+```
+Worker logida birinchi yonishda (bir marta) ko'rinadi:
+- `Qidiruv uchun N ta e'lon matni tayyorlandi (search_text)`
+- `Muddat: N ta e'longa muddat qo'yildi, 0 ta eslatma, M ta e'lon qidiruvdan chiqdi` (21 kundan eskilar)
+- `USD kursi yangilandi: 1 $ = ... so'm` (internet bo'lsa)
+
+### 4) Botni telefonda sinash (@ayvona_jobs_bot)
+1. `/start` → salom + 6 ta tugma: 📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar ·
+   📋 Mening e'lonlarim · ℹ️ Yordam.
+2. **🔍 Ish qidirish** → soha → kasb → hudud → maosh → natijalar (5 tadan, ⬅️ ➡️). "N. Batafsil", "⭐ Saqlash",
+   "📤 Ulashish". "🔤 So'z bilan qidirish" → `сотувчи` yozing — lotincha e'lonlar ham chiqishi kerak.
+3. Kanaldagi istalgan postning **⭐ Saqlash** tugmasi → bot ochiladi, "⭐ Saqlandi" → **⭐ Saqlanganlar** da ko'rinadi.
+4. **🔔 Obunalar** → ➕ Yangi obuna → soha/hudud/maosh → ⏭. Mos e'lon kanalga chiqqach (≈30 s ichida) xabar keladi.
+   Qidiruv natijalari ostidagi "🔔 Shu qidiruvga obuna bo'lish" ham ishlaydi.
+5. **📢 E'lon joylash** → 8 savol → ko'rib chiqish → ✅ Yuborish. ⚠️ Siz adminsiz — sizning e'loningiz tekshiruvsiz
+   navbatga tushadi. **Tekshiruvni sinash uchun ikkinchi Telegram akkaunt** bilan yuboring: admin guruhga (yoki
+   sizga) "🆕 Yangi e'lon — tekshiring" + [✅ Tasdiqlash] [❌ Rad etish] [🚫 Ban] keladi → ✅ → 1–2 daqiqada kanalda,
+   muallifga havola.
+6. **📋 Mening e'lonlarim** → "✅ Ish topildi 1" → "Ha, yopish" → kanaldagi post boshida "❌ YOPILDI", tugmalar yo'q.
+7. Admin: `/stats` (pastda yangi qism: foydalanuvchilar, obunalar, qidiruvlar, manbalar), `/words`,
+   `/addword scam garov puli`, `/delword garov puli`, `/ban @username`, `/unban @username`.
+   ⚠️ `/broadcast` — **hamma foydalanuvchilarga** ketadi; sinash kerak bo'lsa, tasdiqlash oynasida "❌ Bekor qilish".
+
+### 5) Testlar (xohlasangiz)
+```powershell
+uv run pytest
+uv run ruff check .
+```
+Kutilgan: `783 passed`, `All checks passed!`.
+
+### Ochiq qolgan joylar
+- Hammasi Bot API **mock** bilan sinalgan — haqiqiy Telegram'da birinchi marta ertalab ishlaydi.
+- Migratsiyalar faqat **vaqtinchalik bazada** sinaldi (sizning `data/ayvona.db` ga tegilmadi — shuning uchun avval
+  `backup_now.py`).
+- Forma, qidiruv va obuna holati (FSM) xotirada — bot qayta yonsa yarim to'ldirilgan forma unutiladi (yuborilganlar
+  bazada). Serverda bir nechta nusxa bo'lsa — boshqa storage kerak bo'ladi.
+- Obuna va eslatma xabarlari worker'dan ketadi: worker `--no-publish` yoki tokensiz bo'lsa — ketmaydi.
+- "Ko'p hudud" e'lonlari aniq hudud qidiruvida chiqmaydi; kunlik/soatbay maoshlar maosh filtrida hisobga olinmaydi.
