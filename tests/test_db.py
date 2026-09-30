@@ -24,10 +24,11 @@ from ayvona.db.models import (
     RawPost,
     RawPostStatus,
     Source,
+    SourceAddedVia,
     SourceType,
 )
 from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
-from ayvona.db.session import schema_is_ready
+from ayvona.db.session import create_engine, schema_is_ready, sqlite_url
 from ayvona.sources.base import RawItem
 from ayvona.timeutil import utcnow
 from tests.conftest import run_alembic
@@ -274,7 +275,18 @@ async def test_status_helpers(session: AsyncSession) -> None:
     assert len(again) == 2
 
 
+async def test_schema_not_ready_on_an_old_migration(db_file: Path) -> None:
+    run_alembic(db_file, "downgrade", "b5e1a7c3d9f2")
+    eng = create_engine(sqlite_url(db_file))
+    try:
+        assert not await schema_is_ready(eng)
+        assert await schema_is_ready(eng, require_head=False)
+    finally:
+        await eng.dispose()
+
+
 async def test_sources_sync_from_config(session: AsyncSession) -> None:
+    """settings.yaml only seeds the table (Bosqich 8): the admin's changes in the DB win."""
     await sources_repo.sync_from_config(
         session,
         [SourceConfig(identifier="@a", title="A"), SourceConfig(identifier="@b")],
@@ -282,13 +294,17 @@ async def test_sources_sync_from_config(session: AsyncSession) -> None:
     await session.commit()
     a = (await session.scalars(select(Source).where(Source.identifier == "@a"))).one()
     await sources_repo.mark_success(session, a.id, "42", utcnow())
+    b = (await session.scalars(select(Source).where(Source.identifier == "@b"))).one()
+    b.enabled = False  # paused by the admin in the bot
+    session.add(Source(identifier="@bot_added", added_via=SourceAddedVia.BOT))
     await session.commit()
 
-    # @a updated, @b removed from config, @c added
+    # @a updated, @b removed from config, @c added (disabled), @bot_added not in the YAML
     enabled = await sources_repo.sync_from_config(
         session,
         [
             SourceConfig(identifier="@a", title="A2", own_usernames=["@a"]),
+            SourceConfig(identifier="@b"),
             SourceConfig(identifier="@c", enabled=False),
         ],
     )
@@ -296,12 +312,21 @@ async def test_sources_sync_from_config(session: AsyncSession) -> None:
     session.expunge_all()
 
     rows = {s.identifier: s for s in (await session.scalars(select(Source))).all()}
-    assert [s.identifier for s in enabled] == ["@a"]
+    assert [s.identifier for s in enabled] == ["@a", "@bot_added"]
     assert rows["@a"].title == "A2"
     assert rows["@a"].own_usernames == ["@a"]
     assert rows["@a"].last_seen_id == "42"  # cursor survives a config sync
-    assert rows["@b"].enabled is False  # kept, not deleted
+    assert rows["@a"].added_via is SourceAddedVia.YAML
+    assert rows["@b"].enabled is False  # the admin's pause is not undone by the YAML
     assert rows["@c"].enabled is False
+    assert rows["@bot_added"].enabled is True  # not in the YAML -> untouched
+
+
+async def test_sources_sync_keeps_rows_missing_from_yaml(session: AsyncSession) -> None:
+    await sources_repo.sync_from_config(session, [SourceConfig(identifier="@x")])
+    await session.commit()
+    enabled = await sources_repo.sync_from_config(session, [])
+    assert [s.identifier for s in enabled] == ["@x"]
 
 
 async def test_sources_mark_error_and_success(session: AsyncSession) -> None:

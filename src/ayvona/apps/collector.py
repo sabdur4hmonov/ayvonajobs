@@ -4,7 +4,9 @@ Reliability rules (docs/ARCHITECTURE.md §2):
 * store first, process later — this process only writes raw posts;
 * posts and the source cursor (``last_seen_id``) are committed in ONE transaction;
 * one failing source never stops the others;
-* heartbeat in ``kv_store`` every minute; Ctrl+C / SIGTERM stops cleanly.
+* heartbeat in ``kv_store`` every minute; Ctrl+C / SIGTERM stops cleanly;
+* the list of sources is re-read from the DB every cycle (the admin adds / pauses channels from
+  the bot, no restart needed); channels added from the bot (``pending``) are checked first.
 
 Run:  uv run python -m ayvona.apps.collector          (forever)
       uv run python -m ayvona.apps.collector --once   (one cycle, then exit — for checking)
@@ -15,18 +17,22 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 
+from aiogram import Bot
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.apps.runtime import SleepFn, install_signal_handlers, stop_aware_sleep
+from ayvona.botapi import BotConfigError, create_bot
 from ayvona.config import CollectorConfig, Settings, get_settings
-from ayvona.db.models import SourceType
+from ayvona.db.models import SourceStatus, SourceType
 from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
 from ayvona.logging_setup import setup_logging
+from ayvona.services.notifier import Notifier
+from ayvona.services.sources_admin import process_pending
 from ayvona.sources.base import BaseSource, SourceRateLimited
 from ayvona.sources.registry import SourceDeps, create_source
 from ayvona.sources.telegram_source import TelegramConfigError, connect_client
@@ -189,43 +195,102 @@ async def heartbeat_loop(sf: SessionFactory, interval: float, stop: asyncio.Even
 
 
 # ------------------------------------------------------------------ main loop
+class SourcePool:
+    """Source objects for the enabled rows of ``sources``, re-read from the DB on every
+    :meth:`refresh` — a channel added or paused from the bot works without a restart."""
+
+    def __init__(self, sf: SessionFactory, deps: SourceDeps) -> None:
+        self.sf = sf
+        self.deps = deps
+        self._active: dict[int, ActiveSource] = {}
+        self._identifiers: dict[int, str] = {}
+        self._broken: set[tuple[int, str]] = set()  # (id, identifier) that failed to build
+
+    async def refresh(self) -> list[ActiveSource]:
+        try:
+            async with self.sf() as s:
+                rows = await sources_repo.list_enabled(s)
+        except Exception:
+            logger.exception("manbalar ro'yxati o'qilmadi — eski ro'yxat bilan davom etiladi")
+            return list(self._active.values())
+        wanted = {r.id: r for r in rows}
+        for source_id in list(self._active):
+            row = wanted.get(source_id)
+            if row is None or row.identifier != self._identifiers[source_id]:
+                gone = self._active.pop(source_id)
+                self._identifiers.pop(source_id, None)
+                logger.info("Manba o'chirildi/pauza: {}", gone.source.identifier)
+                with contextlib.suppress(Exception):
+                    await gone.source.close()
+        for row in rows:
+            if row.id in self._active or (row.id, row.identifier) in self._broken:
+                continue
+            try:
+                self._active[row.id] = ActiveSource(row.id, create_source(row, self.deps))
+                self._identifiers[row.id] = row.identifier
+            except Exception as e:
+                self._broken.add((row.id, row.identifier))
+                logger.error("{}: manbani yaratib bo'lmadi: {}", row.identifier, e)
+                await _record_error(self.sf, row.id, f"{type(e).__name__}: {e}")
+        return [self._active[r.id] for r in rows if r.id in self._active]
+
+    async def close(self) -> None:
+        for active in self._active.values():
+            with contextlib.suppress(Exception):
+                await active.source.close()
+        self._active.clear()
+
+
+async def sync_sources(sf: SessionFactory, settings: Settings) -> None:
+    """settings.yaml seeds the ``sources`` table (new channels only; the DB is the truth)."""
+    async with sf() as s, s.begin():
+        await sources_repo.sync_from_config(s, settings.app.sources)
+
+
 async def build_active_sources(
     sf: SessionFactory, settings: Settings, deps: SourceDeps
 ) -> list[ActiveSource]:
     """Sync settings.yaml -> ``sources`` table, then create a source object for each enabled row."""
-    async with sf() as s, s.begin():
-        rows = await sources_repo.sync_from_config(s, settings.app.sources)
-    active: list[ActiveSource] = []
-    for row in rows:
-        try:
-            active.append(ActiveSource(row.id, create_source(row, deps)))
-        except Exception as e:
-            logger.error("{}: manbani yaratib bo'lmadi: {}", row.identifier, e)
-            await _record_error(sf, row.id, f"{type(e).__name__}: {e}")
-    return active
+    await sync_sources(sf, settings)
+    return await SourcePool(sf, deps).refresh()
 
 
 async def run_collector(
     sf: SessionFactory,
-    sources: Sequence[ActiveSource],
+    sources: Sequence[ActiveSource] | SourcePool,
     cfg: CollectorConfig,
     stop: asyncio.Event,
     *,
     max_cycles: int | None = None,
+    before_cycle: Callable[[], Awaitable[object]] | None = None,
 ) -> None:
-    """Poll forever (or ``max_cycles`` times) until ``stop`` is set."""
+    """Poll forever (or ``max_cycles`` times) until ``stop`` is set.
+
+    ``sources``: a fixed list, or a :class:`SourcePool` re-read from the DB every cycle.
+    ``before_cycle``: e.g. checking channels added from the bot (errors are logged, not raised).
+    """
     sleep = stop_aware_sleep(stop)
     await write_heartbeat(sf)  # immediately, so even a --once run leaves a heartbeat
     heartbeat = asyncio.create_task(heartbeat_loop(sf, cfg.heartbeat_interval_seconds, stop))
-    if not sources:
-        logger.warning(
-            "Faol manba yo'q. config/settings.yaml dagi 'sources:' ga kanal qo'shing "
-            "va qayta yoqing."
-        )
+    pool = sources if isinstance(sources, SourcePool) else None
+    fixed = [] if isinstance(sources, SourcePool) else list(sources)
+    warned_empty = False
     cycles = 0
     try:
         while not stop.is_set():
-            outcomes = await run_cycle(sf, sources, cfg, sleep)
+            if before_cycle is not None:
+                try:
+                    await before_cycle()
+                except Exception:
+                    logger.exception("sikl oldidagi ish xato berdi")
+            active = await pool.refresh() if pool is not None else fixed
+            if not active and not warned_empty:
+                logger.warning(
+                    "Faol manba yo'q. Bot orqali /addsource bilan yoki config/settings.yaml dagi "
+                    "'sources:' ga kanal qo'shing."
+                )
+            warned_empty = not active
+            outcomes = await run_cycle(sf, active, cfg, sleep)
             cycles += 1
             failed = [o.identifier for o in outcomes if not o.ok]
             logger.debug(
@@ -243,9 +308,11 @@ async def run_collector(
         stop.set()
         heartbeat.cancel()
         await asyncio.gather(heartbeat, return_exceptions=True)
-        for active in sources:
+        if pool is not None:
+            await pool.close()
+        for a in fixed:
             with contextlib.suppress(Exception):
-                await active.source.close()
+                await a.source.close()
 
 
 async def main(once: bool = False) -> int:
@@ -258,14 +325,15 @@ async def main(once: bool = False) -> int:
     try:
         if not await schema_is_ready(engine):
             logger.error(
-                "Baza tayyor emas. Avval shu buyruqni bajaring: uv run alembic upgrade head"
+                "Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head"
             )
             return 1
         sf = create_session_factory(engine)
 
-        needs_telegram = any(
-            s.enabled and SourceType.of(s.type) is SourceType.TELEGRAM for s in settings.app.sources
-        )
+        await sync_sources(sf, settings)
+        async with sf() as s:
+            rows = [*await sources_repo.list_enabled(s), *await sources_repo.list_pending(s)]
+        needs_telegram = any(SourceType.of(r.type) is SourceType.TELEGRAM for r in rows)
         if needs_telegram:
             try:
                 client = await connect_client(settings)
@@ -275,15 +343,31 @@ async def main(once: bool = False) -> int:
             me = await client.get_me()
             logger.info("Telegram'ga ulandi: {}", getattr(me, "username", None) or me.id)
 
+        bot = await _optional_bot(settings)
+        notifier = Notifier(bot, settings.env.admin_chat_id, sf)
         deps = SourceDeps(collector=settings.app.collector, telegram_client=client)
-        sources = await build_active_sources(sf, settings, deps)
-        logger.info("Faol manbalar: {}", [a.source.identifier for a in sources] or "yo'q")
+        pool = SourcePool(sf, deps)
+        active_names = [r.identifier for r in rows if r.status == SourceStatus.ACTIVE]
+        logger.info("Faol manbalar: {}", active_names or "yo'q")
+
+        async def check_pending() -> None:
+            await process_pending(sf, client, notifier)
 
         stop = asyncio.Event()
         install_signal_handlers(stop)
-        await run_collector(
-            sf, sources, settings.app.collector, stop, max_cycles=1 if once else None
-        )
+        try:
+            await run_collector(
+                sf,
+                pool,
+                settings.app.collector,
+                stop,
+                max_cycles=1 if once else None,
+                before_cycle=check_pending,
+            )
+        finally:
+            if bot is not None:
+                with contextlib.suppress(Exception):
+                    await bot.session.close()
         return 0
     finally:
         if client is not None:
@@ -291,6 +375,15 @@ async def main(once: bool = False) -> int:
                 await client.disconnect()
         await engine.dispose()
         logger.info("Collector to'xtadi.")
+
+
+async def _optional_bot(settings: Settings) -> Bot | None:
+    """Bot for admin messages (results of /addsource); ``None`` without BOT_TOKEN."""
+    try:
+        return create_bot(settings)
+    except BotConfigError as e:
+        logger.info("Admin xabarlari faqat logda: {}", e)
+        return None
 
 
 def run() -> int:

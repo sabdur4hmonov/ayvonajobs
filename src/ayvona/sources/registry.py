@@ -59,6 +59,11 @@ def _telegram(row: Source, deps: SourceDeps) -> BaseSource:
     return TelegramSource(
         row.identifier,
         deps.telegram_client,
-        initial_backfill=deps.collector.initial_backfill,
+        # /addsource asks the admin (0 / 5 / 20); YAML channels use collector.initial_backfill
+        initial_backfill=(
+            row.backfill_request
+            if row.backfill_request is not None
+            else deps.collector.initial_backfill
+        ),
         fetch_limit=deps.collector.fetch_limit,
     )

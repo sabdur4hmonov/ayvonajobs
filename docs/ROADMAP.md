@@ -44,6 +44,7 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] Har kategoriya uchun rasm
 - [ ] Regex bilan bezash (lavozim, maosh, manzil, aloqa...) yoki tozalangan fallback
 - [ ] Avtomatik joylash (navbat, qayta urinish, admin'ga xabar)
+      _(kod tayyor, Bot API mock bilan test qilingan — test kanalda tekshirilgach belgilang)_
 - [ ] Hashtaglar: `#dasturchi #toshkent` — kanal ichida bosib qidirish uchun
 - [ ] Kengaytiriladigan manbalar (keyin 2–3 sayt)
 
@@ -56,6 +57,7 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] E'lonni yopish ("Ish topildi" tugmasi) + 30 kundan keyin qidiruvdan avtomatik chiqish
 - [ ] Admin: `/stats /queue /failed /retry /pause /resume /ban /unban /addword /delword`
 - [ ] Manbalarni bot orqali boshqarish: `/addsource /sources` (qo'shish, o'chirish, pauza — kodga tegmasdan)
+      _(kod tayyor — haqiqiy botda tekshirilgach belgilang)_
 - [ ] Kanal postida tugmalar: "📩 Murojaat" · "⭐ Saqlash" · "🔍 Boshqa ishlar" (botga deep link)
 
 **AI (3-qism, ixtiyoriy)** — Gemini faqat regex uddalay olmaganda, kesh, fallback.
@@ -308,6 +310,9 @@ Heartbeat har daqiqada. Testlar: Bot API mock bilan — xato/qayta urinish/pauza
 ---
 
 ## BOSQICH 8 — Admin, monitoring, backup ⏱ 1–2 soat · Model: `sonnet`
+
+- [x] Kod + testlar bajarildi — 2026-09-30 (Bot API mock bilan; tafsilot: `docs/PROGRESS.md`)
+- [ ] Haqiqiy bot bilan tekshirish (Sardor: `docs/PROGRESS.md` oxiridagi "Qanday sinab ko'rasiz")
 
 ```text
 1) services/notifier.py — admin chatga xabar (xatolar, failed postlar, jim qolgan jarayonlar), bir xil xato

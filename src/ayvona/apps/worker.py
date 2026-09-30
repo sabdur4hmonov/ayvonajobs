@@ -5,7 +5,10 @@ Tasks running side by side:
   (processing/pipeline.py);
 * publisher — jobs(queued/retry) -> our channel, ``publish_interval_seconds`` apart
   (publisher/outbox.py);
-* heartbeat — ``kv_store`` ``heartbeat:worker`` every minute.
+* heartbeat — ``kv_store`` ``heartbeat:worker`` every minute;
+* monitoring — every 5 min: collector / bot silent? sources silent or failing?
+  (services/heartbeat.py);
+* backup — daily 03:00 Asia/Tashkent copy of the DB, sent to the admin chat (services/backup.py).
 
 Step 0 (first start only): every post already in the DB becomes ``skipped_backfill`` — the test
 posts collected before the worker existed never reach the channel (``kv_store`` flag
@@ -53,6 +56,8 @@ from ayvona.db.session import create_engine, create_session_factory, schema_is_r
 from ayvona.logging_setup import setup_logging
 from ayvona.processing.pipeline import Pipeline
 from ayvona.publisher.outbox import ChannelSender, Publisher
+from ayvona.services.backup import BackupService
+from ayvona.services.heartbeat import Monitor
 from ayvona.services.notifier import Notifier
 from ayvona.timeutil import utcnow
 
@@ -114,8 +119,12 @@ async def run_worker(
     admin_chat: int | str | None = None,
     publish: bool = True,
     once: bool = False,
+    monitor: bool = True,
 ) -> None:
-    """Everything after the process setup (tests call this with a mocked Bot API)."""
+    """Everything after the process setup (tests call this with a mocked Bot API).
+
+    ``monitor``: also run the monitoring and the daily backup (not in ``once`` mode).
+    """
     await skip_existing_posts(sf)
     await reset_stuck_processing(sf)
     notifier = Notifier(bot, admin_chat, sf)
@@ -147,6 +156,11 @@ async def run_worker(
     ]
     if publisher is not None:
         jobs.append(publisher.run(stop_aware_sleep(stop)))
+    if monitor:
+        jobs.append(
+            Monitor(settings, sf, notifier, ("collector", "bot")).run(stop_aware_sleep(stop))
+        )
+        jobs.append(BackupService(settings, sf, notifier).run(stop_aware_sleep(stop)))
     tasks = [asyncio.create_task(j) for j in jobs]
     try:
         await stop.wait()
@@ -190,7 +204,7 @@ async def main(*, once: bool = False, publish: bool = True) -> int:
     try:
         if not await schema_is_ready(engine):
             logger.error(
-                "Baza tayyor emas. Avval shu buyruqni bajaring: uv run alembic upgrade head"
+                "Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head"
             )
             return 1
         sf = create_session_factory(engine)

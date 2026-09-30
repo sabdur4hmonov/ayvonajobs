@@ -50,14 +50,30 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
     return async_sessionmaker(engine, expire_on_commit=False)
 
 
-async def schema_is_ready(engine: AsyncEngine) -> bool:
-    """True if Alembic migrations were applied (``alembic_version`` exists and is non-empty)."""
+def head_revision() -> str | None:
+    """The newest migration in ``migrations/versions`` (what ``alembic upgrade head`` gives)."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
 
-    def _check(sync_conn: Any) -> bool:
+    from ayvona.config import PROJECT_ROOT
+
+    cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(PROJECT_ROOT / "migrations"))
+    return ScriptDirectory.from_config(cfg).get_current_head()
+
+
+async def schema_is_ready(engine: AsyncEngine, *, require_head: bool = True) -> bool:
+    """True if Alembic migrations were applied — by default up to the newest one, so a process
+    never runs on an old DB (missing columns) after ``git pull`` without ``alembic upgrade``."""
+
+    def _check(sync_conn: Any) -> str | None:
         if not inspect(sync_conn).has_table("alembic_version"):
-            return False
+            return None
         row = sync_conn.exec_driver_sql("SELECT version_num FROM alembic_version").first()
-        return row is not None
+        return row[0] if row else None
 
     async with engine.connect() as conn:
-        return await conn.run_sync(_check)
+        version = await conn.run_sync(_check)
+    if version is None:
+        return False
+    return not require_head or version == head_revision()

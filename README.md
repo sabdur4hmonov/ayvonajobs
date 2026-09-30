@@ -77,6 +77,14 @@ uv run python -m ayvona.apps.worker                # doimiy ishlaydi (to'xtatish
 ⚠️ Birinchi ishga tushishda bazadagi hamma eski postlar `skipped_backfill` bo'ladi (kanalga chiqmaydi).
 Sinovni albatta **test kanal**da qiling: `.env` da `CHANNEL_ID=@sizning_test_kanalingiz`.
 
+**Bot** (Bosqich 8) — hozircha faqat admin buyruqlari (`/help` ro'yxatni ko'rsatadi):
+```powershell
+uv run python -m ayvona.apps.bot                 # BOT_TOKEN va ADMIN_IDS kerak
+uv run python scripts/find_chat_ids.py           # CHANNEL_ID / ADMIN_CHAT_ID / ADMIN_IDS ni topish
+uv run python scripts/backup_now.py --send       # bazaning nusxasi hozir (odatda har kuni 03:00)
+```
+Manbalar endi **bazada** (bot: `/sources`, `/addsource`); `config/settings.yaml` faqat boshlang'ich ro'yxat.
+
 **Post rasmlari va ko'rinishi** (Bosqich 6):
 ```powershell
 uv run python scripts/make_placeholder_images.py   # bo'sh rasm papkalariga vaqtinchalik rasmlar (bir marta)

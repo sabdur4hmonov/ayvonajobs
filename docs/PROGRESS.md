@@ -12,6 +12,7 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-29 | 5 — Extractor, kategoriya | `processing/`: `extract`, `salary`, `location`, `categorize` (+ `contacts` kengaytirildi); `config/extract.yaml` (yangi), `regions.yaml` (14 hudud, tumanlar, mo'ljallar), `categories.yaml` kalit so'zlari; `jobs.profession` + `jobs.salary_period` (migratsiya `b5e1a7c3d9f2`); `low_quality` statusi; `scripts/extract_report.py`; 735/742 qoida tuzatildi | 370 test ✅ (0 xfail — **24/24 o'tdi**), ruff ✅. 313 job'dan: 2 tasi aloqasiz, 3 tasi low_quality, 309 tasi kanalga chiqadi |
 | 2026-09-29 | 6 — Tozalash, shablon, rasmlar | `processing/`: `clean`, `formatter`, `images`; `db/repositories/images_repo.py`; `images` jadvali (migratsiya `c7a4e2d8f1b6`, `category_images` o'rniga); `settings.yaml`: `branding`, `formatter`, `images`; `Extraction.address`; `scripts/make_placeholder_images.py` (Pillow), `scripts/preview_posts.py`; 43 ta snapshot `tests/snapshots/` | 524 test ✅, ruff ✅. Bazadagi 309 e'lon: 285 to'liq shablon, 24 fallback, eng uzuni 1022/1024 |
 | 2026-09-29 | 7 — Worker: pipeline + publisher | 5450 filtri (`not_job_strong_markers`); `processing/pipeline.py`, `publisher/outbox.py`, `services/notifier.py`, `botapi.py`, `apps/worker.py`, `apps/runtime.py`, `db/repositories/jobs_repo.py`; migratsiya `d3f8b1c6a2e4` (raw_posts: backfill, dedup, job_id; jobs.buttons); `settings.yaml`: `worker:`, `publisher:` kengaydi; Bot API mock (`tests/fake_bot.py`) | 582 test ✅, ruff ✅. Bazaning NUSXASIDA: 374 post → 284 job navbatga, 24 dublikat, 2 aloqasiz, 2 past sifat. Haqiqiy Telegram'ga **hech narsa yuborilmadi** |
+| 2026-09-30 | 8 — Admin, monitoring, backup | `bot/`: `setup.py`, `filters.py`, `texts.py`, `handlers/admin.py`, `admin_sources.py`, `admin_images.py`; `apps/bot.py`; `services/`: `heartbeat.py`, `backup.py`, `stats.py`, `sources_admin.py`; collector manbalarni har siklda bazadan o'qiydi + `pending` kanallarni tekshiradi; migratsiya `e5a9c2f7b3d1` (sources boshqaruvi); `scripts/find_chat_ids.py`, `scripts/backup_now.py` | 632 test ✅, ruff ✅. Haqiqiy Telegram'ga **hech narsa yuborilmadi** |
 
 ---
 
@@ -392,6 +393,78 @@ bir xil matn). Haqiqiy baza hali eski migratsiyada — `alembic upgrade head` ke
 - `error` statusidagi postlarni qayta ishlash buyrug'i hali yo'q. Kerak bo'lsa: bazada `status='new'` qilish.
 - `expires_at` hali qo'yilmaydi — Bosqich 14 (21/30 kun).
 
+
+### Bosqich 8 — Admin, monitoring, backup
+Sardor reja tasdig'ini kutmaslikni aytdi — qarorlar va sabablari:
+
+1. **Admin xabarlari** (`services/notifier.py`) Bosqich 7 da yozilgan edi; endi `chat_id` ham oladi — `/addsource`
+   natijasi so'ragan admin'ning o'ziga boradi (admin guruhga emas).
+2. **Monitoring** (`services/heartbeat.py`), har 5 daqiqada: collector/bot "tirikman" belgisi 10 daqiqadan eski →
+   ogohlantirish; manbadan 24 soat post kelmasa → ogohlantirish; manba ketma-ket 5 marta xato bersa → ogohlantirish.
+   - **Har muammo uchun bitta xabar** + tiklanganda "✅ ... yana ishlayapti" (holat `kv_store` da `monitor:*`).
+     Sabab: 10 daqiqalik takror filtri bilan ham har 10 daqiqada bir xil xabar kelaverardi.
+   - Hali **hech qachon** ishlamagan jarayon (masalan bot hali yoqilmagan) — ogohlantirilmaydi.
+   - Worker collector va botni kuzatadi, **bot esa worker'ni** — har jarayonni boshqasi kuzatadi.
+   - Yangi qo'shilgan, hali posti yo'q kanal: 24 soat qo'shilgan vaqtdan hisoblanadi.
+3. **Backup** (`services/backup.py`): worker ichida, har kuni 03:00 (Toshkent). SQLite backup API — collector/bot
+   yozib turganda ham to'g'ri nusxa. Fayl avval `*.tmp` ga yoziladi, keyin nomlanadi (yarim fayl backup bo'lib qolmaydi).
+   Nom: **`data/backups/ayvona_YYYY-MM-DD.db`**, oxirgi 7 tasi qoladi — o'chirishda **faqat shu nomdagi** fayllarga tegiladi
+   (`data/backups/deploy/` — `scripts/deploy.sh` niki, Bosqich 9 sessiyasi bilan kelishildi). Worker 03:00 da o'chiq
+   bo'lsa — yoqilganda o'sha kuni qilinadi (`kv_store: backup:last_date`). Admin chatga fayl bo'lib boradi (45 MB gacha).
+   Qo'lda: `uv run python scripts/backup_now.py [--send]`.
+4. **Admin buyruqlari** (faqat `ADMIN_IDS`): `/stats` (bugun / 7 kun: keldi, chiqdi, dublikat, e'lon emas, shubhali,
+   aloqasiz, past sifat, xato; kategoriyalar; jarayonlar holati), `/queue`, `/failed`, `/retry <id…|all>`, `/pause`,
+   `/resume`, `/help`, `/cancel`. "Bugun" = Toshkent vaqti bilan yarim tundan. Admin bo'lmaganlarga faqat `/start` ga
+   "bot tez orada" javobi (Bosqich 10 gacha). `/` menyusi faqat adminlarga ko'rinadi (`set_my_commands`).
+   Handler'lar 3 faylga bo'lindi: `admin.py` (umumiy), `admin_sources.py`, `admin_images.py` — bitta fayl 700+ qator bo'lardi.
+5. **Manbalar bazadan boshqariladi** (migratsiya `e5a9c2f7b3d1`: `sources.status`, `added_via`, `added_by`,
+   `backfill_request`, `check_interval_minutes`, `daily_limit`):
+   - `settings.yaml` endi **faqat boshlang'ich ro'yxat**: yangi kanal bazaga qo'shiladi; YAML'dan olib tashlangan kanal
+     o'chirilmaydi; admin botda pauza/o'chirgan kanalni YAML **qayta yoqmaydi** (avval har ishga tushishda yoqib yuborardi).
+   - Collector har siklda ro'yxatni bazadan o'qiydi (`SourcePool`) — restart kerak emas; ishlab turgan manba qayta
+     yaratilmaydi, pauza qilingani yopiladi.
+   - `/addsource @kanal | t.me/kanal | t.me/+taklif` → "eski postlardan nechta: 0 / 5 / 20" → bazaga `pending`.
+     Collector keyingi siklda tekshiradi (kanal bormi, o'qib bo'ladimi; taklif havolasi → o'quvchi akkaunt kanalga
+     qo'shiladi) → `active` yoki `rejected` + sabab; admin'ga "✅ Qo'shildi: ..., oxirgi post ID ..." yoki "❌ sabab".
+     Vaqtinchalik muammo (flood, tarmoq) — `pending` qoladi, keyingi siklda qayta. Guruh/foydalanuvchi — rad etiladi
+     (faqat kanallar). Yopiq kanal identifikatori `-100<id>` bo'lib saqlanadi.
+   - ⚠️ **Qaror — eski postlar:** 5/20 tanlansa ham ular bazaga olinadi, lekin kanalga faqat
+     `publisher.publish_backfill: true` bo'lsa chiqadi (Bosqich 7 qoidasi bilan bir xil). Bazada ular dublikat va keyin
+     qidiruv uchun foydali. Tugmani bosishdan oldin shu haqda yozib qo'yiladi. Kerak bo'lsa — sozlamani yoqing.
+   - `/addsource web:<nom>` — kodi yozilgan sayt bo'lsa yoqadi (hozir yo'q → "kod hali yozilmagan"); `rss:<URL>` → "tez orada".
+   - `/sources` — ro'yxat (✅ ⏸ ⏳ ❌, oxirgi post qachon), bosilsa kartochka: [⏸ Pauza]/[▶️ Yoqish] [🗑 O'chirish]
+     [📊 Statistika] [⬅️ Ro'yxat]; saytlar uchun [15 daq] [30 daq] [1 soat]; rad etilgan uchun [🔁 Qayta tekshirish].
+     ROADMAP'dagi "[⏸ O'chirish]" o'rniga **"⏸ Pauza"** — "🗑 O'chirish" bilan adashmasin. O'chirish tasdiq so'raydi,
+     qator bazada qoladi (`status='deleted'`), postlari saqlanadi. Har o'zgarish logga: `admin <id>: manba ... -> pause`.
+6. **Rasmlar** (`/images`, `/images <kasb>`, `/addimage <kasb|kategoriya>`, `#oshpaz` ham bo'ladi): faqat
+   `assets/images/` dagi fayllar o'zgaradi — tanlash qoidasi (`processing/images.py`) va post uslubiga **tegilmadi**.
+   `/addimage` da rasm Pillow bilan tekshiriladi, `1.jpg, 2.jpg ...` bo'lib saqlanadi; haqiqiy rasm o'zi vaqtinchaliklardan
+   ustun. 🗑 bosilgan rasm **o'chirilmaydi**, `data/images_trash/` ga ko'chiriladi (qaytarsa bo'ladi).
+7. **`apps/bot.py`** — faqat admin handlerlari + heartbeat + worker monitoringi. `BOT_TOKEN` yo'q/noto'g'ri → o'zbekcha
+   xabar bilan chiqadi (yiqilmaydi). `ADMIN_IDS` bo'sh → ogohlantirish. FSM — `MemoryStorage` (restart faqat yarim
+   qolgan `/addimage` ni unutadi; Bosqich 10 da doimiy saqlashga o'tish mumkin).
+8. **Qo'shimcha himoya:** jarayonlar endi baza **oxirgi migratsiyada** ekanini tekshiradi. Sabab: `git pull` dan keyin
+   `alembic upgrade head` unutilsa, eski bazada yangi ustunlar yo'qligidan xato berardi. Hozirgi bazangiz eski
+   versiyada — worker/bot "Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head" deb chiqadi.
+9. **Yordamchi skriptlar:** `scripts/find_chat_ids.py` (bot token qo'yilgach kanal/guruh/o'z ID'ingizni topadi,
+   hech narsa yubormaydi), `scripts/backup_now.py`.
+10. **Test xatosi va tuzatish:** birinchi worker testi monitoring bilan ishga tushib, sizning haqiqiy bazangizdan
+    **o'qish rejimida** nusxa olib `data/backups/ayvona_2026-09-29.db` ga yozib qo'ydi (asl bazaga tegmadi). Men uni
+    darhol o'chirdim; test sozlamalari endi hech qachon `data/ayvona.db` ga ishora qilmaydi (backup testlarda o'chiq,
+    faqat vaqtinchalik papkada).
+11. **Testlar** (+50): `test_admin_bot.py` (aiogram Dispatcher'ga soxta update'lar, javoblar Bot API mock'da — faqat
+    admin, /stats /queue /retry /pause, /addsource oqimi, /sources tugmalari, /images, /addimage, rasmni o'chirish),
+    `test_monitoring.py` (jim jarayon/manba bir marta + tiklanish, backup nusxasi/tozalash/03:00/xato, statistika),
+    `test_sources_admin.py` (kiritma tahlili, soxta Telethon bilan tekshiruv, taklif havolasi, collector bazani qayta o'qishi).
+
+**Natija:** 632 test ✅, ruff ✅. Haqiqiy Telegram'ga hech narsa yuborilmadi. `uv run python -m ayvona.apps.bot` va
+`... worker` sizning muhitingizda ishga tushirib ko'rildi: token yo'q / baza eski → aniq xabar, yiqilmaydi, bazaga yozmaydi.
+
+**Ma'lum cheklovlar:**
+- Saytlar uchun kunlik limit (`daily_limit`) ustuni bor, lekin tugmasi yo'q — Bosqich 16 da (RSS bilan birga).
+- Monitoring `collector` jimligini faqat worker ishlaganda sezadi (worker'ni esa bot kuzatadi).
+- `/stats` dagi "chiqmadi" — shu davrda `failed` bo'lib qolganlar (umumiy soni `/failed` da).
+
 ---
 
 ## Sardor uchun
@@ -421,6 +494,9 @@ Kompyuter yoniga qaytganingizda qilishingiz kerak bo'lgan narsalar (batafsil —
 - [ ] ⚠️ **`.env` dagi `CHANNEL_ID` ni tekshiring:** hozir to'ldirilgan (ehtimol `@ayvona`). Token qo'shishdan OLDIN uni
       **test kanal**ga almashtiring yoki bo'sh qoldiring — aks holda worker haqiqiy kanalga yoza boshlaydi.
 - [ ] **Bot, test kanal, admin guruh** — fayl oxiridagi "YAKUNIY XULOSA (Bosqich 7–8)" da qadam-baqadam.
+- [ ] **Bosqich 8 migratsiyasi** ham shu `uv run alembic upgrade head` bilan (sources boshqaruvi).
+- [ ] `ADMIN_IDS`, `ADMIN_CHAT_ID` — `uv run python scripts/find_chat_ids.py` bilan toping.
+- [ ] **Qaror kerak:** `/addsource` da tanlangan eski postlar kanalga chiqsinmi? Hozir yo'q (`publisher.publish_backfill: false`).
 
 ---
 
@@ -539,4 +615,117 @@ uv run ruff check .
 Loglar: `data\logs\collector_<sana>.log`. Muammo bo'lsa, shu faylning oxirini menga yuboring:
 ```powershell
 Get-Content data\logs\collector_*.log -Tail 50
+```
+
+
+---
+
+## YAKUNIY XULOSA — Bosqich 7–8 (2026-09-30)
+
+### 1) Nima qilindi
+
+| Commit | Nima |
+|---|---|
+| `feat(processing): cleaner and post formatter` | Bosqich 6 (avvalgi sessiya yozgan, commit qilinmagan edi) — o'zgarishsiz commit qilindi |
+| `fix(processing): course topic lists are not job ads` | @Buxgalteriyaishorinlarii/5450 (kurs reklamasi) endi e'lon emas; bazada boshqa shunday post yo'q (113 ta shubhali post ko'rildi) |
+| `feat(worker): processing pipeline and reliable publisher` | Bosqich 7: postlarni qayta ishlash, yig'ish oynasi (20 daq), kanalga ishonchli joylash, eski postlar chiqmaydi |
+| `feat(admin): notifications, monitoring, backups, admin commands` | Bosqich 8: admin buyruqlari, manbalar va rasmlar botdan, monitoring, kunlik backup |
+
+Qisqasi — endi tizim to'liq zanjir: **collector** kanallardan o'qiydi → **worker** tozalaydi, dublikatni ushlaydi,
+chiroyli qiladi va 20 daqiqadan keyin **kanalga** joylaydi → **bot** orqali siz hammasini boshqarasiz va kuzatasiz.
+Hech narsa haqiqiy Telegram'ga yuborilmadi — hammasi Bot API mock bilan sinaldi (632 test). `git push` qilinmadi.
+
+### 2) Siz nima qilishingiz kerak (PowerShell)
+
+Hammasi loyiha papkasida:
+```powershell
+cd "D:\Coding projects\ayvona"
+uv sync
+uv run alembic upgrade head            # bazani yangilaydi (3 ta yangi migratsiya). Majburiy!
+```
+
+**a) Bot yarating** — Telegram'da @BotFather:
+1. `/newbot` → nomi: `Ayvona Jobs` → username: `ayvonabot` (band bo'lsa `ayvona_jobs_bot`).
+2. Bergan tokenni nusxalang (`123456789:AAE...`). Hech kimga bermang.
+
+**b) Test kanal va admin guruh oching** (haqiqiy @ayvona emas!):
+1. Yangi kanal: masalan "Ayvona TEST" (yopiq bo'lsa ham bo'ladi) → Sozlamalar → Administratorlar → botni qo'shing,
+   "Xabar joylash" va "Xabarlarni tahrirlash" huquqini bering. Kanalga istalgan bitta post yozing.
+2. Yangi guruh: "Ayvona admin" → botni qo'shing → guruhga `/start@ayvonabot` yozing (bot nomingiz bilan).
+3. Botga shaxsiy chatda `/start` yozing.
+
+**c) `.env` ni to'ldiring:**
+```powershell
+notepad .env
+```
+Avval faqat token:
+```
+BOT_TOKEN=123456789:AAE...
+CHANNEL_ID=
+```
+⚠️ `CHANNEL_ID` hozir sizda to'ldirilgan (ehtimol `@ayvona`) — **bo'shating**, aks holda haqiqiy kanalga yoza boshlaydi.
+Saqlang, keyin ID'larni toping (bot jarayoni ishlamayotgan bo'lsin):
+```powershell
+uv run python scripts/find_chat_ids.py
+```
+Chiqqan ro'yxatdan `.env` ga yozing:
+```
+CHANNEL_ID=-100...        # "channel" qatori (TEST kanal)
+ADMIN_CHAT_ID=-100...     # "supergroup"/"group" qatori
+ADMIN_IDS=123456789       # "SIZ" qatori
+```
+
+**d) Uchta jarayonni yoqing** — uchta alohida PowerShell oynasida:
+```powershell
+uv run python -m ayvona.apps.collector
+```
+```powershell
+uv run python -m ayvona.apps.worker
+```
+```powershell
+uv run python -m ayvona.apps.bot
+```
+Worker birinchi yonganda bazadagi 377 ta eski postni `skipped_backfill` qiladi — ular kanalga chiqmaydi (siz aytgandek).
+
+**e) Ko'rib chiqish kerak bo'lgan qarorlar** (yuqorida "Bosqich 7" va "Bosqich 8" bo'limlarida sabablari):
+- `/addsource` da tanlangan eski postlar kanalga chiqmaydi (`publish_backfill: false`). Chiqsin desangiz — `config\settings.yaml`.
+- Tugma nomi "⏸ Pauza" (ROADMAP'da "⏸ O'chirish" edi).
+- `.env.example` da `CHANNEL_ID` bo'sh qilindi.
+
+### 3) Qanday sinab ko'rasiz
+
+**Testlar:**
+```powershell
+uv run pytest
+uv run ruff check .
+```
+Kutilgan natija: `632 passed`, `All checks passed!`.
+
+**Botda (shaxsiy chat):**
+1. `/help` — buyruqlar ro'yxati chiqadi. Boshqa odam yozsa — faqat "tez orada" javobi.
+2. `/stats` — Collector ✅, Worker ✅, Bot ✅ (hammasi yoqilgan bo'lsa).
+3. `/sources` — 20 ta kanal; birortasini bosing → [📊 Statistika], [⏸ Pauza] → [▶️ Yoqish].
+4. `/addsource @biror_ish_kanali` → [0] ni bosing → 1–2 daqiqada "✅ Qo'shildi: ..." xabari keladi.
+5. `/images` — rasm bo'shliqlari; `/addimage oshpaz` → rasm yuboring → "✅ Saqlandi" → `/cancel`.
+
+**Kanalga chiqishi:**
+1. Collector yangi postlarni olgach, 1–2 daqiqada `/queue` da e'lonlar paydo bo'ladi ("Kutmoqda: N").
+2. **20 daqiqa** (yig'ish oynasi) o'tgach TEST kanalga birin-ketin (1 daqiqa oraliq) rasm + matn + tugmalar bilan chiqadi.
+   Kutishni istamasangiz: `config\settings.yaml` → `hold_minutes: 0` (keyin 20 ga qaytaring).
+3. `/pause` — yangi post chiqmaydi, `/queue` da "⏸ PAUZA"; `/resume` — davom etadi.
+4. Worker'ni Ctrl+C bilan o'chirib qayta yoqing — navbat yo'qolmaydi, davom etadi.
+
+**Admin guruhda:**
+- Shubhali e'lon kelsa "⚠️ Shubhali e'lon ..." xabari.
+- Worker'ni 10+ daqiqa o'chirib qo'ysangiz — bot guruhga "🔴 Worker jim" yozadi, yoqsangiz "✅ Worker yana ishlayapti".
+- Backup: `uv run python scripts/backup_now.py --send` → guruhga `ayvona_YYYY-MM-DD.db` fayli keladi
+  (odatda har kuni 03:00 da o'zi).
+
+**Hammasi test kanalda yaxshi bo'lsa:** `.env` da `CHANNEL_ID` ni haqiqiy `@ayvona` ga almashtiring (bot u yerda ham admin
+bo'lsin) va ROADMAP'dagi Bosqich 7 "Test kanalda tekshirish" katagini belgilang. Keyin — Bosqich 9 (server).
+
+Muammo bo'lsa, log oxirini menga yuboring:
+```powershell
+Get-Content data\logs\worker_*.log -Tail 50
+Get-Content data\logs\bot_*.log -Tail 50
 ```

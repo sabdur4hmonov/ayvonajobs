@@ -152,6 +152,27 @@ class WorkerConfig(BaseModel):
     dedup_reload_hours: float = Field(default=6, gt=0)
 
 
+class MonitoringConfig(BaseModel):
+    """services/heartbeat.py — the worker watches the other processes and the sources."""
+
+    check_interval_minutes: float = Field(default=5, gt=0)
+    heartbeat_stale_minutes: float = Field(default=10, gt=0)
+    source_silence_hours: float = Field(default=24, gt=0)
+    source_error_threshold: int = Field(default=5, ge=1)
+
+
+class BackupConfig(BaseModel):
+    """services/backup.py — daily copy of the DB (SQLite backup API)."""
+
+    enabled: bool = True
+    hour: int = Field(default=3, ge=0, le=23)  # Asia/Tashkent
+    minute: int = Field(default=0, ge=0, le=59)
+    keep: int = Field(default=7, ge=1)
+    dir: str = "data/backups"
+    send_to_admin: bool = True
+    max_send_mb: float = Field(default=45, gt=0)  # Bot API upload limit is 50 MB
+
+
 class BrandingConfig(BaseModel):
     """Our channel and bot (post signature, deep-link buttons). Usernames without ``@``."""
 
@@ -185,6 +206,8 @@ class AppConfig(BaseModel):
     collector: CollectorConfig = Field(default_factory=CollectorConfig)
     publisher: PublisherConfig = Field(default_factory=PublisherConfig)
     worker: WorkerConfig = Field(default_factory=WorkerConfig)
+    monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
+    backup: BackupConfig = Field(default_factory=BackupConfig)
     branding: BrandingConfig = Field(default_factory=BrandingConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
@@ -381,6 +404,10 @@ class Settings(BaseModel):
     @property
     def images_dir(self) -> Path:
         return resolve_path(self.app.images.root)
+
+    @property
+    def backup_dir(self) -> Path:
+        return resolve_path(self.app.backup.dir)
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:

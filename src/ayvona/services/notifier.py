@@ -76,20 +76,25 @@ class Notifier:
         last = await self._last_sent(key)
         return last is not None and now - last < self.throttle
 
-    async def send(self, text: str, *, key: str | None = None) -> bool:
-        """Send an HTML notice (escape user text yourself). True if it reached Telegram."""
+    async def send(
+        self, text: str, *, key: str | None = None, chat_id: int | str | None = None
+    ) -> bool:
+        """Send an HTML notice (escape user text yourself). True if it reached Telegram.
+
+        ``chat_id``: another chat than the admin chat (e.g. the admin who asked for something).
+        """
         now = utcnow()
         key = key or text
+        target = chat_id if chat_id is not None else self.chat_id
         if await self._throttled(key, now):
             logger.debug("notifier: takroriy xabar o'tkazib yuborildi ({})", key[:60])
             return False
-        if not self.enabled:
+        if self.bot is None or target is None:
             logger.warning("[admin'ga, yuborilmadi — bot/ADMIN_CHAT_ID yo'q] {}", text)
             return False
-        assert self.bot is not None and self.chat_id is not None
         try:
             await self.bot.send_message(
-                self.chat_id,
+                target,
                 text[:MAX_MESSAGE_LEN],
                 parse_mode=ParseMode.HTML,
                 link_preview_options=LinkPreviewOptions(is_disabled=True),

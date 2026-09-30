@@ -7,6 +7,7 @@ script means "OK". Scripted errors are real Bot API error JSON pushed through ai
 
 from __future__ import annotations
 
+import io
 import json
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -14,7 +15,15 @@ from typing import Any
 from aiogram import Bot
 from aiogram.client.session.base import BaseSession
 from aiogram.exceptions import TelegramNetworkError
-from aiogram.methods import GetMe, SendDocument, SendMessage, SendPhoto, TelegramMethod
+from aiogram.methods import (
+    EditMessageText,
+    GetFile,
+    GetMe,
+    SendDocument,
+    SendMessage,
+    SendPhoto,
+    TelegramMethod,
+)
 
 TEST_TOKEN = "123456789:TEST_TOKEN_never_sent_anywhere_000000"
 CHANNEL = -1001234567890
@@ -28,6 +37,8 @@ class FakeBotSession(BaseSession):
         self.script: list[Any] = []
         self._message_id = 1000
         self._photo_n = 0
+        # bytes returned when the bot downloads a file (/addimage); a valid JPEG by default
+        self.download_bytes: bytes = jpeg_bytes()
 
     # ------------------------------------------------------------------ scripting
     def fail(self, status: int, description: str, retry_after: int | None = None) -> None:
@@ -50,6 +61,10 @@ class FakeBotSession(BaseSession):
     def _result(self, method: TelegramMethod[Any]) -> Any:
         if isinstance(method, GetMe):
             return {"id": 42, "is_bot": True, "first_name": "Ayvona", "username": "ayvonatestbot"}
+        if isinstance(method, GetFile):
+            return {"file_id": method.file_id, "file_unique_id": "f", "file_path": "photos/x.jpg"}
+        if getattr(method, "__returning__", None) is bool:  # answerCallbackQuery, setMyCommands
+            return True
         self._message_id += 1
         msg: dict[str, Any] = {
             "message_id": self._message_id,
@@ -71,7 +86,7 @@ class FakeBotSession(BaseSession):
             msg["caption"] = method.caption
         elif isinstance(method, SendDocument):
             msg["document"] = {"file_id": "DOC_ID", "file_unique_id": "d"}
-        elif isinstance(method, SendMessage):
+        elif isinstance(method, SendMessage | EditMessageText):
             msg["text"] = method.text
         return msg
 
@@ -100,7 +115,7 @@ class FakeBotSession(BaseSession):
         chunk_size: int = 65536,
         raise_for_status: bool = True,
     ) -> AsyncGenerator[bytes, None]:
-        yield b""
+        yield self.download_bytes
 
     async def close(self) -> None:
         return None
@@ -109,3 +124,11 @@ class FakeBotSession(BaseSession):
 def make_bot() -> tuple[Bot, FakeBotSession]:
     session = FakeBotSession()
     return Bot(TEST_TOKEN, session=session), session
+
+
+def jpeg_bytes(size: tuple[int, int] = (32, 18)) -> bytes:
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", size, (200, 120, 40)).save(buf, "JPEG")
+    return buf.getvalue()

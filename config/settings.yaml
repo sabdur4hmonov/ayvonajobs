@@ -109,6 +109,23 @@ publisher:
   config_error_pause_seconds: 300    # token xato / bot kanalda admin emas: 5 daqiqa hech narsa yubormaydi
   idle_poll_seconds: 5               # navbat bo'sh bo'lsa, shuncha soniyada bir tekshiradi
 
+# --- Monitoring (worker tekshiradi, muammo bo'lsa admin chatga yozadi) ----
+monitoring:
+  check_interval_minutes: 5          # har necha daqiqada tekshiriladi
+  heartbeat_stale_minutes: 10        # collector/bot shuncha vaqt "tirikman" demasa — ogohlantirish
+  source_silence_hours: 24           # manbadan shuncha soat post kelmasa — ogohlantirish (kanal o'chgan / bloklagan?)
+  source_error_threshold: 5          # manba ketma-ket shuncha marta xato bersa — ogohlantirish
+
+# --- Kunlik backup (services/backup.py) --------------------------------
+backup:
+  enabled: true
+  hour: 3                            # Toshkent vaqti bilan 03:00 da
+  minute: 0
+  keep: 7                            # data/backups/ da oxirgi 7 ta nusxa qoladi (ayvona_YYYY-MM-DD.db)
+  dir: "data/backups"
+  send_to_admin: true                # nusxa admin chatga fayl bo'lib ham yuboriladi
+  max_send_mb: 45                    # bundan katta fayl yuborilmaydi (Bot API chegarasi 50 MB)
+
 # --- Kanal posti ko'rinishi (processing/formatter.py) --------------------
 branding:
   channel_username: "ayvona"         # bizning kanal (imzo: "📢 @ayvona — Ayvona Jobs")

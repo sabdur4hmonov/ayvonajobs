@@ -122,3 +122,17 @@ async def count_by_status(
     if statuses:
         stmt = stmt.where(Job.status.in_(statuses))
     return {str(status): int(n) for status, n in (await session.execute(stmt)).all()}
+
+
+async def retry_failed(session: AsyncSession, now: datetime, job_ids: Sequence[int] | None) -> int:
+    """Admin /retry: ``failed`` (and ``retry``) jobs back to the queue with fresh attempts.
+    ``job_ids=None`` = all of them. Does not commit."""
+    stmt = (
+        update(Job)
+        .where(Job.status.in_((JobStatus.FAILED, JobStatus.RETRY)))
+        .values(status=JobStatus.QUEUED, attempts=0, next_retry_at=now)
+    )
+    if job_ids is not None:
+        stmt = stmt.where(Job.id.in_(list(job_ids)))
+    result = await session.execute(stmt)
+    return result.rowcount or 0

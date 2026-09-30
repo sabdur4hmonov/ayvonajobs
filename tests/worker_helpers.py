@@ -27,11 +27,25 @@ JOB_TEXT_FULL = (
 
 
 def make_settings(
-    images_root: Path | None = None, *, publisher: dict[str, Any] | None = None, **worker: Any
+    images_root: Path | None = None,
+    *,
+    publisher: dict[str, Any] | None = None,
+    db_file: Path | None = None,
+    backup_dir: Path | None = None,
+    **worker: Any,
 ) -> Settings:
+    """Test settings. Never points at the real data/ayvona.db: the backup is off unless
+    ``db_file`` + ``backup_dir`` (temporary paths) are given."""
     s = load_settings(DEFAULT_CONFIG_DIR, env_file=None)
+    env = s.env.model_copy(update={"db_path": str(db_file or "/nonexistent/test.db")})
     app = s.app.model_copy(
         update={
+            "backup": s.app.backup.model_copy(
+                update={
+                    "enabled": backup_dir is not None,
+                    "dir": str(backup_dir or "/nonexistent/backups"),
+                }
+            ),
             "publisher": s.app.publisher.model_copy(
                 update={
                     "publish_interval_seconds": 0,
@@ -45,7 +59,7 @@ def make_settings(
             ),
         }
     )
-    return s.model_copy(update={"app": app})
+    return s.model_copy(update={"app": app, "env": env})
 
 
 def make_image(root: Path, rel: str = "boshqa/1.jpg") -> Path:
@@ -154,7 +168,11 @@ class RecordingNotifier:
 
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.targets: list[int | str | None] = []
 
-    async def send(self, text: str, *, key: str | None = None) -> bool:
+    async def send(
+        self, text: str, *, key: str | None = None, chat_id: int | str | None = None
+    ) -> bool:
         self.messages.append(text)
+        self.targets.append(chat_id)
         return True

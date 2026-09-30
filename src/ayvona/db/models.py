@@ -58,6 +58,21 @@ class SourceType(StrEnum):
         return cls(type_key.split(":", 1)[0].strip().lower())
 
 
+class SourceStatus(StrEnum):
+    """Life cycle of a source row (``enabled`` is the admin's pause switch on top of it)."""
+
+    ACTIVE = "active"
+    # Added from the bot (/addsource); the collector checks it (exists? readable?) first.
+    PENDING = "pending"
+    REJECTED = "rejected"  # the check failed (reason in ``last_error``)
+    DELETED = "deleted"  # removed by the admin; kept because raw_posts reference it
+
+
+class SourceAddedVia(StrEnum):
+    YAML = "yaml"
+    BOT = "bot"
+
+
 class RawPostStatus(StrEnum):
     NEW = "new"
     PROCESSING = "processing"
@@ -132,6 +147,23 @@ class Source(Base):
     last_error: Mapped[str | None] = mapped_column(Text)
     own_usernames: Mapped[list[Any]] = mapped_column(default=list)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # Bosqich 8: the DB is the source of truth; settings.yaml only seeds new rows.
+    status: Mapped[SourceStatus] = mapped_column(
+        str_enum(SourceStatus, 16),
+        default=SourceStatus.ACTIVE,
+        server_default=SourceStatus.ACTIVE.value,
+    )
+    added_via: Mapped[SourceAddedVia] = mapped_column(
+        str_enum(SourceAddedVia, 8),
+        default=SourceAddedVia.YAML,
+        server_default=SourceAddedVia.YAML.value,
+    )
+    added_by: Mapped[int | None] = mapped_column(BigInteger)  # admin's Telegram id
+    # Old posts to take on the first poll (bot: 0 / 5 / 20); None = collector.initial_backfill
+    backfill_request: Mapped[int | None] = mapped_column(Integer)
+    # Websites (Bosqich 16): how often to check, requests per day
+    check_interval_minutes: Mapped[int | None] = mapped_column(Integer)
+    daily_limit: Mapped[int | None] = mapped_column(Integer)
 
 
 class RawPost(Base):

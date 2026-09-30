@@ -7,6 +7,7 @@ bot yet): nothing crashes, every caller gets ``None`` / a clear Uzbek message in
 from __future__ import annotations
 
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.base import BaseSession
 from aiogram.utils.token import TokenValidationError
 
@@ -51,7 +52,11 @@ def parse_chat_id(value: str | int | None) -> int | str | None:
     return "@" + v.strip("/")
 
 
-def create_bot(settings: Settings, session: BaseSession | None = None) -> Bot:
+def create_bot(
+    settings: Settings,
+    session: BaseSession | None = None,
+    default: DefaultBotProperties | None = None,
+) -> Bot:
     """A Bot for ``BOT_TOKEN``. Raises :class:`BotConfigError` (Uzbek text) if it is missing/bad.
 
     No network request is made here (the token is only checked for its shape).
@@ -60,6 +65,6 @@ def create_bot(settings: Settings, session: BaseSession | None = None) -> Bot:
     if token is None:
         raise BotConfigError(NO_TOKEN)
     try:
-        return Bot(token.get_secret_value().strip(), session=session)
+        return Bot(token.get_secret_value().strip(), session=session, default=default)
     except TokenValidationError as e:
         raise BotConfigError(BAD_TOKEN) from e
