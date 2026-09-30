@@ -23,7 +23,7 @@ Yangi rasm qo'shilsa yoki o'chirilsa — bot o'zi sezadi (restart kerak emas).
 ## Rasm talablari
 
 - **O'lcham:** 1280 × 720 px (16:9, kanal lentasida eng chiroyli). Format: JPG yoki PNG, **< 1 MB**.
-- **Uslub hamma rasmda bir xil** (brend): bir xil ranglar, bir xil shrift, burchakda kichik `@ayvona` / "Ayvona Jobs" logotipi.
+- **Uslub hamma rasmda bir xil** (brend): bir xil ranglar, bir xil shrift, burchakda kichik `@ayvonajobs` / "Ayvona Jobs" logotipi.
 - Rasmda kasb nomi o'zbekcha (masalan "SHIFOKOR"). Telefon, maosh kabi o'zgaruvchan ma'lumot **yozilmaydi**.
 - Faqat ruxsatli rasmlar: o'zingiz chizgan/yasagan, yoki bepul litsenziyali fotolar (Unsplash, Pexels).
   Boshqa kanallarning rasmlarini, tanilgan brend logotiplarini ishlatmang.

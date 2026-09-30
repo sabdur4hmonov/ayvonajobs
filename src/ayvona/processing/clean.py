@@ -82,7 +82,7 @@ class Cleaner:
         self, source: str | None, own_usernames: Iterable[str] = (), only_defaults: bool = False
     ) -> list[str]:
         rule, _ = self._rules_for(source, only_defaults)
-        own = [*own_usernames, *rule.extra_own_usernames]
+        own = [*own_usernames, *rule.extra_own_usernames, *self.defaults.extra_own_usernames]
         if source:
             own.append(source)
         return own

@@ -30,6 +30,10 @@ from ayvona.sources.base import FetchResult, SourceRateLimited
 from ayvona.sources.registry import SourceDeps
 from tests.fakes import FakeChannel, FakeSource, FakeTelethonClient
 
+BRANDING_YAML = (
+    "branding: {channel_username: kanal, channel_title: Kanal, bot_username: kanal_bot}\n"
+)
+
 SF = async_sessionmaker[AsyncSession]
 
 FAST = CollectorConfig(
@@ -321,7 +325,8 @@ async def test_stop_event_interrupts_long_sleep(session_factory: SF) -> None:
 
 async def test_build_active_sources_from_settings(session_factory: SF, tmp_path: Path) -> None:
     (tmp_path / "settings.yaml").write_text(
-        "sources:\n  - identifier: '@ish'\n  - identifier: '@off'\n    enabled: false\n",
+        "sources:\n  - identifier: '@ish'\n  - identifier: '@off'\n    enabled: false\n"
+        + BRANDING_YAML,
         encoding="utf-8",
     )
     settings = load_settings(tmp_path, env_file=None)
@@ -334,7 +339,9 @@ async def test_build_active_sources_from_settings(session_factory: SF, tmp_path:
 
 
 async def test_source_that_cannot_be_built_is_recorded(session_factory: SF, tmp_path: Path) -> None:
-    (tmp_path / "settings.yaml").write_text("sources:\n  - identifier: '@ish'\n", encoding="utf-8")
+    (tmp_path / "settings.yaml").write_text(
+        "sources:\n  - identifier: '@ish'\n" + BRANDING_YAML, encoding="utf-8"
+    )
     settings = load_settings(tmp_path, env_file=None)
     deps = SourceDeps(collector=settings.app.collector, telegram_client=None)  # not connected
 
@@ -354,7 +361,8 @@ async def test_main_end_to_end_with_fake_telegram(
     cfg_dir = tmp_path / "cfg"
     cfg_dir.mkdir()
     (cfg_dir / "settings.yaml").write_text(
-        "sources:\n  - identifier: 't.me/ish_kanal'\ncollector:\n  initial_backfill: 2\n",
+        "sources:\n  - identifier: 't.me/ish_kanal'\ncollector:\n  initial_backfill: 2\n"
+        + BRANDING_YAML,
         encoding="utf-8",
     )
     env = tmp_path / ".env"

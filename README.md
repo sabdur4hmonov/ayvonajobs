@@ -3,8 +3,8 @@
 O'zbekiston uchun Telegram ish e'lonlari tizimi:
 
 1. **Aggregator** — manba Telegram kanallardan ish e'lonlarini o'qiydi, dublikatlarni olib tashlaydi,
-   kategoriyaga ajratadi, chiroyli qilib **@ayvona** kanaliga avtomatik joylaydi.
-2. **@ayvonabot** — ommaviy bot: e'lon joylash, ish qidirish, saqlanganlar, obunalar.
+   kategoriyaga ajratadi, chiroyli qilib **@ayvonajobs** kanaliga avtomatik joylaydi.
+2. **@ayvona_jobs_bot** — ommaviy bot: e'lon joylash, ish qidirish, saqlanganlar, obunalar.
 
 To'liq reja: [docs/ROADMAP.md](docs/ROADMAP.md) · Arxitektura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
 Nima qilingani: [docs/PROGRESS.md](docs/PROGRESS.md)
@@ -110,7 +110,7 @@ uv run ruff format .              # kodni formatlash
 | `src/ayvona/sources/` | Manbalar: Telegram kanal (keyin veb-saytlar) |
 | `src/ayvona/processing/` | E'lonni tahlil qilish: normalize, dedup, extract, kategoriya, format |
 | `src/ayvona/publisher/` | Navbatdagi e'lonlarni kanalga joylash |
-| `src/ayvona/bot/` | @ayvonabot (aiogram) |
+| `src/ayvona/bot/` | @ayvona_jobs_bot (aiogram) |
 | `src/ayvona/services/` | Obunalar, eskirish, backup, statistika, admin xabarlari |
 | `src/ayvona/ai/` | Gemini (keyin, ixtiyoriy) |
 | `src/ayvona/apps/` | Ishga tushadigan jarayonlar: collector, worker, bot |

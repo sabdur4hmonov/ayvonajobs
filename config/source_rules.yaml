@@ -43,6 +43,9 @@ defaults:
     - "e'lon joylash uchun"
     - "elon joylash uchun"
     - "e'lon yoki rezyume joylash uchun"
+  # Bizning kanal va bot — hech qachon e'lon aloqasi emas (qaysi manbada uchrasa ham).
+  # Eski "@ayvona" ham qoldirildi (zararsiz).
+  extra_own_usernames: ["@ayvonajobs", "@ayvona_jobs_bot", "@ayvona"]
 
 sources:
   "@ishtoparuz_kanal":

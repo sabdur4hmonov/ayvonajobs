@@ -25,6 +25,7 @@ from ayvona.processing.formatter import (
     Formatter,
     format_phone,
     telegram_post_url,
+    tidy_address,
     truncate,
     visible_len,
 )
@@ -88,8 +89,8 @@ def test_full_template_matches_the_agreed_example(fmt: Formatter) -> None:
         "\n"
         "#sotuvchi #sotuv #toshkent\n"
         "➖➖➖➖➖➖➖➖\n"
-        "🔍 Ish qidiryapsizmi? @ayvonabot\n"
-        "📢 @ayvona — Ayvona Jobs\n"
+        "🔍 Ish qidiryapsizmi? @ayvona_jobs_bot\n"
+        "📢 @ayvonajobs — Ayvona Jobs\n"
         '<i><a href="https://t.me/manba_kanal/12345">manba</a></i>'
     )
     assert not out.fallback
@@ -115,7 +116,7 @@ def test_empty_fields_have_no_line_and_no_salary_is_negotiable(fmt: Formatter) -
 def test_user_post_has_no_source_line(fmt: Formatter) -> None:
     out = fmt.format(job()).html
     assert "manba" not in out
-    assert out.endswith("📢 @ayvona — Ayvona Jobs")
+    assert out.endswith("📢 @ayvonajobs — Ayvona Jobs")
 
 
 @pytest.mark.parametrize(
@@ -209,7 +210,7 @@ def test_details_shrink_first_when_the_limit_is_tight(settings: Settings) -> Non
         "💰 Maosh",
         "📍 Manzil",
         "+998 93 123 45 67",
-        "@ayvonabot",
+        "@ayvona_jobs_bot",
         "manba",
     ):
         assert must in out.html
@@ -236,6 +237,172 @@ def test_uzbek_cyrillic_is_transliterated(fmt: Formatter) -> None:
     assert "«Sladovo» qandolat fabrikasi" in out
     assert "Tajriba 3 yildan kam bo'lmasligi" in out
     assert not re.search(r"[Ѐ-ӿ]", out)
+
+
+# ------------------------------------------------------------------ usernames from config
+def test_real_usernames_are_in_settings(settings: Settings) -> None:
+    b = settings.app.branding
+    assert (b.channel_username, b.bot_username) == ("ayvonajobs", "ayvona_jobs_bot")
+    own = settings.source_rules.defaults.extra_own_usernames
+    assert {"@ayvonajobs", "@ayvona_jobs_bot", "@ayvona"} <= set(own)
+
+
+def test_signature_and_buttons_use_branding_from_config(settings: Settings) -> None:
+    branding = settings.app.branding.model_copy(
+        update={"channel_username": "test_kanal", "bot_username": "test_ish_bot"}
+    )
+    app = settings.app.model_copy(update={"branding": branding})
+    out = Formatter(settings.model_copy(update={"app": app})).format(job())
+    assert out.html.endswith(
+        "➖➖➖➖➖➖➖➖\n🔍 Ish qidiryapsizmi? @test_ish_bot\n📢 @test_kanal — Ayvona Jobs"
+    )
+    urls = [b.url for row in out.buttons(job_id=7) for b in row]
+    assert "https://t.me/test_ish_bot?start=save_7" in urls
+    assert "https://t.me/test_ish_bot?start=search" in urls
+    assert "ayvona" not in out.html
+
+
+# ------------------------------------------------------------------ no hashtags in the body
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "18-30 yosh; Faqat #Erkaklar; Jismonan baquvvat",
+            "18-30 yosh; Faqat erkaklar; Jismonan baquvvat",
+        ),
+        ("#Ayollar uchun", "Ayollar uchun"),
+        ("Yotoqxona bor #yotoqjoy", "Yotoqxona bor yotoqjoy"),
+        ("Xushmuomala; #Talabalarni_ham_ishga_olamiz", "Xushmuomala; Talabalarni ham ishga olamiz"),
+        ("#DIMKA Sushka va krekerlar", "DIMKA Sushka va krekerlar"),
+        (
+            "Ish joyi #Toshkent markazida",
+            "Ish joyi Toshkent markazida",
+        ),  # a place keeps its capital
+        ("C# dasturchi, site.uz/#narx, #1 kompaniya", "C# dasturchi, site.uz/#narx, #1 kompaniya"),
+        ("# Toshkent", "Toshkent"),
+        ("Oddiy  matn  (heshtegsiz)", "Oddiy  matn  (heshtegsiz)"),  # untouched
+    ],
+)
+def test_hashtags_inside_text_become_words(fmt: Formatter, text: str, expected: str) -> None:
+    assert fmt._plain(text) == expected
+
+
+def test_only_the_tag_line_has_hashtags(fmt: Formatter) -> None:
+    ex = job(
+        title="#Sotuvchi",
+        company="#Texnomart",
+        schedule="09:00–18:00 #smena",
+        requirements="18–30 yosh; Faqat #Erkaklar",
+        address="#Toshkent #Chilonzor",
+        feature_tags=("yotoqjoy",),
+    )
+    lines = fmt.format(ex, source_url=SRC).html.split("\n")
+    tag_line = lines.index("#sotuvchi #sotuv #toshkent #yotoqjoy")
+    assert not [ln for i, ln in enumerate(lines) if "#" in ln and i != tag_line]
+    assert "📋 Talablar: 18–30 yosh; Faqat erkaklar" in lines
+
+
+def test_non_place_hashtags_of_the_address_keep_their_meaning(fmt: Formatter) -> None:
+    ex = job(address="#Toshkent  #Ayollar #Erkaklar", district=None, requirements="Tajriba")
+    out = fmt.format(ex).html
+    assert "📍 Manzil: Toshkent\n" in out
+    assert "📋 Talablar: Ayollar, erkaklar; Tajriba" in out
+    assert "#Ayollar" not in out and "#Erkaklar" not in out
+
+
+def test_fallback_body_has_no_hashtags(fmt: Formatter) -> None:
+    cleaned = CleanedText(
+        text="Yangi do'kon\n#DIMKA Sushka va krekerlar\nFaqat #Ayollar\n#vakansiya #ish",
+        links=(),
+    )
+    out = fmt.format(job(confidence=0.3), cleaned).html
+    assert "DIMKA Sushka va krekerlar\nFaqat ayollar" in out
+    body = out.split("\n\n#")[0]  # everything above our tag line
+    assert "#" not in body
+
+
+# ------------------------------------------------------------------ address commas
+@pytest.mark.parametrize(
+    ("address", "expected"),
+    [
+        ("Samarqand viloyati Samarqand shahri", "Samarqand viloyati, Samarqand shahri"),
+        ("Toshkent shahar Yashnobod tumani", "Toshkent sh., Yashnobod tumani"),
+        ("Toshkent sh. Yashnobod tumani", "Toshkent sh., Yashnobod tumani"),
+        ("Toshkent shahri Toshkent", "Toshkent sh."),
+        ("Toshkent sh., Toshkent", "Toshkent sh."),
+        (
+            "Toshkent shaxar Olmazor tumani Chukursoy 82",
+            "Toshkent sh., Olmazor tumani, Chukursoy 82",
+        ),
+        ("Toshkent.Sh Mirzo Ulug'bek Tumani massiv", "Toshkent sh., Mirzo Ulug'bek tumani massiv"),
+        ("Toshkent shahar , Uchtepa tumani", "Toshkent sh., Uchtepa tumani"),
+        ("Toshkent viloyati Keles shahari", "Toshkent viloyati, Keles shahari"),
+        ("Mirobod tumani, Kuylyuk,Kompas", "Mirobod tumani, Kuylyuk, Kompas"),
+        # unchanged: no capital word after the unit / not a repeat / another word form
+        ("Toshkent shahri bo'ylab", "Toshkent shahri bo'ylab"),
+        ("Toshkent shahridan 3 km", "Toshkent shahridan 3 km"),
+        ("Toshkent viloyati, Toshkent", "Toshkent viloyati, Toshkent"),
+        ("Buxoro viloyati, G'ijduvon shahar", "Buxoro viloyati, G'ijduvon shahar"),
+    ],
+)
+def test_address_commas(fmt: Formatter, address: str, expected: str) -> None:
+    assert tidy_address(address, fmt._city_titles) == expected
+
+
+def test_address_in_the_post(fmt: Formatter) -> None:
+    samarqand = job(
+        region="samarqand",
+        regions=("samarqand",),
+        district=None,
+        address="Samarqand viloyati Samarqand shahri",
+    )
+    out = fmt.format(samarqand).html
+    assert "📍 Manzil: Samarqand viloyati, Samarqand shahri\n" in out
+    yashnobod = job(district=None, address="Toshkent shahar Yashnobod tumani")
+    assert "📍 Manzil: Toshkent sh., Yashnobod tumani\n" in fmt.format(yashnobod).html
+    # no city in the address -> ours is put first; another region named -> nothing added
+    street = job(district=None, address="Samarqand Darvoza ro'parasi")
+    assert "📍 Manzil: Toshkent sh., Samarqand Darvoza ro'parasi\n" in fmt.format(street).html
+    other = job(district=None, address="Navoiy viloyati")
+    assert "📍 Manzil: Navoiy viloyati\n" in fmt.format(other).html
+
+
+@pytest.mark.parametrize(
+    ("fixture_id", "must", "must_not"),
+    [
+        (
+            "ishtoparuz_kanal_25045",
+            [
+                "📋 Talablar: 18-30 yosh; Faqat erkaklar",
+                "📍 Manzil: Samarqand viloyati, Samarqand shahri",
+            ],
+            ["#Erkaklar"],
+        ),
+        (
+            "manavakansiya_uz_68991",
+            ["📍 Manzil: Toshkent", "Ayollar, erkaklar"],
+            ["#Ayollar", "#Erkaklar", "#Toshkent"],
+        ),
+        (
+            "ishlaUZ_rasmiy_11779",
+            ["📍 Manzil: Toshkent sh., Yakkasaroy Minglar ko'chasi 36-uy"],
+            ["#Toshkent"],
+        ),
+    ],
+)
+def test_real_posts_with_hashtags_and_addresses(
+    fixture_id: str,
+    must: list[str],
+    must_not: list[str],
+    pipeline: tuple[Classifier, Extractor, Cleaner, Formatter],
+) -> None:
+    fx = next(f for f in FIXTURES if f["id"] == fixture_id)
+    got = render_snapshot(fx, pipeline).split("\n", 1)[1]  # without the fixture title line
+    for text in must:
+        assert html.escape(text, quote=False) in got, text
+    for text in must_not:
+        assert text not in got, text
+    assert "🔍 Ish qidiryapsizmi? @ayvona_jobs_bot\n📢 @ayvonajobs — Ayvona Jobs" in got
 
 
 def test_russian_post_gets_uzbek_fields_only(fmt: Formatter) -> None:
@@ -360,8 +527,8 @@ def test_buttons(fmt: Formatter) -> None:
             ("🔗 Ariza topshirish", "https://hh.uz/vacancy/1"),
         ],
         [
-            ("⭐ Saqlash", "https://t.me/ayvonabot?start=save_42"),
-            ("🔍 Boshqa ishlar", "https://t.me/ayvonabot?start=search"),
+            ("⭐ Saqlash", "https://t.me/ayvona_jobs_bot?start=save_42"),
+            ("🔍 Boshqa ishlar", "https://t.me/ayvona_jobs_bot?start=search"),
         ],
     ]
     only_phone = fmt.format(job(usernames=())).buttons()

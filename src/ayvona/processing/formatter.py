@@ -15,13 +15,17 @@ Full template (extract confidence >= ``formatter.min_confidence``)::
 
     #sotuvchi #sotuv #toshkent
     ➖➖➖➖➖➖➖➖
-    🔍 Ish qidiryapsizmi? @ayvonabot
-    📢 @ayvona — Ayvona Jobs
+    🔍 Ish qidiryapsizmi? @ayvona_jobs_bot
+    📢 @ayvonajobs — Ayvona Jobs
     <i><a href="https://t.me/manba_kanal/12345">manba</a></i>
 
 Rules: an empty field has no line; no salary -> "Kelishiladi"; several positions -> "📌 Lavozimlar:"
 list; tags = #kasb #kategoriya #hudud + at most 2 feature tags (<= 5, no repeats); the "manba"
-line only for aggregator posts. Everything is HTML-escaped. At most 1024 characters: first the
+line only for aggregator posts. The usernames in the signature and the bot buttons come from
+``branding`` in config/settings.yaml. Only the tag line has hashtags: a hashtag inside a field or
+the text becomes a plain word ("Faqat #Erkaklar" -> "Faqat erkaklar"). The address gets commas
+between its parts ("Samarqand viloyati, Samarqand shahri", "Toshkent sh., Yashnobod tumani").
+Everything is HTML-escaped. At most 1024 characters: first the
 requirements / details shrink; title, salary, place, contacts, signature and "manba" never.
 
 Fallback (low confidence): category headline + the cleaned original text + contacts.
@@ -35,7 +39,7 @@ from __future__ import annotations
 
 import html
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from ayvona.config import Settings
@@ -91,6 +95,18 @@ _USERNAME_OR_URL_RE = re.compile(r"@\w+|\S+\.\S+/\S*|t\.me/\S+", re.IGNORECASE)
 _CONTACT_HEADER_RE = re.compile(
     r"tel|aloqa|bog'lan|murojaat|contact|telegram|phone|телефон|связ", re.IGNORECASE
 )
+# "#Erkaklar" (not "C#", "site.uz/#x", "#1"): a hashtag that starts with a letter
+_HASHTAG_RE = re.compile(r"(?<![\w/&#])#([^\W\d_]\w*)")
+_LONE_HASH_RE = re.compile(r"(?<!\S)#(?:[ \t]+|$)")
+_SENTENCE_START_RE = re.compile(r"(?:^|[\n.;:!?(•\-–—])\s*$")
+# "shahri Yakkasaroy" -> "shahri, Yakkasaroy" (only before a capital letter / a number)
+_ADDRESS_UNIT_RE = re.compile(
+    r"(?<![\w'])(viloyati|viloyat|vil\.|shahri|shahar|shaxar|shaxri|shahari|sh\.|tumani|tuman)"
+    r"(?![\w'])[ \t]+(?=([^\W_]))",
+    re.IGNORECASE,
+)
+_CITY_UNIT = r"\s*\.?\s*(?:shahri|shahar|shaxar|shaxri|shahr|sh)(?![\w'])\.?"
+_CITY_TAIL_RE = re.compile(r"\s+(?:shahri|shahar|sh\.?)$")  # "toshkent sh." names "toshkent"
 
 
 def tg_len(text: str) -> int:
@@ -169,6 +185,76 @@ def _cap(text: str) -> str:
     return text[:1].upper() + text[1:] if text[:1].islower() else text
 
 
+def _all_caps(word: str) -> bool:
+    letters = [c for c in word if c.isalpha()]
+    return len(letters) > 1 and all(c.isupper() for c in letters)
+
+
+def plain_hashtags(text: str, is_place: Callable[[str], bool] | None = None) -> str:
+    """Hashtags inside a field / the text -> plain words; only the tag line keeps ``#``.
+
+    ``"Faqat #Erkaklar"`` -> ``"Faqat erkaklar"``, ``"#Talabalar_ham"`` -> ``"Talabalar ham"``.
+    A sentence start or a place name keeps its capital letter, an all-caps word ("#DIMKA") stays.
+    """
+    if "#" not in text:
+        return text
+
+    def word(m: re.Match[str]) -> str:
+        w = m.group(1).replace("_", " ").strip()
+        if _all_caps(w):
+            return w
+        if _SENTENCE_START_RE.search(m.string[: m.start()]) or (is_place and is_place(w)):
+            return _cap(w)
+        return w.lower()
+
+    text = _LONE_HASH_RE.sub("", _HASHTAG_RE.sub(word, text))
+    return re.sub(r"(?<=\S)[ \t]{2,}", " ", text)
+
+
+def tidy_address(text: str, city_titles: Sequence[str] = ()) -> str:
+    """Commas between the parts of an address, no repeated city.
+
+    ``"Samarqand viloyati Samarqand shahri"`` -> ``"Samarqand viloyati, Samarqand shahri"``;
+    ``"Toshkent shahar Yashnobod tumani"`` -> ``"Toshkent sh., Yashnobod tumani"``;
+    ``"Toshkent shahri Toshkent"`` -> ``"Toshkent sh."``. ``city_titles``: region titles like
+    ``"Toshkent sh."`` — every spelling of that city ("Toshkent shahri", "Toshkent.Sh") becomes it.
+    """
+    for title in city_titles:
+        name = title.removesuffix(" sh.")
+        if name == title:
+            continue
+
+        def city(m: re.Match[str], title: str = title) -> str:
+            nxt = m.string[m.end() :].lstrip()[:1]
+            # "Toshkent shahri bo'ylab" reads better as it is
+            return m.group(0) if nxt.isalpha() and nxt.islower() else title
+
+        text = re.sub(rf"(?<![\w']){re.escape(name)}{_CITY_UNIT}", city, text, flags=re.IGNORECASE)
+
+    def unit(m: re.Match[str]) -> str:
+        u = m.group(1)
+        if m.start() > 0 and u[:1].isupper() and u[1:].islower():  # "Mirobod Tumani" -> "tumani"
+            u = u.lower()
+        nxt = m.group(2)
+        return u + (", " if nxt.isupper() or nxt.isdigit() else " ")
+
+    text = _ADDRESS_UNIT_RE.sub(unit, text)
+    text = re.sub(r"\s+,", ",", text)
+    text = re.sub(r",(?=[^\s\d])", ", ", text)
+    text = re.sub(r",{2,}", ",", text)
+    # drop a part that only repeats a name said before: "Toshkent sh., Toshkent"
+    parts: list[str] = []
+    seen: set[str] = set()
+    for part in text.split(", "):
+        key = fold(part).strip(" .")
+        if key and key in seen:
+            continue
+        parts.append(part)
+        seen.add(key)
+        seen.add(_CITY_TAIL_RE.sub("", key).strip(" ."))
+    return ", ".join(parts).strip(" ,")
+
+
 _TIME_RANGE_RE = re.compile(
     r"(\d{1,2}[:.]\d{2})\s*(?:-|–|—|до|to|dan|gacha)?\s*(\d{1,2}[:.]\d{2})", re.IGNORECASE
 )
@@ -201,7 +287,7 @@ class FormattedPost:
     tags: tuple[str, ...]
     username: str | None = None  # first @username -> "📩 Murojaat"
     apply_url: str | None = None
-    bot_username: str = "ayvonabot"
+    bot_username: str = ""  # always given by Formatter (branding in settings.yaml)
     shortened: tuple[str, ...] = field(default=())  # what was cut to fit the limit
 
     @property
@@ -258,6 +344,26 @@ class Formatter:
             key: KeywordSet([reg.title, *reg.keywords])
             for key, reg in settings.regions.regions.items()
         }
+        regions = list(settings.regions.regions.values())
+        # "Navoiy viloyati" names a region; "Samarqand" alone may be "Samarqand Darvoza" (Toshkent)
+        self._region_titles = KeywordSet(reg.title for reg in regions)
+        self._place_names = KeywordSet(
+            n
+            for reg in regions
+            for n in (
+                reg.title,
+                *reg.keywords,
+                *reg.districts,
+                *(k for kws in reg.districts.values() for k in kws),
+            )
+        )
+        self._city_titles = [reg.title for reg in regions]
+
+    def _is_place(self, word: str) -> bool:
+        return bool(self._place_names.find(fold(word)))
+
+    def _plain(self, text: str) -> str:
+        return plain_hashtags(text, self._is_place)
 
     # ------------------------------------------------------------------ fields
     def _title(self, ex: Extraction, lang: Language | None) -> str:
@@ -284,7 +390,7 @@ class Formatter:
     def _positions(self, ex: Extraction, lang: Language | None) -> list[str]:
         if not ex.multi:
             return []
-        return [_cap(_latin(self.translator.exact(p) or p)) for p in ex.positions]
+        return [_cap(self._plain(_latin(self.translator.exact(p) or p))) for p in ex.positions]
 
     def _salary(self, ex: Extraction, lang: Language | None) -> str:
         if ex.salary_min is None and ex.salary_max is None:
@@ -293,7 +399,7 @@ class Formatter:
                 return T_NEGOTIABLE
             if lang in (Language.RU, Language.EN) and not _neutral(text):
                 return T_NEGOTIABLE
-            return truncate(_latin(text), 80)
+            return truncate(self._plain(_latin(text)), 80)
         cur = CURRENCY_NAMES.get(ex.currency or UZS, ex.currency or "")
         lo, hi = ex.salary_min, ex.salary_max
         glue = "" if cur == "so'm" else " "  # "4 000 000 so'mdan", "500 $ dan"
@@ -330,24 +436,47 @@ class Formatter:
             return f"{reg.title}, {ex.district}{suffix}"
         return reg.title
 
-    def _place(self, ex: Extraction, lang: Language | None) -> str | None:
+    def _place(self, ex: Extraction, lang: Language | None) -> tuple[str | None, list[str]]:
+        """The "📍 Manzil" line + words that were hashtags in it but are not places
+        ("#Ayollar #Erkaklar" — they go to the requirements, so the meaning stays)."""
         region = self._region_part(ex)
         address = None
+        extra: list[str] = []
         if ex.address and lang not in (Language.RU, Language.EN):
-            address = truncate(_latin(ex.address), 120)
+            address, extra = self._address_tags(_latin(ex.address))
+            address = truncate(tidy_address(address, self._city_titles), 120)
         if address:
             # "Chilonzor 9-kvartal" -> "Toshkent sh., Chilonzor 9-kvartal";
-            # "Toshkent, Yunusobod" names the city already.
+            # "Toshkent, Yunusobod" (or "Navoiy viloyati") names the place already.
             reg = self.settings.regions.regions.get(ex.region or "")
             names = self._region_names.get(ex.region or "")
-            if reg is not None and names is not None and not names.find(fold(address)):
+            folded = fold(address)
+            if (
+                reg is not None
+                and names is not None
+                and not names.find(folded)
+                and not self._region_titles.find(folded)
+            ):
                 address = f"{reg.title}, {address}"
             place = address
         else:
             place = region
         if ex.is_remote:
-            return f"{T_REMOTE}, {place}" if place else T_REMOTE
-        return place
+            place = f"{T_REMOTE}, {place}" if place else T_REMOTE
+        return place, extra
+
+    def _address_tags(self, text: str) -> tuple[str, list[str]]:
+        """``"#Toshkent #Ayollar #Erkaklar"`` -> ``("Toshkent", ["ayollar", "erkaklar"])``."""
+        extra: list[str] = []
+
+        def drop(m: re.Match[str]) -> str:
+            if self._is_place(m.group(1)):
+                return m.group(0)
+            extra.append(m.group(1).replace("_", " ").lower())
+            return ""
+
+        text = self._plain(_HASHTAG_RE.sub(drop, text))
+        return re.sub(r"\s{2,}", " ", text).strip(" ,;"), list(dict.fromkeys(extra))
 
     def _tags(self, ex: Extraction) -> list[str]:
         cats = self.settings.categories
@@ -487,7 +616,7 @@ class Formatter:
         n = self.cfg.max_contacts
         fallback = ex.confidence < self.cfg.min_confidence and cleaned is not None
         p = _Parts(
-            title=_cap(self._title(ex, lang)),
+            title=_cap(self._plain(self._title(ex, lang))),
             phones=list(ex.phones[:n]),
             usernames=list(ex.usernames[:n]),
             emails=list(ex.emails[:2]),
@@ -505,24 +634,29 @@ class Formatter:
                 # The text itself is not shown, so a found title (even an unsure one) says
                 # more than the generic headline.
                 if ex.title:
-                    p.title = _cap(self._title(ex, lang))
+                    p.title = _cap(self._plain(self._title(ex, lang)))
                 p.salary = self._salary(ex, lang)
-                p.place = self._place(ex, lang)
+                p.place, _ = self._place(ex, lang)
                 p.full_info = True
             else:
                 assert cleaned is not None
-                p.body, p.body_links = _fallback_body(cleaned, p.phones, p.usernames)
+                p.body, p.body_links = _fallback_body(
+                    cleaned, p.phones, p.usernames, is_place=self._is_place
+                )
         else:
             if ex.company and not (ex.multi and ex.title_source == "positions"):
-                p.company = truncate(_latin(ex.company), 80)
+                p.company = truncate(self._plain(_latin(ex.company)), 80)
             p.positions = self._positions(ex, lang)
             p.salary = self._salary(ex, lang)
-            p.place = self._place(ex, lang)
+            p.place, place_words = self._place(ex, lang)
             schedule = _schedule_numbers(ex.schedule) if foreign and ex.schedule else ex.schedule
             if schedule:
-                p.schedule = truncate(_latin(schedule), 120)
+                p.schedule = truncate(self._plain(_latin(schedule)), 120)
+            requirements = [_cap(", ".join(place_words))] if place_words and not foreign else []
             if ex.requirements and not foreign:
-                p.requirements = truncate(_latin(ex.requirements), 400)
+                requirements.append(self._plain(_latin(ex.requirements)))
+            if requirements:
+                p.requirements = truncate("; ".join(requirements), 400)
             p.full_info = foreign
 
         caption, shortened = self._fit(p, source_url)
@@ -548,10 +682,14 @@ def _contact_only(line: str, phones: set[str], users: set[str]) -> bool:
 
 
 def _fallback_body(
-    cleaned: CleanedText, phones: Sequence[str] = (), usernames: Sequence[str] = ()
+    cleaned: CleanedText,
+    phones: Sequence[str] = (),
+    usernames: Sequence[str] = (),
+    is_place: Callable[[str], bool] | None = None,
 ) -> tuple[str, list[tuple[str, str]]]:
     """Cleaned original text in Latin, without the source's hashtag lines and without lines that
-    only repeat the contacts (they are listed under the text); hidden links kept."""
+    only repeat the contacts (they are listed under the text); hidden links kept. Hashtags left
+    inside the lines become plain words (only our tag line has hashtags)."""
     shown_phones = set(phones)
     shown_users = {canon_username(u) for u in usernames}
     lines: list[str] = []
@@ -565,9 +703,13 @@ def _fallback_body(
             if lines and _CONTACT_HEADER_RE.search(lines[-1]) and lines[-1].rstrip().endswith(":"):
                 lines.pop()
             continue
-        lines.append(ln)
+        lines.append(plain_hashtags(ln, is_place))
     body = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
-    links = [(_latin(lk.text), lk.url) for lk in cleaned.links if not lk.button and lk.text]
+    links = [
+        (plain_hashtags(_latin(lk.text), is_place), lk.url)
+        for lk in cleaned.links
+        if not lk.button and lk.text
+    ]
     return body, links
 
 

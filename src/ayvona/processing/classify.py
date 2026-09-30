@@ -158,7 +158,11 @@ class Classifier:
 
     def own_usernames(self, post: PostInput) -> list[str]:
         rule = self.source_rules.for_source(post.source)
-        own = [*post.own_usernames, *rule.extra_own_usernames]
+        own = [
+            *post.own_usernames,
+            *rule.extra_own_usernames,
+            *self.source_rules.defaults.extra_own_usernames,
+        ]
         if post.source:
             own.append(post.source)
         return own

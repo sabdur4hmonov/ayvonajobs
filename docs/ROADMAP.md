@@ -48,7 +48,7 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] Hashtaglar: `#dasturchi #toshkent` — kanal ichida bosib qidirish uchun
 - [ ] Kengaytiriladigan manbalar (keyin 2–3 sayt)
 
-**Ommaviy bot @ayvonabot (2-qism)** — asosiy menyu: 📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar
+**Ommaviy bot @ayvona_jobs_bot (2-qism)** — asosiy menyu: 📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar
 - [ ] E'lon joylash: qadamma-qadam forma, **aloqa majburiy** (telefon tugmasi yoki @username), ko'rib chiqish, tasdiqlash
 - [ ] Limitlar (masalan kuniga 2 e'lon), spam / taqiqlangan so'z / **firibgarlik** filtrlari ("oldindan to'lov", "chet elga viza uchun pul"...)
 - [ ] Ish qidirish: kategoriya → hudud → maosh → natijalar (eng yangisi birinchi), kalit so'z bilan qidirish
@@ -74,9 +74,9 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [ ] Claude Code — docs.claude.com'dagi Windows ko'rsatmasi bo'yicha, keyin `claude` bilan Pro akkauntga kiring
 
 **Telegram:**
-- [ ] Kanal yarating: nomi **Ayvona Jobs**, username **@ayvona** (bo'sh bo'lsa)
-- [ ] @BotFather → `/newbot` → username **@ayvonabot** yoki **@ayvona_jobs_bot**.
-      ⚠️ Bot username'i albatta `bot` bilan tugashi kerak, shuning uchun `@ayvona` faqat kanalga bo'ladi.
+- [ ] Kanal yarating: nomi **Ayvona Jobs**, username **@ayvonajobs** (bo'sh bo'lsa)
+- [ ] @BotFather → `/newbot` → username **@ayvona_jobs_bot**.
+      ⚠️ Bot username'i albatta `bot` bilan tugashi kerak, shuning uchun `@ayvonajobs` faqat kanalga bo'ladi.
 - [ ] Botni kanalga **admin** qiling (post joylash + tahrirlash huquqi)
 - [ ] Admin chat: o'zingiz uchun yopiq guruh yarating, botni qo'shing (xatolar, backup shu yerga keladi)
 - [ ] my.telegram.org → API development tools → `API_ID` va `API_HASH` oling
@@ -490,7 +490,7 @@ Testlar: AI mock — muvaffaqiyat, 429, timeout, noto'g'ri JSON → hammasida e'
 **16.0 — umumiy asos (bir marta):**
 ```text
 docs/WEB_SOURCES.md ni o'qi. sources/web/base.py: WebSource(BaseSource) — httpx (User-Agent "AyvonaJobsBot/1.0
-(+https://t.me/ayvona)", timeout, retry, 429/5xx da kutish), har manba uchun minimal so'rov oralig'i va
+(+https://t.me/ayvonajobs)", timeout, retry, 429/5xx da kutish), har manba uchun minimal so'rov oralig'i va
 kunlik limit (settings.yaml: web_sources.<nom>.interval_minutes, max_requests_per_day). RawItem ga
 url, apply_url, source_name ("Himalayas"), location_restrictions qo'sh. Formatter: veb-manbada oxirgi qator
 <i>manba: <a href="URL">Sayt nomi</a></i>, "🔗 Ariza topshirish" tugmasi. Xalqaro masofaviy e'lonlar uchun

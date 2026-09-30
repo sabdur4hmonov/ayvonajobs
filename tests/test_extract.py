@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from ayvona.config import DEFAULT_CONFIG_DIR, load_settings
+from ayvona.processing.classify import PostInput
 from ayvona.processing.extract import Extraction, Extractor
 from tests.post_fixtures import REGRESSIONS_DIR, load_dir, to_post
 
@@ -78,3 +79,13 @@ def test_low_quality_post_is_not_published(extractor: Extractor) -> None:
     got = run_extract(extractor, fx)
     assert got.low_quality and not got.publish
     assert got.has_contact  # the form link is kept — the admin report shows it
+
+
+def test_our_channel_and_bot_are_never_contacts(extractor: Extractor) -> None:
+    """source_rules.yaml -> defaults.extra_own_usernames (our channel, bot and the old name)."""
+    text = (
+        "Sotuvchi kerak\nMaosh: 5 000 000 so'm\nAloqa: @hr_dokon, +998901234567\n"
+        "Boshqa ishlar: @ayvonajobs · @ayvona_jobs_bot · @ayvona"
+    )
+    got = extractor.extract(PostInput(text=text, source="@boshqa_kanal"))
+    assert [u.lower() for u in got.usernames] == ["@hr_dokon"]

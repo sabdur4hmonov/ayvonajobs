@@ -139,7 +139,7 @@ async def add_job(
             formatted_text=text,
             buttons=buttons
             if buttons is not None
-            else [[{"text": "⭐ Saqlash", "url": "https://t.me/ayvonabot?start=save_1"}]],
+            else [[{"text": "⭐ Saqlash", "url": "https://t.me/ayvona_jobs_bot?start=save_1"}]],
             status=status,
             attempts=attempts,
             next_retry_at=next_retry_at,

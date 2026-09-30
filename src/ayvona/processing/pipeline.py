@@ -225,7 +225,7 @@ class Pipeline:
         self.formatter = Formatter(settings)
         self.index = DedupIndex()
         self._index_loaded_at: datetime | None = None
-        self._config_own: set[str] = set()
+        self._config_own: set[str] = set(settings.source_rules.defaults.extra_own_usernames)
         for s in settings.app.sources:
             self._config_own.add(s.identifier)
             self._config_own.update(s.own_usernames)

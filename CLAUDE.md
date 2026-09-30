@@ -5,8 +5,8 @@ This file is loaded automatically by Claude Code in every session. Keep it short
 ## What this project is
 **Ayvona Jobs** ("I wanna job") — a Telegram job-board system for Uzbekistan.
 1. **Aggregator** — reads job posts from source Telegram channels (Telethon, user account), dedups, categorizes,
-   reformats them with regex (no AI in v1) and auto-publishes to our channel **@ayvona** via Bot API.
-2. **Public bot** (**@ayvonabot** — bot usernames must end in "bot") — main menu:
+   reformats them with regex (no AI in v1) and auto-publishes to our channel **@ayvonajobs** via Bot API.
+2. **Public bot** (**@ayvona_jobs_bot** — bot usernames must end in "bot") — main menu:
    📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar.
    Anyone can submit a job via a step-by-step form; job seekers search by category / region / salary / keyword
    (newest first), save favorites, and subscribe to alerts.

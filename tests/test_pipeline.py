@@ -87,7 +87,7 @@ async def test_job_post_becomes_a_queued_job(session_factory: SF) -> None:
     assert job.formatted_text and "Moddiy ashyoviy" in job.formatted_text
     assert f"https://t.me/Buxgalteriyaishorinlarii/{fx['external_id']}" in job.formatted_text
     urls = [b["url"] for r in job.buttons or [] for b in r]
-    assert f"https://t.me/ayvonabot?start=save_{job.id}" in urls
+    assert f"https://t.me/ayvona_jobs_bot?start=save_{job.id}" in urls
     # collecting window: 20 minutes after it was posted (5 minutes ago)
     assert job.next_retry_at is not None
     wait = job.next_retry_at - utcnow()

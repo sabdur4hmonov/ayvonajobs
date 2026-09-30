@@ -1,0 +1,23 @@
+{
+  "title": "Talablarda 'Faqat #Erkaklar', manzil 'Samarqand viloyati Samarqand shahri' -> vergul",
+  "source": "@ishtoparuz_kanal",
+  "external_id": "25045",
+  "grouped_id": null,
+  "has_media": true,
+  "media_type": "photo",
+  "posted_at": "2026-09-29T06:34:21+00:00",
+  "text": "#ISH_BOR\n\"SAMSIFAT GILAM YUVISH KORXONASI\" ishga taklif qiladi\n\n✅Gilam yuvuvchi kerak\n\n💸OYLIK: 4.500.000 dan 9.000.000 gacha\n\n❗️Talablar:\n🔋18-30 yosh\n🙋‍♂Faqat #Erkaklar\n💪Jismonan baquvvat\n\n☀️Qulayliklar:\n📌Yotoqxona mavjud\n📌3 mahal issiq ovqat \n📌Bepul Wi fi\n📌Korxona xizmatlariga chegirmalar\n📌Karyera va muntazam oʻsish imkoniyati\n📌Oyliklar oʻz vaqtida beriladi ( har 15chi sanada avans beriladi)\n\n⏰ISH VAQTI: 8:00 dan 20:00 gacha\n\n\n📍MANZIL: Samarqand viloyati Samarqand shahri \n🎯MOʻLJAL: SamGASI instituti\n\n☎️Bogʻlanish 👇\n📞Tel:+998888848181\nTg: @Orzu_Samsifat",
+  "extra": {},
+  "expected": {
+    "kind": "job",
+    "region": "samarqand",
+    "title_contains": "Gilam yuvuvchi",
+    "usernames": [
+      "@Orzu_Samsifat"
+    ],
+    "phones": [
+      "+998888848181"
+    ],
+    "note": "Postda: talablar ichida '#Erkaklar' (oddiy so'z bo'lishi kerak: 'Faqat erkaklar'), manzil vergulsiz: 'Samarqand viloyati, Samarqand shahri' bo'lishi kerak"
+  }
+}

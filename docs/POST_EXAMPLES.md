@@ -2110,8 +2110,8 @@ note: 'Muddat hali o''tmagan bo''lsa: job, moliya/moliyachi, 7-10 mln, Olmaliq, 
 
 #sotuvchi #toshkent
 ➖➖➖➖➖➖➖➖
-🔍 Ish qidiryapsizmi? @ayvonabot
-📢 @ayvona — Ayvona Jobs
+🔍 Ish qidiryapsizmi? @ayvona_jobs_bot
+📢 @ayvonajobs — Ayvona Jobs
 <i><a href="https://t.me/manba_kanal/12345">manba</a></i>
 ```
 Tugmalar: `📩 Murojaat` (username bo'lsa) · `🔗 Ariza topshirish` (faqat apply_url bo'lsa) · `⭐ Saqlash` · `🔍 Boshqa ishlar`
@@ -2139,7 +2139,7 @@ Foydalanuvchi e'lonlarida (bot orqali) manba qatori bo'lmaydi.
 
 #sotuvchi
 ➖➖➖➖➖➖➖➖
-🔍 Ish qidiryapsizmi? @ayvonabot
-📢 @ayvona — Ayvona Jobs
+🔍 Ish qidiryapsizmi? @ayvona_jobs_bot
+📢 @ayvonajobs — Ayvona Jobs
 <i><a href="https://t.me/manba_kanal/12345">manba</a></i>
 ```

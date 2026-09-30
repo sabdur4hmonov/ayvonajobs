@@ -128,9 +128,9 @@ backup:
 
 # --- Kanal posti ko'rinishi (processing/formatter.py) --------------------
 branding:
-  channel_username: "ayvona"         # bizning kanal (imzo: "📢 @ayvona — Ayvona Jobs")
+  channel_username: "ayvonajobs"     # bizning kanal (imzo: "📢 @ayvonajobs — Ayvona Jobs")
   channel_title: "Ayvona Jobs"
-  bot_username: "ayvonabot"          # ommaviy bot (imzo va "⭐ Saqlash" / "🔍 Boshqa ishlar" tugmalari)
+  bot_username: "ayvona_jobs_bot"    # ommaviy bot (imzo "🔍 Ish qidiryapsizmi? @ayvona_jobs_bot" va tugmalar)
 
 formatter:
   min_confidence: 0.7                # extract ishonchi shundan past bo'lsa — fallback shablon (tozalangan asl matn)

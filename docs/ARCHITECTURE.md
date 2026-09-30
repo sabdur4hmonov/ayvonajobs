@@ -22,10 +22,10 @@ flowchart LR
       AL[alerts / expiry / backup / stats]
     end
     subgraph Bot
-      B[@ayvonabot<br/>aiogram]
+      B[@ayvona_jobs_bot<br/>aiogram]
     end
     DB[(SQLite<br/>ayvona.db)]
-    CH[[Kanal @ayvona]]
+    CH[[Kanal @ayvonajobs]]
     ADM[Admin chat]
 
     TG --> C --> DB

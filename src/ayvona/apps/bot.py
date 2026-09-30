@@ -1,4 +1,4 @@
-"""Bot process (@ayvonabot). For now only the admin commands (Bosqich 8); the public menu
+"""Bot process (@ayvona_jobs_bot). For now only the admin commands (Bosqich 8); the public menu
 comes in Bosqich 10.
 
 Also: ``heartbeat:bot`` every minute and a monitor that watches the worker (the worker watches

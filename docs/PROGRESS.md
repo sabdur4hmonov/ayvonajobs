@@ -283,7 +283,7 @@ Ko'rish: `uv run python scripts/extract_report.py` (`--jobs`, `--no-contact`, `-
    ish vaqti o'chadi → teglar. Lavozim, maosh, aloqa, imzo, manba — hech qachon. Talablar oldindan 400, manzil 120
    belgigacha. Hamma matn `html.escape`.
 10. **Tugmalar:** `FormattedPost.buttons(job_id)` — 1-qator `📩 Murojaat` (birinchi @username) + `🔗 Ariza topshirish`
-    (apply_url), 2-qator `⭐ Saqlash` (`t.me/ayvonabot?start=save_<id>`; job id kerak — Bosqich 7 da beriladi) +
+    (apply_url), 2-qator `⭐ Saqlash` (`t.me/ayvona_jobs_bot?start=save_<id>`; job id kerak — Bosqich 7 da beriladi) +
     `🔍 Boshqa ishlar` (`?start=search`). Kanal/bot nomlari `settings.yaml: branding` da (kodda emas).
 11. **Rasmlar:** `category_images` (bitta rasm/kategoriya) → **`images`** jadvali (ARCHITECTURE §4): kasb, fayl yo'li,
     sha256, `telegram_file_id`, `times_used`, `last_used_at`, `is_placeholder`. Navbat = **eng uzoq ishlatilmagani**
@@ -645,13 +645,13 @@ uv run alembic upgrade head            # bazani yangilaydi (3 ta yangi migratsiy
 ```
 
 **a) Bot yarating** — Telegram'da @BotFather:
-1. `/newbot` → nomi: `Ayvona Jobs` → username: `ayvonabot` (band bo'lsa `ayvona_jobs_bot`).
+1. `/newbot` → nomi: `Ayvona Jobs` → username: `ayvona_jobs_bot`.
 2. Bergan tokenni nusxalang (`123456789:AAE...`). Hech kimga bermang.
 
-**b) Test kanal va admin guruh oching** (haqiqiy @ayvona emas!):
+**b) Test kanal va admin guruh oching** (haqiqiy @ayvonajobs emas!):
 1. Yangi kanal: masalan "Ayvona TEST" (yopiq bo'lsa ham bo'ladi) → Sozlamalar → Administratorlar → botni qo'shing,
    "Xabar joylash" va "Xabarlarni tahrirlash" huquqini bering. Kanalga istalgan bitta post yozing.
-2. Yangi guruh: "Ayvona admin" → botni qo'shing → guruhga `/start@ayvonabot` yozing (bot nomingiz bilan).
+2. Yangi guruh: "Ayvona admin" → botni qo'shing → guruhga `/start@ayvona_jobs_bot` yozing (bot nomingiz bilan).
 3. Botga shaxsiy chatda `/start` yozing.
 
 **c) `.env` ni to'ldiring:**
@@ -721,7 +721,7 @@ Kutilgan natija: `632 passed`, `All checks passed!`.
 - Backup: `uv run python scripts/backup_now.py --send` → guruhga `ayvona_YYYY-MM-DD.db` fayli keladi
   (odatda har kuni 03:00 da o'zi).
 
-**Hammasi test kanalda yaxshi bo'lsa:** `.env` da `CHANNEL_ID` ni haqiqiy `@ayvona` ga almashtiring (bot u yerda ham admin
+**Hammasi test kanalda yaxshi bo'lsa:** `.env` da `CHANNEL_ID` ni haqiqiy `@ayvonajobs` ga almashtiring (bot u yerda ham admin
 bo'lsin) va ROADMAP'dagi Bosqich 7 "Test kanalda tekshirish" katagini belgilang. Keyin — Bosqich 9 (server).
 
 Muammo bo'lsa, log oxirini menga yuboring:
@@ -729,3 +729,25 @@ Muammo bo'lsa, log oxirini menga yuboring:
 Get-Content data\logs\worker_*.log -Tail 50
 Get-Content data\logs\bot_*.log -Tail 50
 ```
+
+
+---
+
+## Tuzatish: haqiqiy username'lar, matnda heshteg yo'q, manzilda vergul (2026-09-30)
+
+- **Username'lar:** kanal **@ayvonajobs**, bot **@ayvona_jobs_bot**. Faqat `config/settings.yaml` → `branding` da turadi
+  (`config.py` da standart qiymat yo'q — yozilmasa dastur ishga tushmaydi). Post tagi:
+  `🔍 Ish qidiryapsizmi? @ayvona_jobs_bot` / `📢 @ayvonajobs — Ayvona Jobs`; "⭐ Saqlash" / "🔍 Boshqa ishlar"
+  tugmalari ham shu botga. Docs, deploy, README, CLAUDE.md, `.env.example` yangilandi (`.env` ga tegilmadi).
+- **O'z akkauntlarimiz:** `config/source_rules.yaml` → `defaults.extra_own_usernames`:
+  `@ayvonajobs`, `@ayvona_jobs_bot`, eski `@ayvona` — hech qaysi manbada e'lon aloqasi bo'lib olinmaydi.
+- **Heshteglar:** faqat oxirgi teglar qatorida. Maydonlar va fallback matn ichidagi heshteg oddiy so'z bo'ladi
+  ("Faqat #Erkaklar" → "Faqat erkaklar"). Manzildagi joy bo'lmagan heshteglar ("#Ayollar #Erkaklar") manzildan
+  olinib, ma'nosi yo'qolmasligi uchun "📋 Talablar" boshiga yoziladi.
+- **Manzil:** qismlar orasida vergul ("Samarqand viloyati, Samarqand shahri", "Toshkent sh., Yashnobod tumani"),
+  "Toshkent shahri/shahar/shaxar" → "Toshkent sh.", takror shahar nomi olib tashlanadi ("Toshkent shahri Toshkent" →
+  "Toshkent sh."). "Toshkent shahri bo'ylab" kabi iboralar o'zgarmaydi.
+- Testlar: yangi 3 ta regression fixture (`ishtoparuz_kanal_25045`, `manavakansiya_uz_68991`, `ishlaUZ_rasmiy_11779`),
+  snapshot'lar yangilandi. `uv run pytest` → 677 passed, `uv run ruff check .` toza.
+- Preview (`uv run python scripts/preview_posts.py`): 680 postda matn ichida heshteg qolmadi (avval 19 ta).
+- Ma'lum: manba matnidagi xatolar ("Toahkent shahri") shundayligicha qoladi.

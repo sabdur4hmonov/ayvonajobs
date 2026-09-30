@@ -296,8 +296,9 @@ class Extractor:
         return self._rules[key]
 
     def _own_usernames(self, post: PostInput) -> list[str]:
-        rule = self.settings.source_rules.for_source(post.source)
-        own = [*post.own_usernames, *rule.extra_own_usernames]
+        rules = self.settings.source_rules
+        rule = rules.for_source(post.source)
+        own = [*post.own_usernames, *rule.extra_own_usernames, *rules.defaults.extra_own_usernames]
         if post.source:
             own.append(post.source)
         return own

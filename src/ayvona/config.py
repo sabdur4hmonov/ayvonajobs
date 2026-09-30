@@ -174,11 +174,14 @@ class BackupConfig(BaseModel):
 
 
 class BrandingConfig(BaseModel):
-    """Our channel and bot (post signature, deep-link buttons). Usernames without ``@``."""
+    """Our channel and bot (post signature, deep-link buttons). Usernames without ``@``.
 
-    channel_username: str = "ayvona"
-    channel_title: str = "Ayvona Jobs"
-    bot_username: str = "ayvonabot"
+    No defaults on purpose: the real usernames live only in ``config/settings.yaml``.
+    """
+
+    channel_username: str
+    channel_title: str
+    bot_username: str
 
     @field_validator("channel_username", "bot_username")
     @classmethod
@@ -208,7 +211,7 @@ class AppConfig(BaseModel):
     worker: WorkerConfig = Field(default_factory=WorkerConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
     backup: BackupConfig = Field(default_factory=BackupConfig)
-    branding: BrandingConfig = Field(default_factory=BrandingConfig)
+    branding: BrandingConfig
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 
@@ -334,6 +337,8 @@ class SourceRuleDefaults(BaseModel):
     phone_link_pattern: str | None = None
     strip_url_params: list[str] = Field(default_factory=list)
     strip_lines: list[str] = Field(default_factory=list)
+    # Our own channel / bot: never a contact of a job, whatever the source
+    extra_own_usernames: list[str] = Field(default_factory=list)
 
 
 class SourceRulesConfig(BaseModel):

@@ -10,6 +10,10 @@ from ayvona.config import (
     load_settings,
 )
 
+BRANDING_YAML = (
+    "branding: {channel_username: kanal, channel_title: Kanal, bot_username: kanal_bot}\n"
+)
+
 
 def test_repository_config_loads() -> None:
     s = load_settings(DEFAULT_CONFIG_DIR, env_file=None)
@@ -70,7 +74,7 @@ def test_sources_from_yaml(tmp_path: Path) -> None:
         "    identifier: '@boshqa'\n"
         "    enabled: false\n"
         "collector:\n"
-        "  initial_backfill: 5\n",
+        "  initial_backfill: 5\n" + BRANDING_YAML,
         encoding="utf-8",
     )
     s = load_settings(tmp_path, env_file=None)
