@@ -751,3 +751,60 @@ Get-Content data\logs\bot_*.log -Tail 50
   snapshot'lar yangilandi. `uv run pytest` → 677 passed, `uv run ruff check .` toza.
 - Preview (`uv run python scripts/preview_posts.py`): 680 postda matn ichida heshteg qolmadi (avval 19 ta).
 - Ma'lum: manba matnidagi xatolar ("Toahkent shahri") shundayligicha qoladi.
+
+
+---
+
+## Skript: navbatdagi e'lonlarni hozirgi formatter bilan qayta formatlash (2026-09-30)
+
+**Muammo:** formatter pipeline paytida ishlaydi, tayyor matn/tugmalar `jobs` da saqlanadi. Formatter o'zgargach
+(username'lar `branding` dan, heshteg va manzil tozalash) navbatdagi joblar eski matnda qolgan edi
+(footerda `@ayvonabot` / `@ayvona`, tugmalarda eski bot).
+
+- **`scripts/reformat_queued.py [--dry-run] [--force]`** → `services/reformat.py`.
+  - Faqat `queued` / `retry`. `published`, `sending`, `failed` ga tegilmaydi — UPDATE shartli
+    (`status in (queued, retry)` **va** `raw_post_id` o'zgarmagan), shu orada publisher olib ketgan yoki
+    to'liqroq nusxa almashtirgan job ustidan yozilmaydi.
+  - `jobs` da formatter uchun yetarli maydon yo'q (til, lavozimlar ro'yxati, email, manzil qismlari...),
+    shuning uchun job `raw_posts` dagi asl matndan qayta quriladi: extract → clean → format (pipeline bilan
+    bir xil kod: yangi `Pipeline.render()` va `Pipeline.post_of_job()`). Dedup ishlamaydi, indeks va
+    `raw_posts` ga tegilmaydi, yangi job ochilmaydi — mavjud job yangilanadi (matn, tugmalar va extract
+    ustunlari: title, maosh, manzil... — matn bilan mos bo'lishi uchun).
+  - Hozirgi qoidalar bo'yicha aloqasi yo'q / sifatsiz bo'lib qolgan job, foydalanuvchi e'loni (raw post yo'q)
+    — o'tkazib yuboriladi (eski matn qoladi), sababi ro'yxatda chiqadi.
+  - Yozishdan oldin backup: `data/backups/reformat/ayvona_YYYY-MM-DD_HHMMSS_before_reformat.db`
+    (`services/backup.make_backup` ga ixtiyoriy `name` qo'shildi; kunlik backup'larga tegmaydi).
+  - Worker `heartbeat` i 2.5 daqiqadan yangi bo'lsa — to'xtaydi ("avval worker'ni to'xtating");
+    `--dry-run` da faqat ogohlantiradi; `--force` bilan baribir davom etadi.
+  - Har job alohida tranzaksiyada; qayta ishga tushirish xavfsiz (ikkinchi marta "O'zgarishsiz").
+  - Oxirida: nechta job yangilandi / o'zgarishsiz / o'tkazib yuborildi + 3 ta namuna (oldin/keyin).
+- Testlar: `tests/test_reformat.py` (6 ta). `uv run pytest` → 683 passed, `uv run ruff check .` toza.
+- Haqiqiy bazada `--dry-run`: 274 ta navbatdagi e'lon, 273 tasi o'zgaradi (footer, tugmalar, manzilda vergul).
+  Haqiqiy yozish hali ishga tushirilmagan.
+
+**Qanday ishlatiladi (PowerShell):**
+```powershell
+# 1) worker'ni to'xtating (uning oynasida Ctrl+C), 2 daqiqa kuting
+uv run python scripts/reformat_queued.py --dry-run    # nima o'zgarishini ko'ring
+uv run python scripts/reformat_queued.py              # backup + yangilash
+# 2) worker'ni qayta yoqing
+uv run python -m ayvona.apps.worker
+```
+
+**Kelajakda shu muammo bo'lmasligi uchun — qaror (bajarilmadi, Sardorning javobini kutadi):**
+"Publisher chiqarish paytida footer va tugmalarni branding'dan qayta qo'ysin" varianti **tanlanmadi**, sabablari:
+1. Yarim yechim: bu safargi muammoning yarmi heshteg va manzil tozalash edi — publisher faqat footer/tugmani
+   almashtirsa, ular baribir eski qolardi.
+2. 1024 belgi limiti: formatter matnni footer bilan birga sig'diradi. Publisher boshqa (uzunroq) footer qo'ysa
+   caption limitdan oshishi mumkin → rasm yo'qoladi yoki publisher'da formatter'ning qisqartirish mantiqini
+   takrorlash kerak bo'ladi.
+3. Bitta post ikki joyda yasaladi: bazadagi `formatted_text` kanaldagi postga teng bo'lmaydi (bot qidiruvi va
+   kelajakdagi sayt (Bosqich 17) `formatted_text` ni ko'rsatsa — boshqacha matn).
+4. Footerni saqlangan HTML'dan ajratish uchun yo sxema o'zgarishi (footersiz matn + migratsiya), yo mo'rt regex kerak.
+5. Publisher — ishonchli yetkazish joyi; unga render qo'shilsa, render xatosi hamma postni `retry/failed` ga tushiradi.
+
+**Taklif (tanlangan):** worker ishga tushganda, publisher boshlanishidan oldin shu `reformat_queued()` ni
+avtomatik chaqirish. Formatter kodi ham, `branding` ham faqat qayta ishga tushirishda o'zgaradi (sozlamalar
+start'da o'qiladi, deploy servislarni qayta yoqadi) — demak har qanday formatter o'zgarishi butun navbatga
+o'zi qo'llanadi, post bitta joyda yasaladi, sxema o'zgarmaydi. Narxi: start'da navbatni qayta ishlash
+(274 ta job — bir necha soniya). Tasdiqlasangiz, qo'shaman.

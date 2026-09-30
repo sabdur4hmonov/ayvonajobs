@@ -35,10 +35,12 @@ def backup_name(day: date) -> str:
     return f"ayvona_{day.isoformat()}.db"
 
 
-def make_backup(db_file: Path, backup_dir: Path, day: date) -> Path:
-    """Consistent copy of ``db_file`` (blocking — run it in a thread)."""
+def make_backup(db_file: Path, backup_dir: Path, day: date, name: str | None = None) -> Path:
+    """Consistent copy of ``db_file`` (blocking — run it in a thread).
+
+    ``name``: another file name than the daily ``ayvona_YYYY-MM-DD.db`` (one-off backups)."""
     backup_dir.mkdir(parents=True, exist_ok=True)
-    target = backup_dir / backup_name(day)
+    target = backup_dir / (name or backup_name(day))
     tmp = target.with_suffix(".db.tmp")
     src = sqlite3.connect(f"file:{db_file.as_posix()}?mode=ro", uri=True)
     try:

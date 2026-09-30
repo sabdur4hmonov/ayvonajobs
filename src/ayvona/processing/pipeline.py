@@ -356,14 +356,7 @@ class Pipeline:
             ignore_usernames=self._own,
         )
         match = self.index.find(entry)
-        cleaned = self.cleaner.clean(
-            post.input.text,
-            post.input.extra,
-            source=post.source.identifier,
-            own_usernames=post.input.own_usernames,
-        )
-        out = self.formatter.format(ex, cleaned, source_url=post.url)
-        fields = job_fields(ex, cleaned.text, out)
+        out, fields = self.render(post, ex)
 
         async with self.sf() as s, s.begin():
             job = await self._group_job(s, match) if match else None
@@ -384,6 +377,46 @@ class Pipeline:
             await self._store_entry(s, post, entry, match)
         self.index.add(entry, match.original if match else None)
         return status
+
+    # ------------------------------------------------------------------ rendering
+    def render(self, post: LogicalPost, ex: Extraction) -> tuple[FormattedPost, dict[str, Any]]:
+        """Clean + format one extracted post: the caption and the ``jobs`` columns.
+
+        Also used by services/reformat.py to rebuild queued jobs with the current formatter.
+        """
+        cleaned = self.cleaner.clean(
+            post.input.text,
+            post.input.extra,
+            source=post.source.identifier,
+            own_usernames=post.input.own_usernames,
+        )
+        out = self.formatter.format(ex, cleaned, source_url=post.url)
+        return out, job_fields(ex, cleaned.text, out)
+
+    async def post_of_job(self, s: AsyncSession, job: Job) -> LogicalPost | None:
+        """The logical post a job was made from (all album parts), or ``None`` (user job /
+        raw post gone). The job's current rows are its ``done`` raw posts (a take-over turns the
+        previous version's rows into ``duplicate``)."""
+        if job.raw_post_id is None:
+            return None
+        primary = await s.get(RawPost, job.raw_post_id)
+        if primary is None:
+            return None
+        source = await s.get(Source, primary.source_id)
+        if source is None:
+            return None
+        rows = list(
+            (
+                await s.scalars(
+                    select(RawPost)
+                    .where(RawPost.job_id == job.id, RawPost.status == RawPostStatus.DONE)
+                    .order_by(RawPost.id)
+                )
+            ).all()
+        )
+        if primary.id not in {r.id for r in rows}:
+            rows = [primary]
+        return self._logical(rows, source)
 
     # ------------------------------------------------------------------ job rows
     async def _group_job(self, s: AsyncSession, match: DedupMatch) -> Job | None:

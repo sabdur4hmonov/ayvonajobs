@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import ColumnElement, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -136,3 +137,25 @@ async def retry_failed(session: AsyncSession, now: datetime, job_ids: Sequence[i
         stmt = stmt.where(Job.id.in_(list(job_ids)))
     result = await session.execute(stmt)
     return result.rowcount or 0
+
+
+async def list_sendable(session: AsyncSession) -> list[Job]:
+    """Every job still waiting to be published (``queued`` / ``retry``), oldest first."""
+    stmt = select(Job).where(Job.status.in_(SENDABLE)).order_by(Job.id)
+    return list((await session.scalars(stmt)).all())
+
+
+async def update_if_sendable(
+    session: AsyncSession, job_id: int, values: dict[str, Any], *, raw_post_id: int | None
+) -> bool:
+    """Change a job only while it is still ``queued`` / ``retry`` and still made from
+    ``raw_post_id`` (the publisher may take it, or a fuller copy take it over, meanwhile — a job
+    being sent or already published is never touched). Does not commit."""
+    same_post = Job.raw_post_id.is_(None) if raw_post_id is None else Job.raw_post_id == raw_post_id
+    result = await session.execute(
+        update(Job)
+        .where(Job.id == job_id, Job.status.in_(SENDABLE), same_post)
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    return (result.rowcount or 0) == 1
