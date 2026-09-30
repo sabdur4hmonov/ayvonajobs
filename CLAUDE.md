@@ -2,6 +2,8 @@
 
 This file is loaded automatically by Claude Code in every session. Keep it short and current.
 
+> **Start here:** read `docs/HANDOFF.md` (current state + next steps + multi-user notes), then `docs/PROGRESS.md`.
+
 ## What this project is
 **Ayvona Jobs** ("I wanna job") — a Telegram job-board system for Uzbekistan.
 1. **Aggregator** — reads job posts from source Telegram channels (Telethon, user account), dedups, categorizes,
