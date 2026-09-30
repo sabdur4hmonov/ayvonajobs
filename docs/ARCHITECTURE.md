@@ -91,6 +91,7 @@ pending_review → queued          (faqat user e'lonlari, shubhali bo'lsa)
 queued → sending → published → closed / expired
                ↘ retry (next_retry_at) → sending
                ↘ failed (admin: /retry)
+queued / retry → skipped_old     (manba posti publisher.max_age_hours dan eski — kanalga chiqmaydi, bazada qoladi)
 rejected (filtr yoki admin rad etdi)
 ```
 

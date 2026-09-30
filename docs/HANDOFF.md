@@ -11,7 +11,7 @@ Yangi sessiya yoki boshqa Windows foydalanuvchisi shu faylni birinchi o'qisin, k
 
 ## Keyingi ishlar (tartib bilan — bittadan)
 1. [ ] Worker'ni qayta yoqish, kanalda yangi postlar `@ayvona_jobs_bot` / `@ayvonajobs` bilan chiqayotganini tekshirish.
-2. [ ] `publisher.max_age_hours: 24` qoidasi (24 soatdan eski e'lon kanalga chiqmasin, status `skipped_old`) — prompt chatda berilgan, hali bajarilmagan.
+2. [x] `publisher.max_age_hours: 24` qoidasi (24 soatdan eski e'lon kanalga chiqmaydi, status `skipped_old`) — 2026-09-30, PROGRESS.md oxirida.
 3. [ ] `git push` (oxirgi commit'lar GitHub'da ekanini tekshirish: `git log origin/main..HEAD`).
 4. [ ] Oracle akkaunt ochish (SETUP_ORACLE.md 1–4-qadam). Region: Zurich/Stockholm/Milan/Marseille/Madrid. Visa/Mastercard.
 5. [ ] Kanalni 1 kun kuzatish; yoqmagan postlarni Claude'ga tashlash.

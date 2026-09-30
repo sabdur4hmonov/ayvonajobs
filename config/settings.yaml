@@ -105,6 +105,7 @@ publisher:
   max_publish_attempts: 8            # shuncha xatodan keyin "failed" + admin'ga xabar
   hold_minutes: 20                   # yangi e'lon shuncha kutadi: boshqa kanalda to'liqroq nusxasi chiqsa, o'sha chiqadi
   publish_backfill: false            # kanal qo'shilganda olingan ESKI postlar ham chiqsinmi (initial_backfill)
+  max_age_hours: 24                  # manbada shundan oldin chiqqan e'lon kanalga chiqmaydi (skipped_old, bazada qoladi). 0 = o'chiq
   retry_base_seconds: 30             # tarmoq xatosi: 30 s, 60 s, 120 s ... kutib qayta urinadi
   retry_max_seconds: 3600            # ... lekin 1 soatdan ko'p emas
   config_error_pause_seconds: 300    # token xato / bot kanalda admin emas: 5 daqiqa hech narsa yubormaydi

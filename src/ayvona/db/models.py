@@ -109,6 +109,8 @@ class JobStatus(StrEnum):
     RETRY = "retry"
     PUBLISHED = "published"
     FAILED = "failed"
+    # Its source post is older than ``publisher.max_age_hours``: never published, kept in the DB.
+    SKIPPED_OLD = "skipped_old"
     REJECTED = "rejected"
     CLOSED = "closed"
     EXPIRED = "expired"

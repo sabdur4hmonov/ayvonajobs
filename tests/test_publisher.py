@@ -1,7 +1,8 @@
 """publisher/outbox.py with a mocked Bot API (tests/fake_bot.py): nothing leaves the machine.
 
 Covers ROADMAP Bosqich 7 step 2: photo + caption + buttons, file_id cache, link preview off,
-flood wait, network backoff, HTML fallback, bad setup, attempts limit, pause, crash recovery.
+flood wait, network backoff, HTML fallback, bad setup, attempts limit, pause, crash recovery;
+and ``publisher.max_age_hours`` (too old -> ``skipped_old``).
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from aiogram.methods import SendMessage, SendPhoto
 from aiogram.types import FSInputFile
 from sqlalchemy import select
 
+from ayvona.config import DEFAULT_CONFIG_DIR, load_settings
 from ayvona.db.models import Image, JobStatus
 from ayvona.db.repositories import kv_repo
 from ayvona.publisher.outbox import (
@@ -23,6 +25,8 @@ from ayvona.publisher.outbox import (
     backoff_seconds,
     keyboard,
     plain_text,
+    skip_old_jobs,
+    too_old_reason,
 )
 from ayvona.timeutil import utcnow
 from tests.fake_bot import CHANNEL, FakeBotSession, make_bot
@@ -30,6 +34,7 @@ from tests.worker_helpers import (
     SF,
     RecordingNotifier,
     add_job,
+    add_job_from_post,
     get_job,
     make_image,
     make_settings,
@@ -224,6 +229,85 @@ async def test_run_once_respects_the_queue(session_factory: SF) -> None:
 
     await pub.run(no_sleep, once=True)
     assert len(session.requests) == 3
+
+
+# ------------------------------------------------------------------ max_age_hours (skipped_old)
+async def test_too_old_job_is_skipped_and_the_next_one_published(session_factory: SF) -> None:
+    old = await add_job_from_post(session_factory, timedelta(hours=25))
+    fresh = await add_job_from_post(session_factory, timedelta(hours=23))
+    pub, session, notifier = publisher(session_factory)
+
+    res = await pub.publish_next()
+    assert res.outcome is Outcome.PUBLISHED and res.job_id == fresh
+    assert len(session.requests) == 1
+
+    job = await get_job(session_factory, old)
+    assert job.status is JobStatus.SKIPPED_OLD
+    assert job.last_error == "eskirgan: 24 soatdan eski"
+    assert job.next_retry_at is None and job.published_at is None
+    assert notifier.messages == []  # log and /stats only, no admin notice
+    assert (await pub.publish_next()).outcome is Outcome.IDLE
+
+
+async def test_exactly_max_age_is_still_published(session_factory: SF) -> None:
+    now = utcnow()
+    job_id = await add_job_from_post(session_factory, timedelta(hours=24), now=now)
+    pub, _, _ = publisher(session_factory)
+    res = await pub.publish_next(now)
+    assert res.outcome is Outcome.PUBLISHED and res.job_id == job_id
+    later = await add_job_from_post(session_factory, timedelta(hours=24, seconds=1), now=now)
+    await pub.publish_next(now)
+    assert (await get_job(session_factory, later)).status is JobStatus.SKIPPED_OLD
+
+
+async def test_only_waiting_jobs_become_skipped_old(session_factory: SF) -> None:
+    age = timedelta(hours=30)
+    ids = {
+        st: await add_job_from_post(session_factory, age, status=st)
+        for st in (
+            JobStatus.QUEUED,
+            JobStatus.RETRY,
+            JobStatus.SENDING,
+            JobStatus.PUBLISHED,
+            JobStatus.FAILED,
+        )
+    }
+    skipped = await skip_old_jobs(make_settings(), session_factory)
+    assert sorted(skipped) == sorted([ids[JobStatus.QUEUED], ids[JobStatus.RETRY]])
+    for st in (JobStatus.SENDING, JobStatus.PUBLISHED, JobStatus.FAILED):
+        assert (await get_job(session_factory, ids[st])).status is st
+
+
+async def test_age_falls_back_to_fetched_at(session_factory: SF) -> None:
+    old = await add_job_from_post(session_factory, None, fetched_ago=timedelta(hours=30))
+    fresh = await add_job_from_post(session_factory, None, fetched_ago=timedelta(hours=1))
+    pub, _, _ = publisher(session_factory)
+    assert (await pub.publish_next()).job_id == fresh
+    assert (await get_job(session_factory, old)).status is JobStatus.SKIPPED_OLD
+
+
+async def test_job_without_a_source_post_is_never_too_old(session_factory: SF) -> None:
+    job_id = await add_job(session_factory)  # user submission: no raw post
+    pub, _, _ = publisher(session_factory)
+    res = await pub.publish_next(utcnow() + timedelta(days=3))
+    assert res.outcome is Outcome.PUBLISHED and res.job_id == job_id
+
+
+async def test_max_age_zero_turns_the_rule_off(session_factory: SF) -> None:
+    job_id = await add_job_from_post(session_factory, timedelta(days=5))
+    pub, _, _ = publisher(session_factory, max_age_hours=0)
+    res = await pub.publish_next()
+    assert res.outcome is Outcome.PUBLISHED and res.job_id == job_id
+
+
+def test_max_age_default_is_24_hours() -> None:
+    cfg = load_settings(DEFAULT_CONFIG_DIR, env_file=None).app.publisher
+    assert cfg.max_age_hours == 24
+    now = utcnow()
+    assert cfg.too_old_before(now) == now - timedelta(hours=24)
+    assert cfg.model_copy(update={"max_age_hours": 0}).too_old_before(now) is None
+    assert too_old_reason(24) == "eskirgan: 24 soatdan eski"
+    assert too_old_reason(1.5) == "eskirgan: 1.5 soatdan eski"
 
 
 # ------------------------------------------------------------------ helpers

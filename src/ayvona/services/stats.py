@@ -39,6 +39,7 @@ class PeriodStats:
     low_quality: int = 0
     errors: int = 0  # raw posts with a processing error
     failed: int = 0  # jobs whose publishing failed (updated in the period)
+    skipped_old: int = 0  # jobs too old for the channel (publisher.max_age_hours), in the period
     categories: list[tuple[str, int]] = field(default_factory=list)  # published, most first
 
 
@@ -68,6 +69,14 @@ async def period_stats(session: AsyncSession, since: datetime) -> PeriodStats:
             select(func.count())
             .select_from(Job)
             .where(Job.status == JobStatus.FAILED, Job.updated_at >= since)
+        )
+        or 0
+    )
+    st.skipped_old = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Job)
+            .where(Job.status == JobStatus.SKIPPED_OLD, Job.updated_at >= since)
         )
         or 0
     )

@@ -9,6 +9,7 @@ Use :func:`get_settings` everywhere; it loads once and caches.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any
@@ -131,6 +132,9 @@ class PublisherConfig(BaseModel):
     hold_minutes: float = Field(default=20, ge=0)
     # Publish posts taken from a channel's history when the source was added (initial_backfill)?
     publish_backfill: bool = False
+    # A job whose source post appeared more than this long ago is never published
+    # (``skipped_old``; kept in the DB). Age = raw_posts.posted_at, else fetched_at. 0 = off.
+    max_age_hours: float = Field(default=24, ge=0)
     # Network / server error: wait retry_base * 2^(attempt-1) seconds, at most retry_max.
     retry_base_seconds: float = Field(default=30, gt=0)
     retry_max_seconds: float = Field(default=3600, gt=0)
@@ -138,6 +142,10 @@ class PublisherConfig(BaseModel):
     config_error_pause_seconds: float = Field(default=300, gt=0)
     # Publisher checks the queue this often when it is empty.
     idle_poll_seconds: float = Field(default=5, gt=0)
+
+    def too_old_before(self, now: datetime) -> datetime | None:
+        """Source posts older than this are not published (``None``: the rule is off)."""
+        return now - timedelta(hours=self.max_age_hours) if self.max_age_hours > 0 else None
 
 
 class WorkerConfig(BaseModel):

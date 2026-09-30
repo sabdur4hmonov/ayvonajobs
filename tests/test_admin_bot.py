@@ -4,6 +4,7 @@ and pictures managed from the bot, admin-only access. Nothing leaves the machine
 from __future__ import annotations
 
 import itertools
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from tests.fake_bot import FakeBotSession, make_bot
 from tests.worker_helpers import (
     SF,
     add_job,
+    add_job_from_post,
     add_raw,
     add_source,
     get_job,
@@ -152,6 +154,31 @@ async def test_failed_retry_pause_resume(harness: BotHarness, session_factory: S
     await harness.send(message_update("/resume"))
     async with session_factory() as s:
         assert not await kv_repo.get_bool(s, kv_repo.PUBLISHER_PAUSED)
+
+
+async def test_retry_of_a_too_old_job_says_why(harness: BotHarness, session_factory: SF) -> None:
+    old = await add_job_from_post(
+        session_factory, timedelta(hours=30), status=JobStatus.FAILED, attempts=8
+    )
+    fresh = await add_job_from_post(
+        session_factory, timedelta(hours=2), status=JobStatus.FAILED, attempts=8
+    )
+
+    await harness.send(message_update("/retry all"))
+    reply = harness.texts()[-1]
+    assert "1 ta e'lon qayta navbatga" in reply
+    assert "eskirgan: 24 soatdan eski" in reply and f"#{old}" in reply
+    assert (await get_job(session_factory, old)).status is JobStatus.SKIPPED_OLD
+    assert (await get_job(session_factory, fresh)).status is JobStatus.QUEUED
+
+    # only too old ones asked for: no "qayta navbatga" line, just the reason
+    other = await add_job_from_post(session_factory, timedelta(days=2), status=JobStatus.FAILED)
+    await harness.send(message_update(f"/retry {other}"))
+    reply = harness.texts()[-1]
+    assert "qayta navbatga" not in reply and "eskirgan" in reply
+
+    await harness.send(message_update("/stats"))
+    assert "Eskirgan (chiqmadi): 2 / 2" in harness.texts()[-1]
 
 
 # ------------------------------------------------------------------ sources

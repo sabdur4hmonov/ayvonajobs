@@ -21,13 +21,17 @@ Errors:
   after ``max_publish_attempts`` -> ``failed`` + admin notice.
 
 A crash while ``sending`` -> the job is queued again on the next start (at-least-once).
+
+Too old: before taking a job, every waiting job whose source post appeared more than
+``max_age_hours`` ago becomes ``skipped_old`` (kept in the DB, never sent; logged, no admin
+notice). The worker does the same once on start, before re-rendering the queue.
 """
 
 from __future__ import annotations
 
 import html
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -203,6 +207,40 @@ def _is_config_error(e: Exception) -> bool:
     return isinstance(e, TelegramBadRequest) and bool(_CONFIG_BAD_REQUEST_RE.search(e.message))
 
 
+def too_old_reason(max_age_hours: float) -> str:
+    """``last_error`` of a ``skipped_old`` job (the admin sees it in /retry too)."""
+    return f"eskirgan: {max_age_hours:g} soatdan eski"
+
+
+async def skip_old_jobs(
+    settings: Settings,
+    sf: async_sessionmaker[AsyncSession],
+    now: datetime | None = None,
+    *,
+    statuses: Sequence[JobStatus] = jobs_repo.SENDABLE,
+    job_ids: Sequence[int] | None = None,
+) -> list[int]:
+    """Waiting jobs whose source post is older than ``publisher.max_age_hours`` ->
+    ``skipped_old`` (one transaction). Returns their ids; logs them. Rule off (0) -> nothing."""
+    cfg = settings.app.publisher
+    cutoff = cfg.too_old_before(now or utcnow())
+    if cutoff is None:
+        return []
+    async with sf() as s, s.begin():
+        ids = await jobs_repo.skip_old(
+            s, cutoff, too_old_reason(cfg.max_age_hours), statuses=statuses, job_ids=job_ids
+        )
+    if ids:
+        shown = ", ".join(f"#{i}" for i in ids[:20]) + (" ..." if len(ids) > 20 else "")
+        logger.info(
+            "{} ta e'lon kanalga chiqmaydi — manbada {:g} soatdan oldin chiqqan (skipped_old): {}",
+            len(ids),
+            cfg.max_age_hours,
+            shown,
+        )
+    return ids
+
+
 CONFIG_HELP = (
     "Tekshiring: 1) BOT_TOKEN to'g'rimi; 2) bot kanalga ADMIN qilinganmi (post joylash huquqi); "
     "3) CHANNEL_ID to'g'rimi (@kanal yoki -100...)."
@@ -259,6 +297,7 @@ class Publisher:
     async def publish_next(self, now: datetime | None = None) -> PublishResult:
         """Publish (or try) the next due job."""
         now = now or utcnow()
+        await skip_old_jobs(self.settings, self.sf, now)
         early, job, image = await self._take(now)
         if early is not None:
             return early

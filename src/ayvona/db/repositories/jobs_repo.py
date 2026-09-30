@@ -3,7 +3,8 @@
 Status flow: ``queued`` -> ``sending`` -> ``published``; on a send error ``retry`` (with
 ``next_retry_at``) and after ``max_publish_attempts`` errors ``failed``. A job is moved to
 ``sending`` with a conditional UPDATE, so two publishers (or a publisher and the pipeline
-replacing a queued job) can never both take it.
+replacing a queued job) can never both take it. A waiting job whose source post is older than
+``publisher.max_age_hours`` becomes ``skipped_old`` instead (:func:`skip_old`).
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from typing import Any
 from sqlalchemy import ColumnElement, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ayvona.db.models import Job, JobStatus
+from ayvona.db.models import Job, JobStatus, RawPost
 
 MAX_ERROR_LEN = 2000
 SENDABLE = (JobStatus.QUEUED, JobStatus.RETRY)
@@ -112,6 +113,40 @@ async def reset_stuck_sending(session: AsyncSession, now: datetime) -> list[int]
     if ids:
         await session.execute(
             update(Job).where(Job.id.in_(ids)).values(status=JobStatus.RETRY, next_retry_at=now)
+        )
+    return ids
+
+
+async def skip_old(
+    session: AsyncSession,
+    posted_before: datetime,
+    reason: str,
+    *,
+    statuses: Sequence[JobStatus] = SENDABLE,
+    job_ids: Sequence[int] | None = None,
+) -> list[int]:
+    """Jobs in ``statuses`` whose source post appeared before ``posted_before``
+    (``raw_posts.posted_at``, else ``fetched_at``) -> ``skipped_old``: never published, kept.
+    Jobs without a raw post (user submissions) are not touched. ``job_ids=None`` = any job.
+    Returns the ids. Does not commit."""
+    posted = (
+        select(func.coalesce(RawPost.posted_at, RawPost.fetched_at))
+        .where(RawPost.id == Job.raw_post_id)
+        .scalar_subquery()
+    )
+    stmt = select(Job.id).where(
+        Job.status.in_(statuses), Job.raw_post_id.is_not(None), posted < posted_before
+    )
+    if job_ids is not None:
+        stmt = stmt.where(Job.id.in_(list(job_ids)))
+    ids = list((await session.scalars(stmt.order_by(Job.id))).all())
+    if ids:
+        await session.execute(
+            update(Job)
+            .where(Job.id.in_(ids), Job.status.in_(statuses))
+            .values(
+                status=JobStatus.SKIPPED_OLD, next_retry_at=None, last_error=reason[:MAX_ERROR_LEN]
+            )
         )
     return ids
 

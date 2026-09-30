@@ -819,3 +819,39 @@ o'zi qo'llanadi, post bitta joyda yasaladi, sxema o'zgarmaydi. Narxi: start'da n
 - ROADMAP Bosqich 10 promptiga "Mavjud kodni hisobga ol" bo'limi qo'shildi (admin /start ushlashi, middleware
   admin'ga ta'sir qilmasligi, deep link formati, favorites mantiqi `services/` da).
 - Testlar: +2 (`tests/test_reformat.py`). `uv run pytest` → 685 passed, `uv run ruff check .` toza.
+
+
+---
+
+## `publisher.max_age_hours` — eski e'lon kanalga chiqmaydi (2026-09-30)
+
+Sardor qarorlari:
+1. **Yosh manba kanalda chiqqan vaqtdan** (`raw_posts.posted_at`), u bo'sh bo'lsa `fetched_at` dan hisoblanadi.
+2. Admin `/retry` qilgan eski `failed`/`retry` e'lon ham `skipped_old` bo'ladi, javobda sababi yoziladi.
+3. Admin chatga xabar **yuborilmaydi** — faqat log va `/stats`.
+
+Nima qilindi:
+- `config/settings.yaml` → `publisher.max_age_hours: 24` (`0` = qoida o'chiq). `PublisherConfig.too_old_before(now)`.
+- Yangi status **`jobs.status = skipped_old`** (oddiy VARCHAR — migratsiya shart emas). E'lon o'chirilmaydi, bazada qoladi
+  (keyin bot qidiruvi uchun), `last_error = "eskirgan: 24 soatdan eski"`, `next_retry_at` bo'shatiladi.
+- `jobs_repo.skip_old()` — bitta shartli UPDATE: faqat `queued`/`retry` (yoki `/retry` da `failed`/`retry`) va manba posti
+  bor e'lonlar. `sending`, `published` ga hech qachon tegilmaydi. Foydalanuvchi e'loni (`raw_post_id` bo'sh) — qoida
+  qo'llanmaydi (Bosqich 11 da hal qilinadi).
+- **Publisher** har post oldidan (`publish_next`) eskirganlarni belgilaydi, keyin navbatdagi yangisini oladi.
+  Chegarada (aynan 24 soat) — hali chiqadi; 24 soat + 1 soniya — `skipped_old`.
+- **Worker start'ida**: `requeue_stuck` → `skip_old` → `reformat_queue` — eskirganlar qayta formatlanmaydi.
+  Xato bo'lsa worker to'xtamaydi (publisher keyin baribir tekshiradi).
+- **`/retry`**: eskirganlar navbatga qaytmaydi, javob: `⏳ N ta e'lon navbatga qo'yilmadi — eskirgan: 24 soatdan eski
+  (kanalga chiqmaydi): #12, #15`. Qolganlari odatdagidek `🔁 N ta e'lon qayta navbatga qo'yildi.`
+- **`/stats`**: yangi qator `⏳ Eskirgan (chiqmadi): bugun / 7 kun`.
+- Log (worker oynasida va `data\logs\worker_*.log`):
+  `N ta e'lon kanalga chiqmaydi — manbada 24 soatdan oldin chiqqan (skipped_old): #1, #2, ...` (20 tadan keyin `...`).
+
+⚠️ Bosqich 7 dagi qoida o'zgardi: collector uzoq o'chiq tursa, qolgan postlar olinadi va qayta ishlanadi (dublikat indeksi,
+bazada saqlanadi), lekin manbada 24 soatdan oldin chiqqanlari kanalga **chiqmaydi**.
+
+Ma'lum: yig'ish oynasida to'liqroq nusxa e'lonni "olib qo'ysa" (take-over), yosh yangi nusxaning `posted_at` idan
+hisoblanadi (20 daqiqalik oyna — amalda farq qilmaydi).
+
+Testlar: +9 (`test_publisher.py` 7, `test_admin_bot.py` 1, `test_reformat.py` 1).
+`uv run pytest` → **694 passed**, `uv run ruff check .` toza.

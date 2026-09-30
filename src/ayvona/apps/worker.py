@@ -14,7 +14,8 @@ Step 0 (first start only): every post already in the DB becomes ``skipped_backfi
 posts collected before the worker existed never reach the channel (``kv_store`` flag
 ``worker:backfill_skipped_at``).
 
-Every start, before publishing: ``queued`` / ``retry`` jobs are re-rendered with the current
+Every start, before publishing: ``queued`` / ``retry`` jobs whose source post is older than
+``publisher.max_age_hours`` become ``skipped_old``; the rest are re-rendered with the current
 formatter and ``branding`` (services/reformat.py; ``worker.reformat_queued_on_start``).
 
 Without ``BOT_TOKEN`` / ``CHANNEL_ID`` the worker still runs: the pipeline fills the queue, the
@@ -58,7 +59,7 @@ from ayvona.db.repositories import kv_repo, raw_posts_repo
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
 from ayvona.logging_setup import setup_logging
 from ayvona.processing.pipeline import Pipeline
-from ayvona.publisher.outbox import ChannelSender, Publisher
+from ayvona.publisher.outbox import ChannelSender, Publisher, skip_old_jobs
 from ayvona.services.backup import BackupService
 from ayvona.services.heartbeat import Monitor
 from ayvona.services.notifier import Notifier
@@ -93,6 +94,18 @@ async def reset_stuck_processing(sf: SessionFactory) -> int:
     if n:
         logger.warning("{} ta post 'processing' da qolgan edi — qayta 'new' qilindi", n)
     return n
+
+
+async def skip_old_queue(settings: Settings, sf: SessionFactory) -> list[int]:
+    """Start-up, before re-rendering: waiting jobs older than ``publisher.max_age_hours`` ->
+    ``skipped_old`` (the publisher checks again before every post). Never stops the worker."""
+    try:
+        return await skip_old_jobs(settings, sf)
+    except Exception:
+        logger.exception(
+            "Eskirgan e'lonlarni belgilashda xato — publisher keyinroq qayta tekshiradi"
+        )
+        return []
 
 
 async def reformat_queue(settings: Settings, sf: SessionFactory) -> ReformatReport | None:
@@ -171,6 +184,7 @@ async def run_worker(
         )
     else:
         logger.info("--no-publish: kanalga hech narsa yuborilmaydi, faqat qayta ishlash.")
+    await skip_old_queue(settings, sf)
     await reformat_queue(settings, sf)
 
     cfg = settings.app.worker

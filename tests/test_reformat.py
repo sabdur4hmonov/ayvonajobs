@@ -9,6 +9,7 @@ import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
+from loguru import logger
 from sqlalchemy import func, select, update
 
 from ayvona.apps.worker import run_worker
@@ -202,6 +203,34 @@ async def test_worker_start_reformats_the_queue(session_factory: SF) -> None:
     assert f"https://t.me/{NEW_BOT}?start=save_{queued.id}" in urls(queued)
     after = await get_job(session_factory, ids[JobStatus.PUBLISHED])
     assert after.formatted_text == published.formatted_text
+
+
+async def test_worker_start_skips_too_old_jobs_before_reformatting(session_factory: SF) -> None:
+    ids = await old_jobs(session_factory)
+    before = await get_job(session_factory, ids[JobStatus.QUEUED])
+    async with session_factory() as s, s.begin():
+        await s.execute(
+            update(RawPost)
+            .where(RawPost.id == before.raw_post_id)
+            .values(posted_at=utcnow() - timedelta(hours=30))
+        )
+    logs: list[str] = []
+    handler = logger.add(lambda m: logs.append(str(m)), level="INFO")
+    try:
+        await run_worker(make_settings(), session_factory, asyncio.Event(), once=True)
+    finally:
+        logger.remove(handler)
+
+    old = await get_job(session_factory, before.id)
+    assert old.status is JobStatus.SKIPPED_OLD
+    assert old.formatted_text == before.formatted_text  # not re-rendered
+    retry = await get_job(session_factory, ids[JobStatus.RETRY])
+    assert f"@{NEW_BOT}" in (retry.formatted_text or "")
+    assert any(
+        "1 ta e'lon kanalga chiqmaydi" in m and "skipped_old" in m and f"#{before.id}" in m
+        for m in logs
+    )
+    assert any("1 ta e'londan 1 tasi o'zgardi" in m for m in logs)
 
 
 async def test_worker_start_reformat_can_be_turned_off(session_factory: SF) -> None:

@@ -127,10 +127,12 @@ async def add_job(
     text: str = "💼 <b>Sotuvchi</b>\n📞 Aloqa: +998 90 123 45 67",
     category: str = "savdo",
     buttons: list[Any] | None = None,
+    raw_post_id: int | None = None,
 ) -> int:
     async with sf() as s, s.begin():
         job = Job(
             origin=JobOrigin.AGGREGATOR,
+            raw_post_id=raw_post_id,
             title="Sotuvchi",
             category=category,
             parse_method=ParseMethod.REGEX,
@@ -147,6 +149,37 @@ async def add_job(
         s.add(job)
         await s.flush()
         return job.id
+
+
+_src_names = iter(range(1, 10**6))
+
+
+async def add_job_from_post(
+    sf: SF,
+    posted_ago: timedelta | None,
+    *,
+    fetched_ago: timedelta = timedelta(minutes=2),
+    now: datetime | None = None,
+    **job: Any,
+) -> int:
+    """A job made from a source post that appeared ``posted_ago`` before ``now``
+    (``None``: the post has no ``posted_at``, only ``fetched_at``)."""
+    src = await add_source(sf, f"@kanal_{next(_src_names)}")
+    raw_id = await add_raw(
+        sf,
+        src,
+        JOB_TEXT,
+        posted_ago=posted_ago or timedelta(0),
+        fetched_ago=fetched_ago,
+        status=RawPostStatus.DONE,
+        now=now,
+    )
+    if posted_ago is None:
+        async with sf() as s, s.begin():
+            row = await s.get(RawPost, raw_id)
+            assert row is not None
+            row.posted_at = None
+    return await add_job(sf, raw_post_id=raw_id, **job)
 
 
 async def get_raw(sf: SF, raw_id: int) -> RawPost:

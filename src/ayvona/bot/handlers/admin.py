@@ -19,7 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.bot import texts as T
 from ayvona.config import Settings
+from ayvona.db.models import JobStatus
 from ayvona.db.repositories import jobs_repo, kv_repo
+from ayvona.publisher.outbox import skip_old_jobs, too_old_reason
 from ayvona.services.stats import day_start, failed_jobs, period_stats, queue_overview
 from ayvona.timeutil import ensure_utc, to_local, utcnow
 
@@ -168,7 +170,9 @@ async def failed_cmd(message: Message, sf: SessionFactory) -> None:
 
 
 @router.message(Command("retry"))
-async def retry_cmd(message: Message, command: CommandObject, sf: SessionFactory) -> None:
+async def retry_cmd(
+    message: Message, command: CommandObject, sf: SessionFactory, settings: Settings
+) -> None:
     arg = (command.args or "").strip().lower()
     if arg == "all":
         ids = None
@@ -177,10 +181,24 @@ async def retry_cmd(message: Message, command: CommandObject, sf: SessionFactory
         if not ids:
             await message.answer(T.RETRY_USAGE)
             return
+    now = utcnow()
+    # Too old for the channel (publisher.max_age_hours): skipped_old instead of the queue.
+    old = await skip_old_jobs(
+        settings, sf, now, statuses=(JobStatus.FAILED, JobStatus.RETRY), job_ids=ids
+    )
     async with sf() as s, s.begin():
-        n = await jobs_repo.retry_failed(s, utcnow(), ids)
-    log_admin(message, f"/retry {arg} -> {n}")
-    await message.answer(T.RETRY_DONE.format(n=n) if n else T.RETRY_NONE)
+        n = await jobs_repo.retry_failed(s, now, ids)
+    log_admin(message, f"/retry {arg} -> {n}, eskirgan {len(old)}")
+    parts = [T.RETRY_DONE.format(n=n)] if n else []
+    if old:
+        parts.append(
+            T.RETRY_TOO_OLD.format(
+                n=len(old),
+                reason=too_old_reason(settings.app.publisher.max_age_hours),
+                ids=", ".join(f"#{i}" for i in old[:30]) + (" ..." if len(old) > 30 else ""),
+            )
+        )
+    await message.answer("\n".join(parts) if parts else T.RETRY_NONE)
 
 
 # ------------------------------------------------------------------ /pause, /resume
