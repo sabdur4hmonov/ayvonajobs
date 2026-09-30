@@ -12,3 +12,17 @@ class JobCb(CallbackData, prefix="job"):
 
 class FavPageCb(CallbackData, prefix="favp"):
     page: int
+
+
+class PostCb(CallbackData, prefix="pj"):
+    """📢 E'lon joylash form: cat <key> | reg <key> | send | edit | field <name> | cancel."""
+
+    action: str
+    value: str = ""
+
+
+class ModCb(CallbackData, prefix="mod"):
+    """Admin decision on a user job waiting for review: ok | no | ban."""
+
+    action: str
+    id: int

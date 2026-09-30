@@ -14,7 +14,7 @@ Qoidalar: collector/worker/bot ISHGA TUSHIRILMAYDI, `data/ayvona.db` ga tegilmay
 har band alohida commit + push, qarorlar PROGRESS.md ga, savol berilmaydi.
 - [x] 0. Monitoring: collector o'chiq → bitta "Collector jim" (kanal-jimlik xabarlari yo'q)
 - [x] 1. Bosqich 10 — ommaviy bot asosi (menyu, deep link'lar, ⭐ saqlanganlar, middleware'lar)
-- [ ] 2. Bosqich 11 — e'lon joylash formasi
+- [x] 2. Bosqich 11 — e'lon joylash formasi (limitlar, filtrlar, moderatsiya, muallifga havola)
 - [ ] 3. Bosqich 12 — qidiruv + saqlanganlar (FTS5 uchun normalize qilingan matn ustuni)
 - [ ] 4. Bosqich 13 — obunalar
 - [ ] 5. Bosqich 14 — yopish, muddat, to'liq statistika

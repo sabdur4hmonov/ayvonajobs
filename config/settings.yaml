@@ -150,3 +150,17 @@ images:
 bot:
   throttle_seconds: 1                # bitta foydalanuvchidan 1 soniyada 1 ta so'rov (ortig'i e'tiborsiz). Adminlarga ta'sir qilmaydi
   touch_interval_seconds: 60         # users.last_active_at shuncha vaqtda bir yangilanadi
+
+# --- 📢 E'lon joylash: foydalanuvchi e'lonlari (services/job_submission.py) --------
+posting:
+  max_per_day: 2                     # bitta foydalanuvchi 24 soatda nechta e'lon yubora oladi
+  min_interval_minutes: 10           # e'lonlar orasida kamida shuncha daqiqa
+  max_waiting: 1                     # bir vaqtda nechta e'lon tekshiruvda/navbatda bo'lishi mumkin
+  moderation: suspicious_only        # auto | suspicious_only (shubhali + yangi foydalanuvchining 1-e'loni) | all
+  max_links: 2                       # bundan ko'p havola — spam
+  max_caps_ratio: 0.6                # harflarning shuncha qismi KATTA bo'lsa — spam
+  max_emoji: 10                      # bundan ko'p emoji — spam
+  duplicate_days: 14                 # shu kunlar ichidagi bir xil e'lon — rad etiladi
+  max_title: 100                     # lavozim uzunligi (belgi)
+  max_short_field: 150               # kompaniya, maosh, manzil, ish vaqti
+  max_requirements: 600              # talablar / izoh

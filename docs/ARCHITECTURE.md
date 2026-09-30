@@ -95,7 +95,9 @@ Sababi (`not_job` ... `low_quality`) `raw_posts.error` ustuniga yoziladi (masala
 
 **jobs.status**
 ```
-pending_review → queued          (faqat user e'lonlari, shubhali bo'lsa)
+pending_review → queued          (faqat user e'lonlari: scam so'z / yangi foydalanuvchi / moderation: all;
+               → rejected         admin [✅]/[❌]/[🚫] tugmasi — bot/moderation.py)
+                                 (ban/spam/dublikat user e'loni bazaga umuman yozilmaydi)
 queued → sending → published → closed / expired
                ↘ retry (next_retry_at) → sending
                ↘ failed (admin: /retry)

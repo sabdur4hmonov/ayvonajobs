@@ -106,7 +106,7 @@ async def search_menu(
     await open_search(message, state, sf=sf, settings=settings, db_user=db_user)
 
 
-@router.message(F.text.in_({T.MENU_POST, T.MENU_ALERTS}))
+@router.message(F.text == T.MENU_ALERTS)
 async def not_yet(message: Message) -> None:
     await message.answer(T.SOON, reply_markup=main_menu())
 

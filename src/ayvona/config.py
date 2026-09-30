@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
@@ -209,6 +209,25 @@ class BotConfig(BaseModel):
     touch_interval_seconds: float = Field(default=60, ge=0)
 
 
+class PostingConfig(BaseModel):
+    """📢 E'lon joylash — jobs submitted by users (services/job_submission.py)."""
+
+    max_per_day: int = Field(default=2, ge=1)  # per user, rolling 24 hours
+    min_interval_minutes: float = Field(default=10, ge=0)
+    max_waiting: int = Field(default=1, ge=1)  # pending_review / queued / sending at once
+    # auto: only scam words go to the admin; suspicious_only: + a new user's first job;
+    # all: every job is checked by an admin first.
+    moderation: Literal["auto", "suspicious_only", "all"] = "suspicious_only"
+    max_links: int = Field(default=2, ge=0)  # more links than this = spam
+    max_caps_ratio: float = Field(default=0.6, gt=0, le=1)  # of letters, texts of 20+ letters
+    max_emoji: int = Field(default=10, ge=0)
+    duplicate_days: int = Field(default=14, ge=1)
+    # field lengths (characters)
+    max_title: int = Field(default=100, ge=10)
+    max_short_field: int = Field(default=150, ge=10)  # company, salary, city, schedule
+    max_requirements: int = Field(default=600, ge=50)
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -233,6 +252,7 @@ class AppConfig(BaseModel):
     backup: BackupConfig = Field(default_factory=BackupConfig)
     branding: BrandingConfig
     bot: BotConfig = Field(default_factory=BotConfig)
+    posting: PostingConfig = Field(default_factory=PostingConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 

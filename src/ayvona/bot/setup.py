@@ -13,8 +13,9 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, LinkPreviewOptions
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.bot import moderation
 from ayvona.bot.filters import IsAdmin
-from ayvona.bot.handlers import admin, admin_images, admin_sources, favorites, start
+from ayvona.bot.handlers import admin, admin_images, admin_sources, favorites, post_job, start
 from ayvona.bot.middlewares import UserMiddleware
 from ayvona.config import Settings
 
@@ -74,11 +75,14 @@ def build_dispatcher(
     admin_area = Router(name="admin_area")
     admin_area.message.filter(is_admin)
     admin_area.callback_query.filter(is_admin)
-    admin_area.include_routers(*_detached(admin.router, admin_sources.router, admin_images.router))
+    admin_area.include_routers(
+        *_detached(admin.router, admin_sources.router, admin_images.router, moderation.router)
+    )
 
     public_area = Router(name="public_area")
     public_area.message.filter(F.chat.type == "private")
-    public_area.include_routers(*_detached(start.router, favorites.router))
+    # start first: its menu buttons work from any step (they leave a half-filled form)
+    public_area.include_routers(*_detached(start.router, favorites.router, post_job.router))
 
     dp.include_routers(*_detached(admin_area, public_area))
     return dp

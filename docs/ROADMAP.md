@@ -405,6 +405,9 @@ Mavjud kodni hisobga ol:
 
 ## BOSQICH 11 — 📢 E'lon joylash formasi ⏱ 2–3 soat · Model: `opus`
 
+- [x] Kod + testlar bajarildi — 2026-09-30 (Bot API mock bilan; tafsilot: `docs/PROGRESS.md`)
+- [ ] Haqiqiy botda tekshirish (telefonda e'lon yuborish → admin tasdiqlashi → kanal)
+
 ```text
 bot/handlers/post_job.py — FSM qadamlari (har qadamda "⬅️ Orqaga" va "❌ Bekor qilish"):
 1 Kategoriya (inline tugmalar) → 2 Lavozim → 3 Kompaniya (o'tkazib yuborish mumkin) → 4 Maosh (tugmalar:

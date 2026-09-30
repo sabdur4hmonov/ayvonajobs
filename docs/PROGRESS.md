@@ -906,3 +906,46 @@ Qarorlar (Sardor yo'qligida):
 5. "📢 E'lon joylash" va "🔔 Obunalar" — hozircha "tez orada" (Bosqich 11 va 13).
 
 Testlar: `tests/test_public_bot.py` (+15). Baza o'zgarmadi (migratsiya yo'q).
+
+
+---
+
+## Bosqich 11 — 📢 E'lon joylash formasi (2026-09-30, avtonom)
+
+Nima qilindi:
+- **Forma** (`bot/handlers/post_job.py`, FSM): 1 soha (tugmalar) → 2 lavozim → 3 kompaniya (⏭) → 4 maosh
+  ("🤝 Kelishiladi" yoki matn — `SalaryParser` bilan son bo'ladi) → 5 hudud (tugmalar + "🏠 Masofaviy") + manzil (⏭) →
+  6 ish vaqti (⏭) → 7 talablar (⏭) → 8 **aloqa — majburiy** ("📱 Raqamni yuborish", "👤 @username ni ishlatish" yoki
+  yozib: +998... / @username; hech biri bo'lmasa keyingi qadamga o'tmaydi) → **ko'rib chiqish** (kanaldagi ko'rinishning
+  o'zi) → [✅ Yuborish] [✏️ Tahrirlash] [❌ Bekor qilish]. Har qadamda "⬅️ Orqaga" va "❌ Bekor qilish"; menyu tugmasi
+  formadan chiqaradi. Tahrirlashda faqat tanlangan maydon so'raladi, keyin yana ko'rib chiqish.
+- **Mantiq — `services/job_submission.py`** (veb-sayt ham ishlatadi): `Draft`, `render` (aggregator'ning o'sha
+  `Formatter`i — o'zbek lotin, kirill o'giriladi), `check_content`, `check_limits`, `find_duplicate`, `submit`,
+  `approve`, `reject`.
+- **Limitlar** (`settings.yaml → posting`): 24 soatda 2 ta, orasida 10 daqiqa, bir vaqtda 1 ta kutayotgan
+  (`pending_review/queued/sending/retry`). Forma boshida ham, yuborishda ham tekshiriladi. Adminlarga limit yo'q.
+- **Filtrlar:** `filters.yaml` + `filter_words` jadvali (keyin `/addword`): `ban` so'zlar → rad; `spam` so'zlar,
+  > 2 havola, KATTA HARF > 60% (20+ harfli matnda), > 10 emoji → rad (bazaga yozilmaydi); `scam` so'zlar
+  (`scam_exceptions` hisobga olinadi) → admin tekshiruviga; dublikat (dedup.py, 14 kun, hamma e'lonlar orasida) → rad.
+- **Moderatsiya** (`posting.moderation`): `auto` (faqat scam admin'ga) | `suspicious_only` (standart: scam + yangi
+  foydalanuvchining birinchi e'loni) | `all`. Admin'ga (`ADMIN_CHAT_ID`, yo'q bo'lsa har bir admin'ga shaxsiy):
+  e'lon + sabab + [✅ Tasdiqlash] [❌ Rad etish] [🚫 Ban] (`bot/moderation.py`). Natija muallifga yoziladi, admin
+  xabari "✅ Tasdiqlandi (@admin)" bilan yangilanadi, ikkinchi bosish — "allaqachon ko'rib chiqilgan".
+- Tasdiqlangan e'lon → `jobs(queued, origin=user)` → worker publisher chiqaradi → **muallifga kanal havolasi**
+  (`publisher/outbox.py → _tell_author`, xato bo'lsa jim — chiqarishga ta'sir qilmaydi).
+- Qat'iy qoida 7: aloqasiz e'lon `submit` da ham rad etiladi (bazadagi CHECK'dan tashqari).
+
+Qarorlar (Sardor yo'qligida):
+1. **"Kuniga 2 ta" = oxirgi 24 soat** (yarim tundan emas) — kechasi 23:59 va 00:01 da ketma-ket yuborib bo'lmaydi.
+   Admin rad etgan e'lon ham limitga kiradi (spam qilib qayta-qayta yuborishning oldini oladi).
+2. **Tasdiqlangan muallif `trust_level=1`** bo'ladi — keyingi e'lonlari (scam so'zi bo'lmasa) to'g'ridan-to'g'ri navbatga.
+3. **Ban/spam/dublikat → bazaga yozilmaydi** (foydalanuvchiga sabab umumiy aytiladi — qaysi so'z ekanini aytmaymiz,
+   aylanib o'tmasin). Scam → yoziladi (`pending_review`, sababi `jobs.last_error` da).
+4. **Kategoriya tugmalari** — `categories.yaml` dagi hamma kategoriya (kasb so'ralmaydi — lavozimdan `Categorizer`
+   topadi, faqat tanlangan sohaga mos bo'lsa).
+5. **Faqat O'zbekiston raqami** (+998) qabul qilinadi (CLAUDE.md qoida 7).
+6. **ru/en yozilgan e'lon** — formatter aggregator'dagidek ishlaydi (talablar ko'rsatilmaydi, qoida 8).
+   Forma savollari o'zbekcha, shuning uchun bu kam uchraydi.
+7. User e'loniga yig'ish oynasi (`hold_minutes`) va `max_age_hours` qo'llanmaydi (raw post yo'q) — darhol chiqadi.
+
+Testlar: `tests/test_job_submission.py` (+25), `tests/test_post_job.py` (+11). Baza o'zgarmadi (migratsiya yo'q).

@@ -57,6 +57,86 @@ FAV_EMPTY = (
 )
 FAV_HEAD = "⭐ <b>Saqlanganlar</b> — {total} ta (sahifa {page}/{pages})"
 CARD_CLOSED = " ❌ Yopilgan"
+
+# ------------------------------------------------------------------ public: 📢 E'lon joylash
+BTN_BACK = "⬅️ Orqaga"
+BTN_CANCEL = "❌ Bekor qilish"
+BTN_SKIP = "⏭ O'tkazib yuborish"
+BTN_NEGOTIABLE = "🤝 Kelishiladi"
+BTN_SEND_PHONE = "📱 Raqamni yuborish"
+BTN_MY_USERNAME = "👤 {username} ni ishlatish"
+BTN_REMOTE = "🏠 Masofaviy"
+BTN_SUBMIT = "✅ Yuborish"
+BTN_EDIT = "✏️ Tahrirlash"
+POST_INTRO = (
+    "📢 <b>E'lon joylash</b>\n"
+    "Bir necha savolga javob bering — e'lon kanalga chiroyli shaklda chiqadi.\n"
+    "Istalgan paytda: «{back}» yoki «{cancel}»."
+)
+POST_ASK_CATEGORY = "1/8. Qaysi soha? 👇"
+POST_ASK_TITLE = "2/8. Lavozim nomi? (masalan: <i>Sotuvchi</i>, <i>Buxgalter</i>)"
+POST_ASK_COMPANY = "3/8. Kompaniya yoki do'kon nomi? (ixtiyoriy)"
+POST_ASK_SALARY = (
+    "4/8. Maosh? (masalan: <i>4-6 mln so'm</i>, <i>5 000 000 so'mdan</i>, <i>500$</i>)\n"
+    "yoki «{negotiable}»."
+)
+POST_ASK_REGION = "5/8. Hudud? 👇"
+POST_ASK_CITY = "Shahar / tuman / mo'ljal? (masalan: <i>Chilonzor tumani</i>; ixtiyoriy)"
+POST_ASK_SCHEDULE = "6/8. Ish vaqti? (masalan: <i>9:00-18:00, 5/2</i>; ixtiyoriy)"
+POST_ASK_REQUIREMENTS = "7/8. Talablar va qo'shimcha ma'lumot? (ixtiyoriy)"
+POST_ASK_CONTACT = (
+    "8/8. <b>Aloqa — majburiy.</b>\n"
+    "«{phone}» tugmasini bosing yoki yozing: <i>+998 90 123 45 67</i> yoki <i>@username</i>."
+)
+POST_NEED_BUTTON = "👆 Tugmalardan birini tanlang."
+POST_TOO_LONG = "✂️ Juda uzun yoki bo'sh. Ko'pi bilan {limit} belgi yozing."
+POST_TOO_SHORT = "Lavozim nomini to'liqroq yozing (kamida 3 harf)."
+POST_NO_CONTACT = (
+    "❗️ Aloqa topilmadi. O'zbekiston raqami (+998...) yoki Telegram @username kerak — "
+    "aloqasiz e'lon qabul qilinmaydi."
+)
+POST_PREVIEW_HEAD = "👀 <b>Kanalda shunday ko'rinadi:</b>"
+POST_PREVIEW_ASK = "Hammasi to'g'rimi?"
+POST_EDIT_WHICH = "Nimani o'zgartiramiz?"
+POST_FIELDS = {
+    "category": "Soha",
+    "title": "Lavozim",
+    "company": "Kompaniya",
+    "salary": "Maosh",
+    "region": "Hudud",
+    "city": "Manzil",
+    "schedule": "Ish vaqti",
+    "requirements": "Talablar",
+    "contact": "Aloqa",
+}
+POST_EXPIRED = "Forma eskirdi. «📢 E'lon joylash» ni qayta bosing."
+POST_QUEUED = (
+    "✅ Qabul qilindi! E'loningiz bir necha daqiqada kanalga chiqadi — havolasini yuboraman."
+)
+POST_REVIEW = "🕵️ E'loningiz qabul qilindi va tekshiruvga yuborildi. Natijasini shu yerga yozaman."
+POST_REJECTED = "🚫 E'lon qabul qilinmadi: taqiqlangan so'zlar yoki spam belgilari bor."
+POST_DUPLICATE = "♻️ Bunday e'lon yaqinda chiqqan — takror yuborilmaydi."
+POST_LIMIT_DAILY = "⏳ Bir kunda ko'pi bilan {n} ta e'lon yuborish mumkin. Ertaga urinib ko'ring."
+POST_LIMIT_INTERVAL = "⏳ E'lonlar orasida {total} daqiqa bo'lishi kerak. {left} daqiqadan keyin."
+POST_LIMIT_WAITING = (
+    "⏳ Oldingi e'loningiz hali tekshiruvda yoki navbatda. U chiqqach, yangisini yuboring."
+)
+POST_APPROVED_USER = "✅ E'loningiz tasdiqlandi va tez orada kanalga chiqadi."
+POST_REJECTED_USER = "❌ Afsuski, e'loningiz tasdiqlanmadi (kanal qoidalariga mos emas)."
+POST_PUBLISHED_USER = "📢 E'loningiz kanalga chiqdi: {url}"
+
+# ------------------------------------------------------------------ admin: moderation
+MOD_HEAD = (
+    "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"
+    "Muallif: {author}\nSabab: {reasons}\n➖➖➖➖➖➖➖➖\n"
+)
+MOD_OK = "✅ Tasdiqlash"
+MOD_NO = "❌ Rad etish"
+MOD_BAN = "🚫 Ban"
+MOD_DONE_OK = "\n\n✅ <b>Tasdiqlandi</b> ({admin})"
+MOD_DONE_NO = "\n\n❌ <b>Rad etildi</b> ({admin})"
+MOD_DONE_BAN = "\n\n🚫 <b>Rad etildi, muallif bloklandi</b> ({admin})"
+MOD_ALREADY = "Bu e'lon allaqachon ko'rib chiqilgan."
 SALARY_NEGOTIABLE = "Kelishiladi"
 REMOTE = "Masofaviy"
 

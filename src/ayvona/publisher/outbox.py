@@ -61,8 +61,9 @@ from aiogram.types import (
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.bot.texts import POST_PUBLISHED_USER
 from ayvona.config import Settings
-from ayvona.db.models import Job, JobStatus
+from ayvona.db.models import Job, JobOrigin, JobStatus
 from ayvona.db.repositories import images_repo, jobs_repo, kv_repo
 from ayvona.processing.images import PickedImage, pick_image
 from ayvona.services.notifier import Notifier
@@ -346,7 +347,21 @@ class Publisher:
             result.message_id,
             " (oddiy matn — HTML xatosi)" if result.plain else "",
         )
+        if job.origin == JobOrigin.USER and job.author_id:
+            await self._tell_author(job.author_id, result.message_id)
         return PublishResult(Outcome.PUBLISHED, job.id)
+
+    async def _tell_author(self, author_id: int, message_id: int) -> None:
+        """A user's job is in the channel: send them the link. Never fails the publishing."""
+        url = f"https://t.me/{self.settings.app.branding.channel_username}/{message_id}"
+        try:
+            await self.sender.bot.send_message(
+                author_id,
+                POST_PUBLISHED_USER.format(url=url),
+                link_preview_options=LinkPreviewOptions(is_disabled=False),
+            )
+        except Exception as e:  # blocked the bot, flood, ...
+            logger.info("Muallif {} ga havola yuborilmadi: {}", author_id, e)
 
     async def _release(
         self, job: Job, status: JobStatus, not_before: datetime, error: str | None
