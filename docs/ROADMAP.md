@@ -44,7 +44,7 @@ Pro'da limit bor (har 5 soatlik oyna + haftalik). Kuchli model limitni tezroq ye
 - [x] Regex bilan bezash (lavozim, maosh, manzil, aloqa...) yoki tozalangan fallback
 - [x] Avtomatik joylash (navbat, qayta urinish, admin'ga xabar, 24 soatdan eskisi chiqmaydi)
 - [x] Hashtaglar: `#dasturchi #toshkent` — kanal ichida bosib qidirish uchun
-- [ ] Kengaytiriladigan manbalar (keyin 2–3 sayt) _(`BaseSource` + registry tayyor; saytlar — Bosqich 16)_
+- [x] Kengaytiriladigan manbalar — Bosqich 16: RSS + 6 ta sayt (`/addsource web:<nom>`), standart o'chiq
 
 **Ommaviy bot @ayvona_jobs_bot (2-qism)** — asosiy menyu: 📢 E'lon joylash · 🔍 Ish qidirish · ⭐ Saqlanganlar · 🔔 Obunalar
 - [x] E'lon joylash: qadamma-qadam forma, **aloqa majburiy** (telefon tugmasi yoki @username), ko'rib chiqish, tasdiqlash

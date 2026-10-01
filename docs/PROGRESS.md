@@ -23,6 +23,10 @@ Claude Code har bir bosqichdan keyin shu yerga yozadi: nima qilindi, qanday ishg
 | 2026-09-30 | 12 — Qidiruv | Usta + so'z bilan (FTS5, kirill/lotin), USD kursi; migratsiya `f2b6d8a4c1e3` | 762 test ✅ |
 | 2026-10-01 | 13 — Obunalar | Obuna ustasi, worker'da yuborish, kunlik limit + dayjest; migratsiya `a7c3e9f1b5d8` | 771 test ✅ |
 | 2026-10-01 | 14 — Yopish, muddat, statistika | 📋 Mening e'lonlarim, kanal posti "YOPILDI", 21/30 kun muddat + eslatma, /stats, /addword /delword /words /ban /unban /broadcast; migratsiya `b8d4f0a2c6e9` | 783 test ✅ |
+| 2026-10-01 | 15 — Gemini | `ai/` (REST + httpx), kesh, limit, circuit breaker, tarjima + sifat tekshiruvi, `/ai` | 803 test ✅ |
+| 2026-10-01 | 16 — Veb-manbalar | RSS, Himalayas, Remotive, Jobicy, Remote OK, Oson Ish, hh.uz; collector oralig'i; "manba: <sayt>" | 829 test ✅ |
+| 2026-10-01 | 17 — Veb-sayt | FastAPI + Jinja2, o'qish uchun; sitemap, JSON-LD; `ayvona-web.service`, Caddy | 837 test ✅ |
+| 2026-10-01 | Deploy | deploy.sh (web, rasmlar), SETUP_ORACLE 10a; toza klonda `uv sync --locked` ✅ | 837 test ✅ |
 
 ---
 
@@ -487,7 +491,8 @@ laptopda 3 jarayon ishlayapti, `git push` (1626806 gacha).
 
 Hali ochiq:
 - [ ] ⚠️ **Migratsiya (Bosqich 12+):** jarayonlarni to'xtatib `uv run alembic upgrade head`, keyin qayta yoqish
-      (batafsil — fayl oxiridagi tungi ish hisobotida).
+      (batafsil — fayl oxiridagi "IKKINCHI TUN HISOBOTI").
+- [ ] **Gemini kaliti (ixtiyoriy):** aistudio.google.com → `.env` → `GEMINI_API_KEY=` (o'sha hisobot, a-band).
 - [ ] **hh.uz (ixtiyoriy)** — rasmiy API ilovasi: 1) https://dev.hh.ru → hh akkaunt bilan kiring → "Мои приложения"
       → "Добавить приложение" (nomi: Ayvona Jobs, sayt: https://t.me/ayvonajobs, maqsad: vakansiyalarni Telegram
       kanalda havola bilan ko'rsatish). 2) Tasdiqlangach (bir necha kun) ilova sahifasidan **application token** ni
@@ -1277,3 +1282,73 @@ Testlar: `tests/test_web.py` (+8, ASGI orqali — server ham, tarmoq ham yo'q). 
 - **Toza klon sinovi** (serverdagidek): `git clone` → vaqtinchalik papka (`.env`/`data/` yo'q) →
   `uv sync --locked` ✅ → `uv run ruff check .` ✅ → `uv run pytest` **837 passed** ✅. Klon keyin o'chirildi.
   (Git Bash'da "dubious ownership" — global sozlamaga tegilmadi, faqat `git -c safe.directory=*` bilan.)
+
+
+---
+
+## IKKINCHI TUN HISOBOTI — nima qilish kerak (2026-10-01)
+
+### a) Gemini API kaliti (ixtiyoriy — kalitsiz ham hammasi ishlaydi)
+1. Brauzerda **aistudio.google.com** → Google akkaunt bilan kiring → **Get API key** → **Create API key** → nusxalang.
+2. `.env` ni oching va shu qatorni to'ldiring (`GEMINI_ALLOW_KEY_ROTATION=false` shunday qolsin):
+   ```powershell
+   notepad .env
+   ```
+   ```
+   GEMINI_API_KEY=AIza...sizning_kalit
+   GEMINI_MODEL=gemini-flash-latest
+   ```
+3. Worker'ni qayta yoqing (pastdagi d-band). Logda: `Gemini yordamchi: model gemini-flash-latest, kalitlar: 1.`
+4. Sinash: botda admin sifatida `/ai` → "✅ ishlayapti", "Bugun: N/200". Ruscha e'lon kanalga chiqqanda postda
+   kirill bo'lmaydi va talablar o'zbekcha bo'ladi; `/ai` dagi hisoblagich oshadi. O'chirish: `/ai` → ⏸ O'chirish.
+
+### b) hh.uz ilovasini ro'yxatdan o'tkazish (ixtiyoriy)
+1. **dev.hh.ru** → hh akkaunt bilan kiring → "Мои приложения" → "Добавить приложение".
+2. Nomi: `Ayvona Jobs`; sayt: `https://t.me/ayvonajobs`; tavsif: "vakansiyalarni Telegram kanalda asl havola bilan
+   ko'rsatish". Tasdiqlashni kuting (bir necha kun bo'lishi mumkin).
+3. Ilova sahifasidan **application token** ni oling va `.env` ga yozing:
+   ```
+   HH_ACCESS_TOKEN=...token...
+   HH_USER_AGENT=AyvonaJobs/1.0 (sizning@email)
+   ```
+4. Collector'ni qayta yoqing, botda: `/addsource web:hh_uz`. Natijani `/sources` → hh.uz kartochkasida ko'ring.
+
+### c) Yangi migratsiyalar (avval nusxa!)
+Uchala oynada **Ctrl+C** (collector, worker, bot). Keyin:
+```powershell
+cd "D:\Coding projects\ayvona"
+uv sync
+uv run python scripts/backup_now.py
+uv run alembic upgrade head
+```
+Oxirida 3 qator: `e5a9c2f7b3d1 -> f2b6d8a4c1e3`, `-> a7c3e9f1b5d8`, `-> b8d4f0a2c6e9`. Xato bo'lsa — yoqmang, xabarni
+Claude'ga yuboring (nusxa `data\backups\` da).
+
+### d) Jarayonlarni qayta yoqish (har biri alohida oynada)
+```powershell
+uv run python -m ayvona.apps.collector
+```
+```powershell
+uv run python -m ayvona.apps.worker
+```
+```powershell
+uv run python -m ayvona.apps.bot
+```
+Sayt (ixtiyoriy, laptopda ko'rish uchun): `uv run python -m ayvona.apps.web` → brauzerda `http://127.0.0.1:8080`.
+
+Veb-manbalarni yoqish (botda, admin): `/addsource web:himalayas` (keyin `web:remotive`, `web:jobicy`,
+`web:remoteok`). Birinchi tekshiruvdagi e'lonlar "tarix" — kanalga chiqmaydi; keyingilari chiqadi (kuniga ≤ 12 ta
+xalqaro). Oson Ish: `/addsource web:osonish` — birinchi postlarni ko'zdan kechiring.
+
+### e) Oracle serverga chiqarish — qolgan qadamlar (deploy/SETUP_ORACLE.md)
+Hammasi qolgan (server hali yo'q): **1** akkaunt → **2** SSH kalit → **3** server (A1, 1 OCPU / 6 GB) → **4** ulanish →
+**5** tayyorlash → **6** `ayvona` foydalanuvchi + uv → **7** deploy key + clone → **8** `.env`/session/baza (scp) →
+**9** `uv sync --locked` + `alembic upgrade head` + `pytest` → **10** systemd (collector, worker, bot) →
+**10a** (ixtiyoriy) sayt: DuckDNS + Caddy + 80/443 + `ayvona-web`. Keyingi yangilashlar: `sudo bash scripts/deploy.sh`.
+
+### Ochiq qolgan joylar
+- Bosqich 10–17 haqiqiy Telegram, Gemini va saytlarda hali **sinalmagan** (faqat mock va saqlangan namunalar).
+- Oson Ish sahifa tuzilishi jonli saytda tekshirilmagan; hh.uz — token bilan birinchi so'rovda tekshiriladi;
+  vacancy.gov.uz — qo'shilmadi.
+- Saytdan e'lon joylash, Telegram Login Widget, saytda saqlanganlar/obunalar va admin panel — keyin (server kerak).
+- Gemini bepul limitlari Google tomonidan o'zgarishi mumkin — `/ai` da xatolar ko'paysa `ai.daily_limit` ni kamaytiring.
