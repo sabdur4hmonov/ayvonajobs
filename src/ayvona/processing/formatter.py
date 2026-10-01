@@ -328,6 +328,7 @@ class _Parts:
     emails: list[str] = field(default_factory=list)
     apply_url: str | None = None
     tags: list[str] = field(default_factory=list)
+    source_name: str | None = None  # websites: "manba: Himalayas" (their terms ask for the name)
 
 
 # --------------------------------------------------------------------------- formatter
@@ -500,14 +501,18 @@ class Formatter:
         return (base + features)[: self.cfg.max_tags]
 
     # ------------------------------------------------------------------ rendering
-    def _signature(self, source_url: str | None) -> list[str]:
+    def _signature(self, source_url: str | None, source_name: str | None = None) -> list[str]:
         b = self.branding
         lines = [
             T_SEPARATOR,
             esc(T_SIGN_BOT.format(bot=b.bot_username)),
             esc(T_SIGN_CHANNEL.format(channel=b.channel_username, title=b.channel_title)),
         ]
-        if source_url:
+        if source_url and source_name:  # websites: "manba: <a>Himalayas</a>"
+            lines.append(
+                f'<i>{T_SOURCE}: <a href="{html.escape(source_url)}">{esc(source_name)}</a></i>'
+            )
+        elif source_url:
             lines.append(f'<i><a href="{html.escape(source_url)}">{T_SOURCE}</a></i>')
         return lines
 
@@ -554,7 +559,7 @@ class Formatter:
         blocks.append(contacts)
 
         tail = [" ".join(f"#{t}" for t in p.tags)] if p.tags else []
-        tail.extend(self._signature(source_url))
+        tail.extend(self._signature(source_url, p.source_name))
         blocks.append(tail)
         return "\n\n".join("\n".join(b) for b in blocks if b)
 
@@ -605,8 +610,10 @@ class Formatter:
         cleaned: CleanedText | None = None,
         *,
         source_url: str | None = None,
+        source_name: str | None = None,
     ) -> FormattedPost:
-        """Caption + buttons of one job. ``source_url``: the original post (aggregator only).
+        """Caption + buttons of one job. ``source_url``: the original post (aggregator only);
+        ``source_name``: the website it came from ("manba: Himalayas").
 
         ``cleaned`` (clean.py) is the body of the fallback template; without it the full
         template is used whatever the confidence.
@@ -622,6 +629,7 @@ class Formatter:
             emails=list(ex.emails[:2]),
             apply_url=None if (ex.phones or ex.usernames or ex.emails) else ex.apply_url,
             tags=self._tags(ex),
+            source_name=source_name,
         )
         if fallback:
             cat = self.settings.categories.get(ex.category)

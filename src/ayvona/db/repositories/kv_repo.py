@@ -52,6 +52,14 @@ async def get_time(session: AsyncSession, key: str) -> datetime | None:
         return None
 
 
+async def incr(session: AsyncSession, key: str) -> int:
+    """Integer counter +1 (missing = 0). Does not commit."""
+    raw = await get(session, key)
+    n = (int(raw) if raw and raw.lstrip("-").isdigit() else 0) + 1
+    await set_value(session, key, str(n))
+    return n
+
+
 async def get_bool(session: AsyncSession, key: str) -> bool:
     return (await get(session, key) or "").strip().lower() in _TRUE
 

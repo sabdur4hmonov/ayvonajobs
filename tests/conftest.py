@@ -6,6 +6,7 @@ import shutil
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import httpx
 import pytest
 import sqlalchemy as sa
 from alembic import command
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from ayvona.config import PROJECT_ROOT
 from ayvona.db.session import create_engine, create_session_factory, sqlite_url
+from ayvona.sources.web import base as web_base
 
 _ENV_KEYS = (
     "API_ID",
@@ -26,6 +28,10 @@ _ENV_KEYS = (
     "DB_PATH",
     "LOG_LEVEL",
     "TZ",
+    "GEMINI_API_KEY",
+    "GEMINI_API_KEYS",
+    "GEMINI_ALLOW_KEY_ROTATION",
+    "HH_ACCESS_TOKEN",
 )
 
 
@@ -34,6 +40,17 @@ def _isolated_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests must never pick up the developer's real environment variables."""
     for key in _ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
+
+
+def _no_network(request: httpx.Request) -> httpx.Response:
+    raise AssertionError(f"test tried to reach the internet: {request.method} {request.url}")
+
+
+@pytest.fixture(autouse=True)
+def _offline_web(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Web sources / RSS probes go through ``sources.web.base.TRANSPORT``: in tests it fails on
+    any request unless the test installs its own MockTransport with saved answers."""
+    monkeypatch.setattr(web_base, "TRANSPORT", httpx.MockTransport(_no_network))
 
 
 def alembic_config(db_file: Path) -> Config:

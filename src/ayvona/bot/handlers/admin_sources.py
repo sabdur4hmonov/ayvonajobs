@@ -14,18 +14,25 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.filters.callback_data import CallbackData
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.bot import texts as T
+from ayvona.bot.callbacks import RssCb
 from ayvona.bot.handlers.admin import ago, local_time
 from ayvona.config import Settings
 from ayvona.db.models import Source, SourceAddedVia, SourceStatus, SourceType
 from ayvona.db.repositories import sources_repo
-from ayvona.services.sources_admin import SourceKind, parse_source_input
+from ayvona.services.sources_admin import (
+    SourceKind,
+    enable_feed,
+    parse_source_input,
+    probe_rss,
+)
 from ayvona.services.stats import source_stats
-from ayvona.sources.registry import registered_types
+from ayvona.sources.web import SITES
 from ayvona.timeutil import ensure_utc, utcnow
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -71,9 +78,42 @@ ICONS = {
 
 
 # ------------------------------------------------------------------ /addsource
+@router.callback_query(RssCb.filter())
+async def rss_decide(
+    query: CallbackQuery,
+    callback_data: RssCb,
+    state: FSMContext,
+    sf: SessionFactory,
+    settings: Settings,
+) -> None:
+    await query.answer()
+    pending = (await state.get_data()).get("pending_rss")
+    await state.update_data(pending_rss=None)
+    if not isinstance(query.message, Message):
+        return
+    if callback_data.action != "add":
+        await query.message.edit_text(T.CANCELLED)
+        return
+    if not pending:
+        await query.message.edit_text(T.ADDSOURCE_RSS_EXPIRED)
+        return
+    interval = settings.app.web_sources.default_interval_minutes
+    async with sf() as s, s.begin():
+        src = await enable_feed(s, pending["url"], pending["title"], query.from_user.id, interval)
+        interval = src.check_interval_minutes or interval
+    logger.info("{}: RSS qo'shildi: {}", _who(query.from_user.id), pending["url"])
+    await query.message.edit_text(
+        T.ADDSOURCE_RSS_ADDED.format(title=html.escape(pending["title"]), interval=interval)
+    )
+
+
 @router.message(Command("addsource"))
 async def addsource_cmd(
-    message: Message, command: CommandObject, sf: SessionFactory, settings: Settings
+    message: Message,
+    command: CommandObject,
+    state: FSMContext,
+    sf: SessionFactory,
+    settings: Settings,
 ) -> None:
     arg = (command.args or "").strip()
     if not arg:
@@ -86,35 +126,69 @@ async def addsource_cmd(
     user_id = message.from_user.id if message.from_user else None
 
     if parsed.kind is SourceKind.RSS:
-        await message.answer(T.ADDSOURCE_RSS_SOON.format(url=html.escape(parsed.identifier[4:])))
+        url = parsed.identifier.removeprefix("rss:")
+        probe = await probe_rss(url, settings)
+        if not probe.ok:
+            await message.answer(T.ADDSOURCE_RSS_BAD.format(error=html.escape(probe.error or "?")))
+            return
+        await state.update_data(pending_rss={"url": url, "title": probe.title})
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text=T.B_ADD, callback_data=RssCb(action="add").pack()),
+                    InlineKeyboardButton(
+                        text=T.B_CANCEL, callback_data=RssCb(action="cancel").pack()
+                    ),
+                ]
+            ]
+        )
+        await message.answer(
+            T.ADDSOURCE_RSS_FOUND.format(
+                title=html.escape(probe.title), url=html.escape(url), n=probe.items
+            ),
+            reply_markup=keyboard,
+        )
         return
 
     if parsed.kind is SourceKind.WEB:
-        known = [t for t in registered_types() if t.startswith("web:")]
-        if parsed.identifier not in known:
+        info = SITES.get(parsed.identifier)
+        if info is None:
             await message.answer(
                 T.ADDSOURCE_WEB_UNKNOWN.format(
-                    key=html.escape(parsed.identifier), known=", ".join(known) or "yo'q"
+                    key=html.escape(parsed.identifier), known=", ".join(SITES) or "yo'q"
                 )
             )
             return
+        if reason := info.unavailable(settings):
+            await message.answer(
+                T.ADDSOURCE_WEB_NEEDS.format(key=html.escape(info.key), reason=html.escape(reason))
+            )
+            return
+        default = settings.app.web_sources.default_interval_minutes
         async with sf() as s, s.begin():
             src = await sources_repo.get_by_identifier(s, parsed.identifier)
             if src is None:
                 src = Source(
                     identifier=parsed.identifier,
                     type=parsed.identifier,
+                    title=info.cls.site_name,
                     added_via=SourceAddedVia.BOT,
                     added_by=user_id,
-                    check_interval_minutes=DEFAULT_WEB_INTERVAL,
+                    check_interval_minutes=default,
                 )
                 s.add(src)
             src.status = SourceStatus.ACTIVE
             src.enabled = True
-            interval = src.check_interval_minutes or DEFAULT_WEB_INTERVAL
+            src.last_error = None
+            interval = max(src.check_interval_minutes or default, info.cls.min_interval_minutes)
         logger.info("{}: /addsource {} (sayt yoqildi)", _who(user_id), parsed.identifier)
         await message.answer(
-            T.ADDSOURCE_WEB_ENABLED.format(key=html.escape(parsed.identifier), interval=interval)
+            T.ADDSOURCE_WEB_ENABLED.format(
+                title=html.escape(info.title),
+                key=html.escape(info.key),
+                interval=interval,
+                note=f"\n⚠️ {html.escape(info.note)}" if info.note else "",
+            )
         )
         return
 
@@ -243,7 +317,7 @@ def _card_keyboard(src: Source) -> InlineKeyboardMarkup:
         first,
         [InlineKeyboardButton(text=T.B_STATS, callback_data=cb(action="stats", id=src.id).pack())],
     ]
-    if SourceType.of(src.type) is SourceType.WEB:
+    if SourceType.of(src.type) in (SourceType.WEB, SourceType.RSS):
         rows.append(
             [
                 InlineKeyboardButton(
@@ -266,9 +340,13 @@ async def _card_view(
         return T.SOURCE_NOT_FOUND, None
     state = _state(src)
     error = f"\n<code>{html.escape(src.last_error[:300])}</code>" if src.last_error else ""
-    interval = (
-        T.SOURCE_INTERVAL.format(m=src.check_interval_minutes) if src.check_interval_minutes else ""
-    )
+    interval = ""
+    if src.check_interval_minutes:
+        site = SITES.get(src.type)
+        minimum = site.cls.min_interval_minutes if site else 0
+        interval = T.SOURCE_INTERVAL.format(m=src.check_interval_minutes)
+        if minimum > src.check_interval_minutes:  # the site's terms win
+            interval += T.SOURCE_SITE_MINIMUM.format(m=minimum)
     text = T.SOURCE_CARD.format(
         icon=ICONS.get(state, "•"),
         name=_name(src),

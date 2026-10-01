@@ -1,0 +1,5 @@
+[
+  {"last_updated": 1790000000, "legal": "API Terms of Service: Please link back to the URL on Remote OK and mention Remote OK as a source."},
+  {"slug": "remote-react-developer-4001", "id": "4001", "epoch": 1790004000, "date": "2026-09-30T11:00:00+00:00", "company": "Frontier", "position": "React Developer", "tags": ["react", "javascript"], "description": "<p>React, TypeScript.</p>", "location": "Worldwide", "salary_min": 50000, "salary_max": 70000, "apply_url": "https://remoteok.com/remote-jobs/remote-react-developer-4001/apply", "url": "https://remoteok.com/remote-jobs/remote-react-developer-4001"},
+  {"slug": "remote-ops-4002", "id": "4002", "epoch": 1790005000, "date": "2026-09-30T12:00:00+00:00", "company": "Opsy", "position": "DevOps Engineer", "tags": ["devops"], "description": "<p>AWS.</p>", "location": "", "url": "https://remoteok.com/remote-jobs/remote-ops-4002"}
+]

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import html
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -43,16 +43,18 @@ from ayvona.db.models import (
     RawPost,
     RawPostStatus,
     Source,
+    SourceType,
 )
-from ayvona.db.repositories import raw_posts_repo
+from ayvona.db.repositories import kv_repo, raw_posts_repo
 from ayvona.processing.classify import Classification, Classifier, PostInput, PostKind, merge_album
 from ayvona.processing.clean import Cleaner
 from ayvona.processing.dedup import WINDOW, DedupEntry, DedupIndex, DedupMatch, make_entry
 from ayvona.processing.extract import Extraction, Extractor
 from ayvona.processing.formatter import FormattedPost, Formatter, telegram_post_url
 from ayvona.processing.normalize import search_text
+from ayvona.processing.web import apply_web, web_data
 from ayvona.services.notifier import Notifier
-from ayvona.timeutil import ensure_utc, utcnow
+from ayvona.timeutil import ensure_utc, to_local, utcnow
 
 KIND_STATUS: dict[PostKind, RawPostStatus] = {
     PostKind.NOT_JOB: RawPostStatus.NOT_JOB,
@@ -91,7 +93,17 @@ class LogicalPost:
 
     @property
     def url(self) -> str | None:
+        """The original post: the job page for websites, ``t.me/<channel>/<id>`` for Telegram."""
+        extra = self.primary.extra or {}
+        if isinstance(extra.get("url"), str) and extra["url"]:
+            return extra["url"]
         return telegram_post_url(self.source.identifier, self.primary.external_id)
+
+    @property
+    def source_name(self) -> str | None:
+        """Website name for "manba: Himalayas" (their terms ask for it); None for Telegram."""
+        name = (self.primary.extra or {}).get("source_name")
+        return name if isinstance(name, str) else None
 
     @property
     def label(self) -> str:
@@ -346,6 +358,15 @@ class Pipeline:
             return RawPostStatus.SKIPPED_BACKFILL
 
         cls = self.classifier.classify(post.input, now)
+        web = web_data(post.input.extra)
+        if (
+            web is not None
+            and SourceType.of(post.source.type) is SourceType.WEB
+            and cls.kind in (PostKind.NOT_JOB, PostKind.OPPORTUNITY, PostKind.NO_TEXT)
+        ):
+            # A job site's API lists jobs only (an English text has few of our job markers);
+            # scam / resume / closed checks still apply. RSS feeds are classified normally.
+            cls = replace(cls, kind=PostKind.JOB, reasons=(*cls.reasons, "web: job site"))
         if cls.kind is not PostKind.JOB:
             status = KIND_STATUS[cls.kind]
             await self._set_status(post, status, ", ".join(cls.reasons)[:500] or None)
@@ -353,6 +374,8 @@ class Pipeline:
             return status
 
         ex = self.extractor.extract(post.input)
+        if web is not None:
+            ex = apply_web(ex, web, post.input.extra or {})
         if not ex.has_contact:
             await self._set_status(post, RawPostStatus.NO_CONTACT)
             return RawPostStatus.NO_CONTACT
@@ -371,12 +394,21 @@ class Pipeline:
         )
         match = self.index.find(entry)
         out, fields = self.render(post, ex)
+        international = bool(web and web.get("international"))
 
         async with self.sf() as s, s.begin():
             job = await self._group_job(s, match) if match else None
-            if job is None:
+            if job is None and international and await self._international_full(s, now):
+                status = RawPostStatus.SKIPPED_LIMIT
+                await self._set_rows(s, post, status)
+                logger.info(
+                    "{}: xalqaro e'lonlar kunlik chegarasi to'ldi — kanalga chiqmaydi", post.label
+                )
+            elif job is None:
                 status = await self._new_job(s, post, now, fields, out)
                 stats.new_jobs += 1
+                if international:
+                    await kv_repo.incr(s, self._international_key(now))
             elif await self._take_over(s, post, job, ex, fields, out):
                 status = RawPostStatus.DONE
                 stats.replaced += 1
@@ -391,6 +423,15 @@ class Pipeline:
             await self._store_entry(s, post, entry, match)
         self.index.add(entry, match.original if match else None)
         return status
+
+    # ------------------------------------------------------------------ international cap
+    def _international_key(self, now: datetime) -> str:
+        return f"web:international:{to_local(now, self.settings.timezone).date().isoformat()}"
+
+    async def _international_full(self, s: AsyncSession, now: datetime) -> bool:
+        """Today's international remote jobs reached ``web_sources.max_international_per_day``."""
+        cap = self.settings.app.web_sources.max_international_per_day
+        return int(await kv_repo.get(s, self._international_key(now)) or 0) >= cap
 
     # ------------------------------------------------------------------ AI (optional)
     async def enhance(
@@ -419,7 +460,7 @@ class Pipeline:
             source=post.source.identifier,
             own_usernames=post.input.own_usernames,
         )
-        out = self.formatter.format(ex, cleaned, source_url=post.url)
+        out = self.formatter.format(ex, cleaned, source_url=post.url, source_name=post.source_name)
         return out, job_fields(ex, cleaned.text, out)
 
     async def post_of_job(self, s: AsyncSession, job: Job) -> LogicalPost | None:

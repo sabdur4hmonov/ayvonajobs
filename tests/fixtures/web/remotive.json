@@ -1,0 +1,9 @@
+{
+  "0-legal-notice": "Remotive API Legal Notice",
+  "job-count": 3,
+  "jobs": [
+    {"id": 2001, "url": "https://remotive.com/remote-jobs/software-dev/backend-engineer-2001", "title": "Backend Engineer", "company_name": "Globex", "category": "Software Development", "job_type": "full_time", "publication_date": "2026-09-30T08:00:00", "candidate_required_location": "Worldwide", "salary": "$4,000 - $6,000 / month", "description": "<p>Go and Kubernetes.</p>"},
+    {"id": 2002, "url": "https://remotive.com/remote-jobs/marketing/seo-2002", "title": "SEO Specialist", "company_name": "Initech", "category": "Marketing", "job_type": "contract", "publication_date": "2026-09-30T09:00:00", "candidate_required_location": "USA Only", "salary": "", "description": "<p>US based.</p>"},
+    {"id": 2003, "url": "https://remotive.com/remote-jobs/design/ui-2003", "title": "UI Designer", "company_name": "Umbrella", "category": "Design", "job_type": "full_time", "publication_date": "2026-09-30T10:00:00", "candidate_required_location": "Europe, Central Asia", "salary": "", "description": "<p>Figma.</p>"}
+  ]
+}

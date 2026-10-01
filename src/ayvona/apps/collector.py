@@ -19,6 +19,7 @@ import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 from aiogram import Bot
 from loguru import logger
@@ -27,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from ayvona.apps.runtime import SleepFn, install_signal_handlers, stop_aware_sleep
 from ayvona.botapi import BotConfigError, create_bot
 from ayvona.config import CollectorConfig, Settings, get_settings
-from ayvona.db.models import SourceStatus, SourceType
+from ayvona.db.models import Source, SourceStatus, SourceType
 from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
 from ayvona.logging_setup import setup_logging
@@ -36,7 +37,8 @@ from ayvona.services.sources_admin import process_pending
 from ayvona.sources.base import BaseSource, SourceRateLimited
 from ayvona.sources.registry import SourceDeps, create_source
 from ayvona.sources.telegram_source import TelegramConfigError, connect_client
-from ayvona.timeutil import utcnow
+from ayvona.sources.web.base import WebSource
+from ayvona.timeutil import ensure_utc, utcnow
 
 PROCESS_NAME = "collector"
 LAST_CYCLE_KEY = kv_repo.COLLECTOR_LAST_CYCLE
@@ -63,6 +65,15 @@ class PollOutcome:
 class ActiveSource:
     source_id: int
     source: BaseSource
+    # Websites / RSS: polled only every ``interval`` (the site's minimum or the admin's choice,
+    # whichever is longer); Telegram channels: every cycle (None).
+    interval: timedelta | None = None
+    last_checked: datetime | None = None
+
+    def due(self, now: datetime) -> bool:
+        if self.interval is None or self.last_checked is None:
+            return True
+        return now - ensure_utc(self.last_checked) >= self.interval
 
 
 # ------------------------------------------------------------------ helpers
@@ -160,6 +171,8 @@ async def run_cycle(
     sleep: SleepFn,
 ) -> list[PollOutcome]:
     outcomes: list[PollOutcome] = []
+    now = utcnow()
+    sources = [a for a in sources if a.due(now)]
     for i, active in enumerate(sources):
         out = await poll_source(
             sf, active.source_id, active.source, fetch_timeout=cfg.fetch_timeout_seconds
@@ -223,16 +236,34 @@ class SourcePool:
                 with contextlib.suppress(Exception):
                     await gone.source.close()
         for row in rows:
-            if row.id in self._active or (row.id, row.identifier) in self._broken:
+            if row.id in self._active:
+                self._active[row.id].interval = self._interval(row, self._active[row.id].source)
+                self._active[row.id].last_checked = row.last_checked_at
+                continue
+            if (row.id, row.identifier) in self._broken:
                 continue
             try:
-                self._active[row.id] = ActiveSource(row.id, create_source(row, self.deps))
+                source = create_source(row, self.deps)
+                self._active[row.id] = ActiveSource(
+                    row.id, source, self._interval(row, source), row.last_checked_at
+                )
                 self._identifiers[row.id] = row.identifier
             except Exception as e:
                 self._broken.add((row.id, row.identifier))
                 logger.error("{}: manbani yaratib bo'lmadi: {}", row.identifier, e)
                 await _record_error(self.sf, row.id, f"{type(e).__name__}: {e}")
         return [self._active[r.id] for r in rows if r.id in self._active]
+
+    def _interval(self, row: Source, source: BaseSource) -> timedelta | None:
+        if not isinstance(source, WebSource):
+            return None
+        default = (
+            self.deps.settings.app.web_sources.default_interval_minutes
+            if self.deps.settings
+            else 30
+        )
+        minutes = max(row.check_interval_minutes or default, source.min_interval_minutes)
+        return timedelta(minutes=minutes)
 
     async def close(self) -> None:
         for active in self._active.values():
@@ -324,9 +355,7 @@ async def main(once: bool = False) -> int:
     client = None
     try:
         if not await schema_is_ready(engine):
-            logger.error(
-                "Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head"
-            )
+            logger.error("Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head")
             return 1
         sf = create_session_factory(engine)
 
@@ -345,7 +374,9 @@ async def main(once: bool = False) -> int:
 
         bot = await _optional_bot(settings)
         notifier = Notifier(bot, settings.env.admin_chat_id, sf)
-        deps = SourceDeps(collector=settings.app.collector, telegram_client=client)
+        deps = SourceDeps(
+            collector=settings.app.collector, telegram_client=client, settings=settings
+        )
         pool = SourcePool(sf, deps)
         active_names = [r.identifier for r in rows if r.status == SourceStatus.ACTIVE]
         logger.info("Faol manbalar: {}", active_names or "yo'q")

@@ -215,10 +215,14 @@ class BaseSource(ABC):
     type: str
     async def fetch_new(self, since: str | None) -> FetchResult: ...  # items + yangi kursor
 ```
-- `TelegramSource` — hozir.
-- `WebSource` (masalan `HhUzSource`, `OlxSource`) — keyin: httpx + selectolax, saytning `robots.txt` va
-  qoidalariga rioya qilish, sekin so'rovlar (har bir sayt uchun 5–15 daqiqa).
-- `registry.py` config'dagi `type` bo'yicha kerakli klassni tanlaydi. Pipeline o'zgarmaydi.
+- `TelegramSource` — Telegram kanallar (Telethon).
+- `sources/web/` (Bosqich 16): `WebSource` asosi (httpx, User-Agent, 429/5xx, **saytning chegaralari kodda**),
+  `RssSource` (`type=rss`, istalgan RSS/Atom), `HimalayasSource`, `RemotiveSource`, `JobicySource`, `RemoteOkSource`,
+  `OsonIshSource`, `HhUzSource` (`type=web:<nom>`). Har e'lon `raw_posts.extra` da: `web` (tuzilgan maydonlar),
+  `url`, `apply_url`, `source_name`. Collector veb-manbani faqat oralig'i kelganda so'raydi (Telegram — har siklda).
+  Pipeline `processing/web.py` bilan tuzilgan maydonlarni ishlatadi; postda "🔗 Ariza topshirish" va
+  "manba: <sayt nomi>". Xalqaro masofaviy — kuniga ≤ 12 (`skipped_limit`).
+- `registry.py` `sources.type` bo'yicha kerakli klassni tanlaydi. Pipeline o'zgarmaydi.
 - **Manbalar ro'yxati bazada saqlanadi** (`sources` jadvali). `settings.yaml` — faqat boshlang'ich ro'yxat.
   Admin botda `/addsource` va `/sources` orqali kanal qo'shadi/o'chiradi, collector har siklda ro'yxatni
   bazadan o'qiydi (restart kerak emas). Yangi **sayt** turini qo'shish uchun esa baribir parser kodi kerak.

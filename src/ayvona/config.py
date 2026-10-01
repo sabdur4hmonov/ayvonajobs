@@ -301,6 +301,19 @@ class AIConfig(BaseModel):
     max_input_chars: int = Field(default=3000, ge=200)
 
 
+class WebSourcesConfig(BaseModel):
+    """Websites / APIs / RSS (sources/web/). Each site's own limits are in its code."""
+
+    user_agent: str = "AyvonaJobsBot/1.0 (+https://t.me/ayvonajobs)"
+    timeout_seconds: float = Field(default=30, gt=0)
+    fetch_limit: int = Field(default=50, ge=1)  # new jobs taken per poll and source
+    # International remote jobs (Himalayas, Remotive, Jobicy, Remote OK) per Tashkent day,
+    # all sources together; the rest stay in the DB (search) as skipped_limit.
+    max_international_per_day: int = Field(default=12, ge=0)
+    default_interval_minutes: int = Field(default=30, ge=5)  # new web / rss rows
+    osonish_max_pages: int = Field(default=20, ge=1)  # vacancy pages read per poll
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -331,6 +344,7 @@ class AppConfig(BaseModel):
     expiry: ExpiryConfig = Field(default_factory=ExpiryConfig)
     broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
     ai: AIConfig = Field(default_factory=AIConfig)
+    web_sources: WebSourcesConfig = Field(default_factory=WebSourcesConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 

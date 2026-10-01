@@ -345,18 +345,25 @@ RESUMED = "▶️ Kanalga joylash davom etmoqda."
 ADDSOURCE_USAGE = (
     "Ishlatish:\n"
     "/addsource @kanal\n/addsource t.me/kanal\n/addsource t.me/+TaklifHavola (yopiq kanal)\n"
-    "/addsource web:hh_uz (kodi yozilgan sayt)\n/addsource rss:https://sayt.uz/feed"
+    "/addsource rss:https://sayt.uz/feed (istalgan RSS/Atom lenta)\n"
+    "/addsource web:nom — kodi yozilgan sayt: web:himalayas, web:remotive, web:jobicy, "
+    "web:remoteok, web:osonish, web:hh_uz"
 )
 ADDSOURCE_BAD = "Tushunmadim: <code>{text}</code>\n\n" + ADDSOURCE_USAGE
-ADDSOURCE_RSS_SOON = (
-    "📰 RSS manbalar tez orada (Bosqich 16.0). Havolani saqlab qo'ying: <code>{url}</code>"
+ADDSOURCE_RSS_FOUND = (
+    "📰 <b>{title}</b>\n<code>{url}</code>\nLentada hozir {n} ta yozuv. Qo'shilsinmi?\n"
+    "<i>Ish e'loni bo'lmagan yozuvlarni filtr o'tkazib yuboradi. Birinchi tekshiruvdagi eski "
+    "yozuvlar kanalga chiqmaydi.</i>"
 )
-ADDSOURCE_WEB_UNKNOWN = (
-    "❌ <code>{key}</code> uchun kod hali yozilmagan. Mavjudlari: {known}.\n"
-    "Saytlar Bosqich 16 da qo'shiladi."
-)
+ADDSOURCE_RSS_BAD = "❌ Lentani o'qib bo'lmadi: {error}"
+ADDSOURCE_RSS_ADDED = "✅ RSS qo'shildi: <b>{title}</b> (har {interval} daqiqada tekshiriladi)."
+ADDSOURCE_RSS_EXPIRED = "So'rov eskirdi — /addsource rss:<URL> ni qayta yozing."
+B_ADD = "✅ Qo'shish"
+ADDSOURCE_WEB_UNKNOWN = "❌ <code>{key}</code> uchun kod yo'q. Mavjudlari: {known}."
+ADDSOURCE_WEB_NEEDS = "❌ <code>{key}</code> hozir yoqilmaydi: {reason}"
 ADDSOURCE_WEB_ENABLED = (
-    "✅ Sayt yoqildi: <code>{key}</code> (har {interval} daqiqada tekshiriladi)."
+    "✅ Sayt yoqildi: <b>{title}</b> <code>{key}</code> "
+    "(har {interval} daqiqada tekshiriladi).{note}"
 )
 ADDSOURCE_EXISTS = "ℹ️ {ident} allaqachon ro'yxatda va ishlayapti."
 ADDSOURCE_REENABLED = "▶️ {ident} ro'yxatda bor edi — qayta yoqildi."
@@ -397,6 +404,7 @@ SOURCE_STATE = {
     "rejected": "qo'shilmadi",
 }
 SOURCE_INTERVAL = "\nTekshirish oralig'i: {m} daqiqa"
+SOURCE_SITE_MINIMUM = " (sayt shartlari: kamida {m} daqiqa — shunday tekshiriladi)"
 SOURCE_PAUSED = "⏸ {name} pauzaga qo'yildi."
 SOURCE_RESUMED = "▶️ {name} yoqildi."
 SOURCE_DELETE_CONFIRM = "🗑 {name} o'chirilsinmi?\nPostlari bazada qoladi, faqat o'qish to'xtaydi."

@@ -206,8 +206,8 @@ async def test_addsource_asks_backfill_then_queues_pending(
     [
         ("", "Ishlatish"),
         ("salom dunyo", "Tushunmadim"),
-        ("rss:https://example.uz/feed", "tez orada"),
-        ("web:hh_uz", "kod hali yozilmagan"),
+        ("web:hh_uz", "HH_ACCESS_TOKEN"),
+        ("web:olx", "kod yo'q"),
     ],
 )
 async def test_addsource_other_inputs(harness: BotHarness, arg: str, expected: str) -> None:

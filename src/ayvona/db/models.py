@@ -51,6 +51,7 @@ class SourceType(StrEnum):
 
     TELEGRAM = "telegram"
     WEB = "web"
+    RSS = "rss"  # any RSS / Atom feed, identifier "rss:<URL>" (Bosqich 16)
 
     @classmethod
     def of(cls, type_key: str) -> SourceType:
@@ -94,6 +95,8 @@ class RawPostStatus(StrEnum):
     # before the worker's first start, and history taken when a source is added
     # (unless ``publisher.publish_backfill``).
     SKIPPED_BACKFILL = "skipped_backfill"
+    # An international remote job over ``web_sources.max_international_per_day`` (Bosqich 16).
+    SKIPPED_LIMIT = "skipped_limit"
     ERROR = "error"
 
 

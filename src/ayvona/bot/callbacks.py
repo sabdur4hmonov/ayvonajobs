@@ -53,6 +53,10 @@ class BroadcastCb(CallbackData, prefix="bc"):
     action: str  # send | cancel
 
 
+class RssCb(CallbackData, prefix="rss"):
+    action: str  # add | cancel (the URL waits in the admin's FSM data)
+
+
 class AICb(CallbackData, prefix="ai"):
     action: str  # on | off
 

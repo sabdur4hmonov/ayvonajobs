@@ -9,10 +9,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from ayvona.config import CollectorConfig
+from ayvona.config import CollectorConfig, Settings
 from ayvona.db.models import Source
 from ayvona.sources.base import BaseSource
 from ayvona.sources.telegram_source import TelegramSource
+from ayvona.sources.web import SITES, RssSource
 
 
 @dataclass(slots=True)
@@ -21,6 +22,7 @@ class SourceDeps:
 
     collector: CollectorConfig
     telegram_client: Any | None = None
+    settings: Settings | None = None  # web / rss sources (User-Agent, tokens, limits)
 
 
 SourceFactory = Callable[[Source, SourceDeps], BaseSource]
@@ -67,3 +69,26 @@ def _telegram(row: Source, deps: SourceDeps) -> BaseSource:
         ),
         fetch_limit=deps.collector.fetch_limit,
     )
+
+
+def _settings(deps: SourceDeps) -> Settings:
+    if deps.settings is None:
+        raise RuntimeError("web sources need settings (SourceDeps.settings)")
+    return deps.settings
+
+
+@register("rss")
+def _rss(row: Source, deps: SourceDeps) -> BaseSource:
+    return RssSource(row.identifier, _settings(deps), title=row.title)
+
+
+def _register_site(key: str) -> None:
+    info = SITES[key]
+
+    @register(key)
+    def _site(row: Source, deps: SourceDeps) -> BaseSource:
+        return info.cls(row.identifier, _settings(deps))
+
+
+for _key in SITES:
+    _register_site(_key)

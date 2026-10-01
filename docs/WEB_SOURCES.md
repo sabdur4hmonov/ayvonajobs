@@ -2,6 +2,11 @@
 
 **Sana:** 2026-09-29 · **Kim:** Claude (chat) · **Qachon ulanadi:** Bosqich 9 dan keyin (MVP 1–2 hafta barqaror ishlagach) — Bosqich 16.
 
+> **Holat (2026-10-01):** kod tayyor — `src/ayvona/sources/web/`. Yoqish: botda `/addsource web:himalayas`
+> (`remotive`, `jobicy`, `remoteok`, `osonish`, `hh_uz`) yoki `/addsource rss:<URL>`. Shartlar 2026-10-01 da qayta
+> o'qildi (PROGRESS.md, Bosqich 16). hh.uz — `HH_ACCESS_TOKEN` kerak; vacancy.gov.uz — qo'shilmadi.
+> Himalayas/Remotive: Google Jobs'ga yuborish taqiq → saytimizda ularning e'lonlariga JobPosting belgisi yo'q.
+
 Tanlov mezonlari: 1) ruxsat bor (rasmiy API yoki `robots.txt` ruxsat beradi, shartlari bilan), 2) bepul,
 3) O'zbekiston fuqarosi **haqiqatan ariza topshira oladi**, 4) har e'londa ariza havolasi bor.
 

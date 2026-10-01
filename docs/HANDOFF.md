@@ -26,7 +26,8 @@ Qarorlar va sabablari — PROGRESS.md dagi har bosqich bo'limida; ertalabki buyr
 Qoidalar o'sha: jarayonlar ishga tushirilmaydi, haqiqiy baza/.env/session'ga tegilmaydi, haqiqiy saytlarga/Gemini'ga
 so'rov yo'q (faqat mock va `tests/fixtures/web/`), har vazifa alohida commit + push.
 - [x] 1. Bosqich 15 — Gemini yordamchi (`ai/`, `/ai`)
-- [ ] 2. Bosqich 16 — veb-manbalar: RSS → Himalayas → Remotive → Jobicy → Remote OK → Oson Ish → hh.uz → (vacancy.gov.uz)
+- [x] 2. Bosqich 16 — veb-manbalar: RSS, Himalayas, Remotive, Jobicy, Remote OK, Oson Ish, hh.uz (token kerak);
+      vacancy.gov.uz qo'shilmadi (sabab PROGRESS'da). Hammasi standart o'chiq — `/addsource web:<nom>`.
 - [ ] 3. Bosqich 17 — o'z veb-sayti (FastAPI + Jinja2, read-only birinchi)
 - [ ] 4. Deploy tayyorligi (SETUP_ORACLE.md, systemd, deploy.sh; toza klonda `uv sync --locked` + testlar)
 - [ ] 5. Hujjatlarni yakunlash + Sardorga hisobot

@@ -1,0 +1,8 @@
+{
+  "apiVersion": "2",
+  "jobCount": 2,
+  "jobs": [
+    {"id": 3001, "url": "https://jobicy.com/jobs/3001-qa-engineer", "jobSlug": "3001-qa-engineer", "jobTitle": "QA Engineer", "companyName": "Testify", "jobIndustry": ["Engineering"], "jobType": ["full-time"], "jobGeo": "Anywhere", "jobLevel": "Midweight", "jobExcerpt": "Manual and automated testing.", "jobDescription": "<p>Selenium, Playwright.</p>", "pubDate": "2026-09-30T07:00:00+00:00", "salaryMin": 30000, "salaryMax": 42000, "salaryCurrency": "USD", "salaryPeriod": "year"},
+    {"id": 3002, "url": "https://jobicy.com/jobs/3002-sales", "jobSlug": "3002-sales", "jobTitle": "Sales Manager", "companyName": "Sellers", "jobIndustry": ["Sales"], "jobType": ["full-time"], "jobGeo": "Canada", "jobExcerpt": "Sell.", "jobDescription": "<p>Canada only.</p>", "pubDate": "2026-09-30T06:00:00+00:00"}
+  ]
+}

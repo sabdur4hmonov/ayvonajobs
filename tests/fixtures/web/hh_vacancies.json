@@ -1,0 +1,7 @@
+{
+  "found": 2, "pages": 1, "per_page": 50, "page": 0,
+  "items": [
+    {"id": "5001", "name": "Бухгалтер", "area": {"id": "2759", "name": "Ташкент"}, "salary": {"from": 6000000, "to": 8000000, "currency": "UZS", "gross": false}, "employer": {"name": "ООО Пример Трейд"}, "published_at": "2026-09-30T10:00:00+0500", "alternate_url": "https://hh.uz/vacancy/5001", "apply_alternate_url": "https://hh.uz/applicant/vacancy_response?vacancyId=5001", "snippet": {"requirement": "Опыт работы от 2 лет. Знание <highlighttext>1С</highlighttext>.", "responsibility": "Ведение учета."}, "schedule": {"id": "fullDay", "name": "Полный день"}},
+    {"id": "5002", "name": "Frontend developer", "area": {"id": "2759", "name": "Ташкент"}, "salary": null, "employer": {"name": "IT Park Resident"}, "published_at": "2026-09-30T11:00:00+0500", "alternate_url": "https://hh.uz/vacancy/5002", "apply_alternate_url": "https://hh.uz/applicant/vacancy_response?vacancyId=5002", "snippet": {"requirement": "React, TypeScript.", "responsibility": null}, "schedule": {"name": "Удаленная работа"}}
+  ]
+}

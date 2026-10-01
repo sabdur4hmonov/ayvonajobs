@@ -15,16 +15,21 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+import httpx
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from telethon import errors
 from telethon.tl import types
 from telethon.tl.functions.messages import CheckChatInviteRequest, ImportChatInviteRequest
 
-from ayvona.db.models import Source, SourceStatus
+from ayvona.config import Settings
+from ayvona.db.models import Source, SourceAddedVia, SourceStatus, SourceType
 from ayvona.db.repositories import sources_repo
 from ayvona.services.notifier import Notifier
+from ayvona.sources.base import SourceError
 from ayvona.sources.telegram_source import normalize_identifier
+from ayvona.sources.web import base as web_base
+from ayvona.sources.web.rss import parse_feed
 
 
 class SourceKind(StrEnum):
@@ -66,6 +71,55 @@ def parse_source_input(text: str) -> ParsedSource | None:
     if m := _RSS_RE.match(t):
         return ParsedSource(SourceKind.RSS, "rss:" + m.group(1))
     return None
+
+
+# --------------------------------------------------------------------------- RSS / websites
+@dataclass(frozen=True, slots=True)
+class FeedProbe:
+    ok: bool
+    title: str = ""
+    items: int = 0
+    error: str | None = None
+
+
+async def probe_rss(url: str, settings: Settings) -> FeedProbe:
+    """Read the feed once (the bot shows its title before adding it). Never raises."""
+    cfg = settings.app.web_sources
+    try:
+        async with httpx.AsyncClient(
+            timeout=min(cfg.timeout_seconds, 20),
+            headers={"User-Agent": cfg.user_agent},
+            follow_redirects=True,
+            transport=web_base.TRANSPORT,
+        ) as http:
+            resp = await http.get(url)
+        if resp.status_code >= 400:
+            return FeedProbe(False, error=f"HTTP {resp.status_code}")
+        feed = parse_feed(resp.text)
+    except SourceError as e:
+        return FeedProbe(False, error=str(e))
+    except httpx.HTTPError as e:
+        return FeedProbe(False, error=f"tarmoq: {type(e).__name__}")
+    return FeedProbe(True, title=feed.title[:120], items=len(feed.jobs))
+
+
+async def enable_feed(
+    session: AsyncSession, url: str, title: str, admin_id: int | None, interval: int
+) -> Source:
+    """``rss:<url>`` row, active (or a paused / deleted one switched back on). Does not commit."""
+    ident = f"rss:{url}"
+    src = await sources_repo.get_by_identifier(session, ident)
+    if src is None:
+        src = Source(identifier=ident, type=SourceType.RSS.value, check_interval_minutes=interval)
+        session.add(src)
+    src.title = title or src.title
+    src.status = SourceStatus.ACTIVE
+    src.enabled = True
+    src.added_via = SourceAddedVia.BOT
+    src.added_by = admin_id
+    src.last_error = None
+    await session.flush()
+    return src
 
 
 # --------------------------------------------------------------------------- checking

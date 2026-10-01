@@ -488,6 +488,13 @@ laptopda 3 jarayon ishlayapti, `git push` (1626806 gacha).
 Hali ochiq:
 - [ ] ⚠️ **Migratsiya (Bosqich 12+):** jarayonlarni to'xtatib `uv run alembic upgrade head`, keyin qayta yoqish
       (batafsil — fayl oxiridagi tungi ish hisobotida).
+- [ ] **hh.uz (ixtiyoriy)** — rasmiy API ilovasi: 1) https://dev.hh.ru → hh akkaunt bilan kiring → "Мои приложения"
+      → "Добавить приложение" (nomi: Ayvona Jobs, sayt: https://t.me/ayvonajobs, maqsad: vakansiyalarni Telegram
+      kanalda havola bilan ko'rsatish). 2) Tasdiqlangach (bir necha kun) ilova sahifasidan **application token** ni
+      oling. 3) `.env` ga: `HH_ACCESS_TOKEN=...` va `HH_USER_AGENT=AyvonaJobs/1.0 (sizning@email)`. 4) Collector'ni
+      qayta yoqing, botda `/addsource web:hh_uz`.
+- [ ] **Veb-manbalarni yoqish (xohlasangiz):** `/addsource web:himalayas`, `web:remotive`, `web:jobicy`,
+      `web:remoteok` (masofaviy xalqaro, kuniga ≤ 12 ta), `web:osonish` (birinchi natijalarni ko'ring).
 - [ ] **Qaror kerak — `initial_backfill`:** yangi kanal qo'shilganda eski postlar olinsinmi? Hozir `0` (faqat keyingilari).
 - [ ] **Qaror kerak — `/addsource` dagi eski postlar** kanalga chiqsinmi? Hozir yo'q (`publisher.publish_backfill: false`).
       Eslatma: chiqsa ham, manbada 24 soatdan oldin chiqqanlari baribir chiqmaydi (`publisher.max_age_hours`).
@@ -1164,3 +1171,56 @@ Qarorlar (Sardor yo'qligida):
 Testlar: `tests/test_ai.py` (+20): maskalash, klient (muvaffaqiyat, 429, 503, timeout, noto'g'ri JSON), tarjima va
 aloqa saqlanishi, kesh, limit, admin o'chirishi, kalitsiz, aylanish, sifat tekshiruvi, pipeline (hamma xatoda e'lon
 chiqadi), `/ai`. **803 passed.**
+
+
+---
+
+## Bosqich 16 — 🌐 Veb-saytlar, API va RSS manbalar (2026-10-01, avtonom)
+
+**Shartlar o'qildi (2026-10-01, bir martalik, faqat hujjat/robots.txt):** Himalayas (havola + "Himalayas" nomi;
+Jooble/Google Jobs/LinkedIn ga yuborish TAQIQ), Remotive (kuniga ≤ 4 so'rov, havola + nom, agregatorlarga taqiq),
+Jobicy (soatiga ≤ 1, kanonik havola + nom), Remote OK (havola + nom), Oson Ish robots.txt (sahifalar ruxsat,
+`/api/` va `/admin/` taqiq, `Crawl-delay: 1`, sitemap bor). Hech qaysi saytdan e'lon **yig'ilmadi**: testlar sun'iy
+namunalar bilan (`tests/fixtures/web/`), `tests/conftest.py` har qanday haqiqiy HTTP so'rovni to'xtatadi.
+
+Nima qilindi (`src/ayvona/sources/web/`):
+- **`base.py` — `WebSource`**: httpx, `User-Agent: AyvonaJobsBot/1.0 (+https://t.me/ayvonajobs)`, 429 →
+  `SourceRateLimited` (Retry-After), 5xx → bir marta qayta, **har saytning chegaralari kodda** (`min_interval_minutes`,
+  `max_requests_per_day`, `request_delay_seconds`) — admin oralig'i faqat siyrakroq qila oladi; kursor = oxirgi e'lon
+  vaqti (Unix soniya); `open_to_uzbekistan()` — Worldwide/Anywhere/Uzbekistan/Central Asia/CIS/Asia/APAC yoki UTC+5 ni
+  qamragan vaqt mintaqasi; `WebJob` → `RawItem` (`extra.web` — tuzilgan maydonlar, `url`, `apply_url`, `source_name`).
+- **`rss.py` — istalgan RSS 2.0 / Atom** (`/addsource rss:<URL>` → bot lentani o'qib sarlavha va yozuvlar sonini
+  ko'rsatadi → [✅ Qo'shish] → `sources(type=rss)`, collector restart'siz o'qiydi). Sanasiz lentalar — oxirgi yozuv
+  ID'si bo'yicha.
+- **`remote_apis.py`**: Himalayas (soatiga), Remotive (6 soatda, kuniga 4), Jobicy (soatiga, `geo=anywhere`), Remote OK
+  (soatiga; birinchi element — huquqiy eslatma, tashlanadi; joylashuvi bo'sh e'lon olinmaydi).
+- **`uzbek_sites.py`**: Oson Ish (faqat `sitemap.xml` → vakansiya sitemap'i → e'lon sahifalari; JSON-LD `JobPosting`
+  yoki `og:` teglari; 1 s oraliq; aylanishda ≤ 20 sahifa; 30 daqiqada), hh.uz (rasmiy API `api.hh.ru/vacancies`,
+  `area=97`, `host=hh.uz`; **token va HH-User-Agent'siz ishga tushmaydi**).
+- **Collector**: veb/RSS manbalar faqat oralig'i kelganda so'raladi (`ActiveSource.due`), Telegram — har siklda.
+- **Pipeline** (`processing/web.py`): sayt API'sidan kelgan e'lon — tuzilgan maydonlar (lavozim, kompaniya, maosh —
+  yillik → oylik, masofaviy, ariza havolasi) regex taxminidan ustun; sayt API'si "e'lon emas" deb tasniflanmaydi
+  (inglizcha matnda bizning belgilar kam), lekin scam/rezyume/yopilgan tekshiruvi qoladi; RSS — odatdagidek tasniflanadi.
+  Postda: **"🔗 Ariza topshirish"** tugmasi, oxirida **`manba: <a>Himalayas</a>`**, teglar `#masofaviy #xalqaro`.
+- **Xalqaro e'lonlar kuniga ≤ 12 ta** (`web_sources.max_international_per_day`); ortig'i `raw_posts.status =
+  skipped_limit` (bazada qoladi).
+- **Bot**: `/addsource web:himalayas|remotive|jobicy|remoteok|osonish|hh_uz` (token yo'q bo'lsa sababini aytadi),
+  `/addsource rss:<URL>`; `/sources` kartochkasida sayt minimal oralig'i ko'rinadi; RSS uchun ham oraliq tugmalari.
+
+Qarorlar (Sardor yo'qligida):
+1. **Hamma saytlar standart O'CHIQ** — `/addsource web:<nom>` bilan siz yoqasiz (kod/YAML tahrirsiz).
+2. **Oson Ish** — HTML tuzilishi jonli saytda tekshirilmagan (ruxsat faqat robots.txt o'qishga edi). Kod umumiy
+   standartlarga (sitemap + JSON-LD `JobPosting` / `og:` teglari) tayanadi. Yoqqandan keyin birinchi postlarni ko'ring;
+   noto'g'ri bo'lsa `/sources` → ⏸ Pauza va Claude'ga ayting.
+3. **hh.uz** — kod tayyor, lekin `HH_ACCESS_TOKEN` + `HH_USER_AGENT` siz yoqilmaydi (qadamlar "Sardor uchun" da).
+   API maydonlari hh'ning GitHub hujjatidagi namunadan; token bilan birinchi so'rovda tekshiriladi.
+4. **vacancy.gov.uz qo'shilmadi** — hujjatlashtirilgan API yoki o'qisa bo'ladigan shartlar topilmadi; taxmin bilan
+   davlat saytini o'qimaymiz. Keyin rasmiy API/RSS bo'lsa — `rss:` orqali kodsiz qo'shsa bo'ladi.
+5. **Jobicy faqat `geo=anywhere`** — soatiga 1 so'rov chegarasida bir nechta geo so'rov sig'maydi.
+6. **Remote OK da joylashuvi yozilmagan e'lon olinmaydi** (Himalayas'da bo'sh = butun dunyo — ularning hujjatiga ko'ra).
+7. **Kunlik so'rov hisobi xotirada** (restart nolga tushiradi), lekin minimal oraliq bazadagi `last_checked_at` bilan
+   ishlaydi — restart ham chegarani buzmaydi.
+8. **Muhim (Bosqich 17 uchun):** Himalayas/Remotive shartlari Google Jobs'ga yuborishni taqiqlaydi → saytimizda veb-manba
+   e'lonlariga `JobPosting` JSON-LD **qo'yilmaydi** (faqat Telegram/foydalanuvchi e'lonlariga).
+
+Testlar: `tests/test_web_sources.py` (+26). **829 passed**, ruff toza. Migratsiya kerak emas (yangi status VARCHAR).

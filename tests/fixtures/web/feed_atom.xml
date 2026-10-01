@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom ish lentasi</title>
+  <entry>
+    <title>Haydovchi kerak</title>
+    <link rel="alternate" href="https://atom.example.uz/jobs/21"/>
+    <id>urn:job:21</id>
+    <published>2026-09-30T05:00:00Z</published>
+    <summary>Haydovchi kerak, B toifa. Tel: +998 93 555 66 77</summary>
+  </entry>
+</feed>

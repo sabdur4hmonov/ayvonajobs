@@ -514,6 +514,10 @@ Testlar: AI mock — muvaffaqiyat, 429, timeout, noto'g'ri JSON → hammasida e'
 
 ## BOSQICH 16 — Veb-sayt va xalqaro manbalar ⏱ har manba 1–2 soat · Model: `sonnet` (hh.uz va Oson Ish uchun `opusplan`)
 
+- [x] 16.0 asos + RSS, Himalayas, Remotive, Jobicy, Remote OK, Oson Ish, hh.uz (kod + saqlangan namunalar bilan testlar) — 2026-10-01
+- [ ] vacancy.gov.uz — qo'shilmadi (API/shartlar yo'q, PROGRESS.md)
+- [ ] Haqiqiy ishga tushirish: `/addsource web:<nom>` (hh.uz — token kerak)
+
 > Ro'yxat va shartlar: `docs/WEB_SOURCES.md`. Tartib: hh.uz → Oson Ish → Himalayas + Remotive → Jobicy, Remote OK → vacancy.gov.uz.
 > "Xorijda ish" (@migratsiyaagentligi) allaqachon Telegram manba sifatida qo'shilgan.
 > Har bir manbani ALOHIDA sessiyada qo'shing. Oldin umumiy asos (16.0), keyin har sayt.

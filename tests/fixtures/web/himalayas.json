@@ -1,0 +1,49 @@
+{
+  "updatedAt": 1790000000,
+  "offset": 0,
+  "limit": 20,
+  "totalCount": 3,
+  "jobs": [
+    {
+      "title": "Senior Python Developer",
+      "excerpt": "Build APIs for a fintech product.",
+      "companyName": "Acme Remote",
+      "companySlug": "acme-remote",
+      "employmentType": "Full Time",
+      "locationRestrictions": [],
+      "timezoneRestriction": [],
+      "categories": ["Software Engineering"],
+      "minSalary": 60000,
+      "maxSalary": 84000,
+      "salaryPeriod": "year",
+      "currency": "USD",
+      "description": "<p>We are looking for a <b>Python</b> developer.</p><ul><li>5+ years Python</li><li>Django, PostgreSQL</li></ul>",
+      "pubDate": 1790001000,
+      "expiryDate": 1792600000,
+      "applicationLink": "https://acme.example/careers/python",
+      "guid": "https://himalayas.app/companies/acme-remote/jobs/senior-python-developer"
+    },
+    {
+      "title": "Customer Support Specialist",
+      "excerpt": "Help our customers.",
+      "companyName": "Helpdesk Co",
+      "locationRestrictions": ["United States"],
+      "timezoneRestriction": [-8, -5],
+      "description": "<p>US only.</p>",
+      "pubDate": 1790002000,
+      "applicationLink": "https://helpdesk.example/jobs/1",
+      "guid": "https://himalayas.app/companies/helpdesk/jobs/support"
+    },
+    {
+      "title": "Data Analyst",
+      "excerpt": "Analyze data.",
+      "companyName": "Asia Data",
+      "locationRestrictions": ["Asia"],
+      "timezoneRestriction": [3, 4, 5, 6],
+      "description": "<p>SQL and Python.</p>",
+      "pubDate": 1790003000,
+      "applicationLink": "https://asiadata.example/apply",
+      "guid": "https://himalayas.app/companies/asia-data/jobs/data-analyst"
+    }
+  ]
+}

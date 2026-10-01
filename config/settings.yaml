@@ -206,3 +206,14 @@ ai:
   pause_minutes_rate_limited: 60     # 429 (limit) dan keyin shu kalit shuncha daqiqa ishlatilmaydi
   pause_minutes_error: 5             # 5xx / timeout / tarmoq xatosidan keyin
   max_input_chars: 3000              # e'lon matni shundan uzun bo'lsa qisqartirib yuboriladi
+
+# --- 🌐 Veb-saytlar, API va RSS manbalar (sources/web/) ------------------------
+# Botda: /addsource web:himalayas (rss:<URL> ...), /sources — yoqish/o'chirish/oraliq. Kod/YAML tahrir kerak emas.
+# Har saytning o'z shartidagi chegaralar (kuniga nechta so'rov, oraliq) kodda — bu yerdan oshirib bo'lmaydi.
+web_sources:
+  user_agent: "AyvonaJobsBot/1.0 (+https://t.me/ayvonajobs)"
+  timeout_seconds: 30
+  fetch_limit: 50                    # bir so'rovda bitta manbadan ko'pi bilan nechta yangi e'lon
+  max_international_per_day: 12      # xalqaro masofaviy e'lonlar kanalga kuniga (hamma saytlardan jami)
+  default_interval_minutes: 30       # yangi qo'shilgan sayt/RSS shuncha daqiqada bir tekshiriladi
+  osonish_max_pages: 20              # Oson Ish: bir aylanishda ko'pi bilan nechta e'lon sahifasi o'qiladi
