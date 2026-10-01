@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <meta name="description" content="{{ description }}">
+  <link rel="canonical" href="{{ canonical }}">
+  {% if noindex %}<meta name="robots" content="noindex">{% endif %}
+  <meta property="og:site_name" content="{{ brand.channel_title }}">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ canonical }}">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/static/style.css">
+  {% if json_ld %}<script type="application/ld+json">{{ json_ld }}</script>{% endif %}
+</head>
+<body>
+  <header class="top">
+    <a class="logo" href="/">💼 {{ brand.channel_title }}</a>
+    <nav>
+      <a href="/ish">Ish qidirish</a>
+      <a href="https://t.me/{{ brand.channel_username }}" rel="noopener">Kanal</a>
+      <a href="https://t.me/{{ brand.bot_username }}" rel="noopener">Bot</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>
+    <p>{{ brand.channel_title }} — O'zbekiston bo'ylab ish e'lonlari, bepul.
+      Kanal: <a href="https://t.me/{{ brand.channel_username }}">@{{ brand.channel_username }}</a> ·
+      E'lon joylash: <a href="https://t.me/{{ brand.bot_username }}">@{{ brand.bot_username }}</a></p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <h1>{{ heading or "Ish qidirish" }}</h1>
+  {% include "_search_form.html" %}
+  <p class="summary">{{ total }} ta e'lon · {{ summary }} · eng yangisi tepada</p>
+  {% for c in jobs %}{% include "_card.html" %}{% else %}
+    <p>Bu filtrlar bo'yicha hozircha e'lon yo'q. Filtrlarni kengaytirib ko'ring yoki botda obuna bo'ling:
+      <a href="https://t.me/{{ brand.bot_username }}?start=search">@{{ brand.bot_username }}</a>.</p>
+  {% endfor %}
+  {% if pages > 1 %}
+  <nav class="pages">
+    {% if page > 1 %}<a href="?{{ query | urlencode }}&sahifa={{ page - 1 }}">← Oldingi</a>{% endif %}
+    <span>{{ page }} / {{ pages }}</span>
+    {% if page < pages %}<a href="?{{ query | urlencode }}&sahifa={{ page + 1 }}">Keyingi →</a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

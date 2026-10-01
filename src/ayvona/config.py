@@ -314,6 +314,17 @@ class WebSourcesConfig(BaseModel):
     osonish_max_pages: int = Field(default=20, ge=1)  # vacancy pages read per poll
 
 
+class WebsiteConfig(BaseModel):
+    """Our own website (apps/web.py, Bosqich 17): read-only pages over the same DB and services."""
+
+    host: str = "127.0.0.1"  # Caddy (HTTPS) in front of it on the server
+    port: int = Field(default=8080, ge=1, le=65535)
+    # Public address for canonical links and sitemap.xml, e.g. https://ayvona.duckdns.org
+    base_url: str = ""
+    page_size: int = Field(default=20, ge=5, le=50)
+    sitemap_limit: int = Field(default=5000, ge=100, le=50000)
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -345,6 +356,7 @@ class AppConfig(BaseModel):
     broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
     ai: AIConfig = Field(default_factory=AIConfig)
     web_sources: WebSourcesConfig = Field(default_factory=WebSourcesConfig)
+    website: WebsiteConfig = Field(default_factory=WebsiteConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 

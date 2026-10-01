@@ -1,0 +1,23 @@
+<form class="search" action="/ish" method="get">
+  <input type="search" name="q" value="{{ f.keyword if f and f.keyword else '' }}" placeholder="Kasb yoki so'z: oshpaz, sotuvchi, python..." maxlength="100">
+  <select name="soha" aria-label="Soha">
+    <option value="">Barcha sohalar</option>
+    {% for key, cat in categories.items() %}
+      <option value="{{ key }}" {% if f and f.category == key %}selected{% endif %}>{{ cat.title }}</option>
+    {% endfor %}
+  </select>
+  <select name="hudud" aria-label="Hudud">
+    <option value="">Barcha hududlar</option>
+    <option value="{{ remote }}" {% if f and f.region == remote %}selected{% endif %}>Masofaviy</option>
+    {% for key, reg in regions.items() %}
+      <option value="{{ key }}" {% if f and f.region == key %}selected{% endif %}>{{ reg.title }}</option>
+    {% endfor %}
+  </select>
+  <select name="maosh" aria-label="Maosh">
+    <option value="0">Maosh: farqi yo'q</option>
+    {% for v in salary_steps %}
+      <option value="{{ v }}" {% if f and f.min_salary == v %}selected{% endif %}>{{ '%g' % (v / 1000000) }} mln+ so'm</option>
+    {% endfor %}
+  </select>
+  <button type="submit">🔍 Qidirish</button>
+</form>

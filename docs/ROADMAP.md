@@ -556,6 +556,11 @@ Saqlangan javob (JSON yoki HTML) namunasi bilan test. Bot orqali /addsource web:
 yozish (e'lon joylash, saqlash) faqat `services/` orqali.
 **Bepul:** FastAPI + Jinja2 (server tomonda chiziladi, React yo'q), Caddy (avto HTTPS), boshida DuckDNS manzili; ayvona.uz domeni — keyin, ixtiyoriy.
 
+- [x] 1–3 (jarayon, sahifalar, SEO) + 7 (testlar) — 2026-10-01, o'qish uchun versiya (`apps/web.py`, `deploy/Caddyfile.example`)
+- [ ] 4 Saytdan e'lon joylash + Telegram Login Widget (server/domen kerak)
+- [ ] 5 Saytda saqlanganlar/obunalar (Telegram akkaunt orqali)
+- [ ] 6 Admin panel
+
 ```text
 Bosqich 17: Ayvona Jobs veb-sayti. Avval CLAUDE.md, docs/ARCHITECTURE.md va services/ ni o'qi.
 1) src/ayvona/apps/web.py — FastAPI + Jinja2 jarayoni (4-jarayon), deploy/systemd/ayvona-web.service, Caddy sozlamasi qo'llanmasi.

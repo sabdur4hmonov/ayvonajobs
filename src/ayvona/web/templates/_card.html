@@ -1,0 +1,5 @@
+<article class="card{% if not c.open %} closed{% endif %}">
+  <h3><a href="{{ c.url }}">{{ c.title }}</a>{% if not c.open %} <span class="badge">Yopilgan</span>{% endif %}</h3>
+  {% if c.company %}<p class="company">{{ c.company }}</p>{% endif %}
+  <p class="meta">💰 {{ c.salary }}{% if c.place %} · 📍 {{ c.place }}{% endif %}{% if c.date %} · {{ c.date }}{% endif %}</p>
+</article>

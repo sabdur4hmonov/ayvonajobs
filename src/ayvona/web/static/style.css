@@ -1,0 +1,41 @@
+/* Ayvona Jobs — simple, fast, readable on phones. No external fonts or scripts. */
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5f6878; --accent: #1f6feb; --border: #e3e6eb;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #11151c; --card: #1a202a; --text: #e6e9ee; --muted: #9aa3b2; --accent: #5aa2ff; --border: #2a3240; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+       padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--border); }
+.top .logo { font-weight: 700; color: var(--text); }
+.top nav a { margin-left: 14px; }
+main { max-width: 860px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 1.6rem; margin: 0.4em 0; }
+h2 { font-size: 1.2rem; margin: 1.2em 0 0.5em; }
+.hero p { color: var(--muted); }
+.search { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.search input, .search select, .search button { font: inherit; padding: 9px 10px; border-radius: 8px;
+       border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.search input { flex: 1 1 260px; }
+.search button { background: var(--accent); color: #fff; border: 0; cursor: pointer; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+        margin: 10px 0; }
+.card h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.card .company, .meta, .summary { color: var(--muted); margin: 2px 0; }
+.card.closed { opacity: 0.6; }
+.badge { font-size: 0.75rem; background: #c0392b; color: #fff; padding: 1px 6px; border-radius: 6px; }
+.links a { display: inline-block; margin: 0 10px 6px 0; }
+.pages { display: flex; gap: 16px; align-items: center; justify-content: center; margin: 16px 0; }
+.job .post { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+             white-space: normal; word-wrap: break-word; }
+.tags a, .tags span { display: inline-block; margin-right: 8px; font-size: 0.9rem; }
+.notice { background: #fdecea; color: #8a1c13; padding: 8px 12px; border-radius: 8px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.btn { background: var(--accent); color: #fff; padding: 9px 14px; border-radius: 8px; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+footer { color: var(--muted); text-align: center; padding: 24px 16px; font-size: 0.9rem; }

@@ -1,0 +1,24 @@
+# Ayvona Jobs veb-sayti uchun Caddy (bepul, avtomatik HTTPS — Let's Encrypt).
+#
+# 1) Bepul manzil: duckdns.org da kiring -> subdomen (masalan ayvona) -> serverning ochiq IP'sini yozing.
+# 2) Serverda:  sudo apt install -y caddy
+# 3) Shu faylni nusxalang va manzilni o'zingiznikiga almashtiring:
+#      sudo cp /home/ayvona/ayvona/deploy/Caddyfile.example /etc/caddy/Caddyfile
+#      sudo nano /etc/caddy/Caddyfile
+#      sudo systemctl reload caddy
+# 4) Oracle: VCN -> Security List -> Ingress: 80 va 443 (TCP) portlarini oching; serverda:
+#      sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+#      sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+#      sudo netfilter-persistent save
+# 5) config/settings.yaml -> website.base_url: "https://ayvona.duckdns.org" (sitemap va canonical uchun)
+
+ayvona.duckdns.org {
+	encode gzip zstd
+	reverse_proxy 127.0.0.1:8080
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	@static path /static/*
+	header @static Cache-Control "public, max-age=86400"
+}

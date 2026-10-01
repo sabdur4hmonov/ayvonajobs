@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="job">
+  {% if not open %}<p class="notice">❌ Bu e'lon yopilgan yoki muddati tugagan.</p>{% endif %}
+  <h1>{{ card.title }}</h1>
+  <p class="meta">
+    {% if job.company %}🏢 {{ job.company }} · {% endif %}💰 {{ card.salary }}
+    {% if card.place %} · 📍 {{ card.place }}{% endif %}
+    {% if card.date %} · 🗓 {{ card.date }}{% endif %}
+  </p>
+  <p class="tags">
+    {% if category %}<a href="/soha/{{ job.category }}">{{ category.title }}</a>{% endif %}
+    {% if profession %}<span>{{ profession }}</span>{% endif %}
+    {% if job.region and job.region in regions %}<a href="/hudud/{{ job.region }}">{{ regions[job.region].title }}</a>{% endif %}
+    {% if job.is_remote %}<a href="/hudud/{{ remote }}">Masofaviy</a>{% endif %}
+  </p>
+  <div class="post">{{ post }}</div>
+  {% if open %}
+  <p class="actions">
+    {% for b in buttons %}<a class="btn" href="{{ b.url }}" rel="nofollow noopener">{{ b.text }}</a>{% endfor %}
+    <a class="btn ghost" href="{{ save_url }}" rel="nofollow noopener">⭐ Botda saqlash</a>
+    {% if channel_url %}<a class="btn ghost" href="{{ channel_url }}" rel="noopener">📢 Kanalda ochish</a>{% endif %}
+  </p>
+  {% endif %}
+</article>
+{% endblock %}

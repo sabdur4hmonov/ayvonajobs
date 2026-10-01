@@ -28,7 +28,7 @@ so'rov yo'q (faqat mock va `tests/fixtures/web/`), har vazifa alohida commit + p
 - [x] 1. Bosqich 15 — Gemini yordamchi (`ai/`, `/ai`)
 - [x] 2. Bosqich 16 — veb-manbalar: RSS, Himalayas, Remotive, Jobicy, Remote OK, Oson Ish, hh.uz (token kerak);
       vacancy.gov.uz qo'shilmadi (sabab PROGRESS'da). Hammasi standart o'chiq — `/addsource web:<nom>`.
-- [ ] 3. Bosqich 17 — o'z veb-sayti (FastAPI + Jinja2, read-only birinchi)
+- [x] 3. Bosqich 17 — o'z veb-sayti, o'qish uchun versiya (`apps/web.py`, 4-jarayon); e'lon joylash/Login Widget — keyin
 - [ ] 4. Deploy tayyorligi (SETUP_ORACLE.md, systemd, deploy.sh; toza klonda `uv sync --locked` + testlar)
 - [ ] 5. Hujjatlarni yakunlash + Sardorga hisobot
 

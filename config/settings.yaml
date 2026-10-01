@@ -217,3 +217,12 @@ web_sources:
   max_international_per_day: 12      # xalqaro masofaviy e'lonlar kanalga kuniga (hamma saytlardan jami)
   default_interval_minutes: 30       # yangi qo'shilgan sayt/RSS shuncha daqiqada bir tekshiriladi
   osonish_max_pages: 20              # Oson Ish: bir aylanishda ko'pi bilan nechta e'lon sahifasi o'qiladi
+
+# --- 🌍 O'z veb-sayti (apps/web.py, Bosqich 17) -------------------------------------
+# Hozircha faqat o'qish uchun: e'lonlar, qidiruv, kategoriya/hudud sahifalari, sitemap.xml.
+website:
+  host: "127.0.0.1"                  # serverda oldida Caddy (HTTPS) turadi — deploy/Caddyfile.example
+  port: 8080
+  base_url: ""                       # ochiq manzil, masalan "https://ayvona.duckdns.org" (sitemap va canonical uchun)
+  page_size: 20                      # sahifada nechta e'lon
+  sitemap_limit: 5000                # sitemap.xml da ko'pi bilan nechta e'lon

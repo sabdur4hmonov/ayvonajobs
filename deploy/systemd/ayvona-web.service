@@ -1,0 +1,37 @@
+# Ayvona Jobs — web: o'z veb-sayti (FastAPI, faqat o'qish). 127.0.0.1:8080 da tinglaydi,
+# tashqariga Caddy (HTTPS) orqali chiqadi: deploy/Caddyfile.example.
+#
+# Sayt bazadan faqat o'qiydi — yiqilsa ham collector/worker/bot ishlayveradi.
+# Baza eng oxirgi migratsiyada bo'lmasa ishga tushmaydi — avval: uv run alembic upgrade head.
+#
+# Yoqish:
+#   sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-web.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ayvona-web
+# Loglar:  journalctl -u ayvona-web -f
+
+[Unit]
+Description=Ayvona Jobs - web (veb-sayt)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ayvona
+Group=ayvona
+WorkingDirectory=/home/ayvona/ayvona
+ExecStart=/home/ayvona/.local/bin/uv run --no-sync python -m ayvona.apps.web
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=15
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+# Kichik server: sayt 300 MB dan ko'p xotira olmasin
+MemoryMax=300M
+
+[Install]
+WantedBy=multi-user.target

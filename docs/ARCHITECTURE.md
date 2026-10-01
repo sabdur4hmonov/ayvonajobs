@@ -39,7 +39,7 @@ flowchart LR
     AL -- mos ish topildi --> B
 ```
 
-**3 ta alohida jarayon (process)** ishlaydi. Biri yiqilsa, qolganlari ishlashda davom etadi,
+**3 ta asosiy jarayon (process)** ishlaydi (+ ixtiyoriy 4-chisi — `web`, veb-sayt). Biri yiqilsa, qolganlari ishlashda davom etadi,
 systemd uni avtomatik qayta yoqadi:
 
 | Jarayon | Vazifasi | Kutubxona |
@@ -47,6 +47,7 @@ systemd uni avtomatik qayta yoqadi:
 | `collector` | Manbalardan yangi postlarni olib, **xom holda** bazaga yozadi | Telethon |
 | `worker` | Xom postlarni qayta ishlaydi, navbatdagi e'lonlarni kanalga joylaydi, obunachilarga xabar (`services/alerts.py`), muddati o'tgan e'lonlar (`services/expiry.py`), USD kursi, monitoring, backup | aiogram (Bot API) |
 | `bot` | Ommaviy bot: e'lon joylash, qidiruv, saqlanganlar, obunalar, admin buyruqlari | aiogram |
+| `web` | O'z veb-sayti (Bosqich 17): bosh sahifa, qidiruv, e'lon sahifalari, sitemap, JobPosting JSON-LD. Bazadan faqat o'qiydi, mantiq `services/` dan | FastAPI + Jinja2 (oldida Caddy) |
 
 Hammasi bitta SQLite bazani ishlatadi (WAL rejimi — bir vaqtda o'qish/yozish xavfsiz).
 

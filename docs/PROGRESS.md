@@ -1224,3 +1224,41 @@ Qarorlar (Sardor yo'qligida):
    e'lonlariga `JobPosting` JSON-LD **qo'yilmaydi** (faqat Telegram/foydalanuvchi e'lonlariga).
 
 Testlar: `tests/test_web_sources.py` (+26). **829 passed**, ruff toza. Migratsiya kerak emas (yangi status VARCHAR).
+
+
+---
+
+## Bosqich 17 — 🌍 Ayvona Jobs o'z veb-sayti (2026-10-01, avtonom) — o'qish uchun versiya
+
+Nima qilindi:
+- **4-jarayon `apps/web.py`** — FastAPI + Jinja2 (server tomonda chiziladi, JS yo'q), `127.0.0.1:8080`
+  (`settings.yaml → website`). Bazadan **faqat o'qiydi** — yiqilsa collector/worker/bot'ga ta'sir qilmaydi.
+- **Sahifalar** (`src/ayvona/web/`): bosh sahifa (yangi e'lonlar + qidiruv formasi + sohalar/hududlar), `/ish`
+  (qidiruv: so'z, soha, hudud, maosh; 20 tadan sahifa; botning o'sha `services/search.py` qoidalari — kirill/lotin
+  ham), `/ish/<id>-<slug>` (e'lon: kanaldagi matn, [📩 Murojaat]/[🔗 Ariza], "⭐ Botda saqlash", "📢 Kanalda ochish";
+  `/ish/<id>` → 301 to'g'ri manzilga), `/soha/<kategoriya>`, `/hudud/<hudud>` (va `/hudud/remote`), 404 sahifa.
+- **SEO**: har sahifada title, description, canonical, Open Graph; `sitemap.xml` (ochiq e'lonlar + soha/hudud
+  sahifalari), `robots.txt` (`/ish?` filtr kombinatsiyalari yopiq); **JobPosting JSON-LD** (`validThrough` =
+  `expires_at`, maosh, hudud yoki `TELECOMMUTE`) — faqat Telegram va foydalanuvchi e'lonlariga. Yopilgan/muddati o'tgan
+  e'lon: "❌ yopilgan" + `noindex`.
+- **Deploy**: `deploy/systemd/ayvona-web.service` (MemoryMax=300M), `deploy/Caddyfile.example` (DuckDNS + avtomatik
+  HTTPS, Oracle portlari 80/443).
+- Yangi kutubxonalar: `fastapi`, `jinja2`, `uvicorn` (bepul, ochiq kodli).
+
+Qarorlar (Sardor yo'qligida):
+1. **Birinchi versiya faqat o'qish uchun** (siz aytgandek): saytdan e'lon joylash, Telegram Login Widget, saytdagi
+   saqlanganlar/obunalar va admin panel — keyingi qadam. E'lon joylash uchun sayt **botga** yo'naltiradi
+   (`@ayvona_jobs_bot`), saqlash — `?start=save_<id>` orqali botda. Sababi: Login Widget domen (`/setdomain` BotFather'da)
+   va HTTPS talab qiladi — server bo'lmaguncha sinab bo'lmaydi.
+2. **Veb-manba (Himalayas, Remotive ...) e'lonlariga JobPosting yo'q** — ularning shartlari Google Jobs'ga yuborishni
+   taqiqlaydi; sahifa baribir ochiq (havola + manba nomi bilan).
+3. **Telefonlar sahifada ko'rinadi** (kanaldagi kabi, ochiq e'lon). Rezyume yoki shaxsiy ma'lumot saytda yo'q.
+4. Sayt `search_logs` ga yozmaydi (faqat o'qiydi).
+
+Ishga tushirish (laptopda sinash uchun, bazani faqat o'qiydi):
+```powershell
+uv run python -m ayvona.apps.web
+start http://127.0.0.1:8080
+```
+
+Testlar: `tests/test_web.py` (+8, ASGI orqali — server ham, tarmoq ham yo'q). **837 passed**, ruff toza.

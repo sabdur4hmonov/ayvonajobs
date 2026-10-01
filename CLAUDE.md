@@ -69,7 +69,8 @@ tests/                 fixtures/posts/*.txt + unit tests
 deploy/                systemd units + Oracle setup guide
 data/                  (gitignored) ayvona.db, *.session, backups/
 ```
-Three processes: `uv run python -m ayvona.apps.collector`, `... .worker`, `... .bot`.
+Three processes: `uv run python -m ayvona.apps.collector`, `... .worker`, `... .bot` (+ optional `... .web`, the website).
+Extra packages: `ai/` (optional Gemini helper), `sources/web/` (websites, APIs, RSS), `web/` (FastAPI site).
 
 ## Conventions
 - Type hints everywhere; small functions; docstrings in English, user-facing texts in Uzbek (latin) in `bot/texts.py`.

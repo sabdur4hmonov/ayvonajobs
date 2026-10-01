@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>O'zbekistonda ish toping</h1>
+  <p>Kanallar va saytlardagi ish e'lonlari bir joyda — har kuni yangilanadi.</p>
+  {% set f = None %}
+  {% include "_search_form.html" %}
+</section>
+
+<section>
+  <h2>Yangi e'lonlar</h2>
+  {% for c in jobs %}{% include "_card.html" %}{% else %}<p>Hozircha e'lon yo'q.</p>{% endfor %}
+  <p><a class="more" href="/ish">Hamma e'lonlar →</a></p>
+</section>
+
+<section class="links">
+  <h2>Sohalar</h2>
+  <p>{% for key, cat in categories.items() %}<a href="/soha/{{ key }}">{{ cat.title }}</a>{% endfor %}</p>
+  <h2>Hududlar</h2>
+  <p><a href="/hudud/{{ remote }}">Masofaviy</a>{% for key, reg in regions.items() %}<a href="/hudud/{{ key }}">{{ reg.title }}</a>{% endfor %}</p>
+</section>
+{% endblock %}
