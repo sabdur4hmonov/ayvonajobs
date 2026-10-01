@@ -18,6 +18,7 @@ from aiogram.types import Message
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.ai.helper import AIHelper
 from ayvona.bot import texts as T
 from ayvona.config import Settings
 from ayvona.db.models import JobStatus
@@ -102,6 +103,8 @@ async def stats_cmd(message: Message, sf: SessionFactory, settings: Settings) ->
         week = await period_stats(s, now - timedelta(days=7))
         queue = await queue_overview(s, now, limit=0)
         extra = await bot_stats(s, now, day_start(now, tz))
+    ai = await AIHelper(settings, sf).status(now)
+    async with sf() as s:
         processes: list[str] = []
         for key, name in PROCESSES:
             beat = await kv_repo.read_heartbeat(s, key)
@@ -127,6 +130,7 @@ async def stats_cmd(message: Message, sf: SessionFactory, settings: Settings) ->
             processes=", ".join(processes),
         )
         + _extra_stats(extra, settings)
+        + T.STATS_AI.format(calls=ai.calls_today, limit=ai.daily_limit)
     )
 
 

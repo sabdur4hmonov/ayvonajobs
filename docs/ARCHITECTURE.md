@@ -225,12 +225,18 @@ class BaseSource(ABC):
 
 ---
 
-## 7. Gemini (keyingi bosqich)
+## 7. Gemini yordamchi (Bosqich 15, ixtiyoriy) — `src/ayvona/ai/`
 
-- Faqat `confidence < 0.6` bo'lgan postlar uchun chaqiriladi.
-- Yuborishdan oldin telefon va @username'lar yashiriladi (`[PHONE]`) — ularni regex baribir yaxshi topadi.
-- Javob JSON sxema bo'yicha olinadi, `ai_cache` ga yoziladi (bir xil matn qayta yuborilmaydi).
-- Circuit breaker: 429 / xato → shu kalit bugun uchun "charchagan" → darhol regex fallback. E'lon baribir chiqadi.
+- Faqat `.env` da `GEMINI_API_KEY` bo'lsa. Kalit yo'q / admin `/ai` da o'chirgan / limit / xato → **regex natijasi**.
+- Chaqiriladi: aloqasi bor e'lon, regex `confidence < ai.min_confidence` (0.7) **yoki** ruscha/inglizcha **yoki**
+  `low_quality`. Pipeline'da: extract → (aloqa yo'q → chiqmaydi) → **AI** → low_quality tekshiruvi → dedup → format.
+- Yuborishdan oldin telefon, @username, email, havolalar yashiriladi (`[PHONE] [USER] [EMAIL] [LINK]`).
+- Javob JSON sxema bo'yicha (REST `generateContent`, httpx; SDK yo'q), `ai_cache` ga yoziladi — bir xil matn qayta
+  yuborilmaydi; worker start'idagi qayta formatlash faqat keshdan foydalanadi.
+- Sifat tekshiruvi: lavozim bor, kirill harf yo'q, uzun matn inglizcha qolmagan — aks holda javob tashlanadi.
+  Aloqalar har doim regex'dan. Natija: `parse_method=gemini`, til `uz_latin` (formatter to'liq shablon chiqaradi).
+- Limitlar: kuniga `ai.daily_limit` (200), so'rovlar orasida 4 s; 429 → kalit 60 daqiqa, 5xx/timeout → 5 daqiqa dam.
+  Hisoblagichlar `kv_store` da (`ai:calls:<sana>` ...) — `/ai` va `/stats` ko'rsatadi.
 - Bir necha kalit: `GEMINI_API_KEYS` ro'yxati, lekin `GEMINI_ALLOW_KEY_ROTATION=false` (standart holatda o'chiq).
   ⚠️ Google limitlari **loyiha (project) bo'yicha** hisoblanadi. Limitni chetlab o'tish uchun bir necha akkaunt
   ochish Google shartlariga zid bo'lishi va ikkala akkauntning bloklanishiga olib kelishi mumkin.

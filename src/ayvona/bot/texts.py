@@ -242,6 +242,26 @@ BROADCAST_DONE = "📣 Tayyor: {ok} ta yuborildi, {failed} tasiga yetmadi (botni
 BROADCAST_EXPIRED = "Xabar eskirdi — /broadcast ni qayta yozing."
 BROADCAST_BAD_HTML = "HTML xato: {error}"
 
+# ------------------------------------------------------------------ admin: 🤖 /ai
+AI_STATUS = (
+    "🤖 <b>Gemini yordamchi</b>\n"
+    "Holat: {state}\n"
+    "Model: <code>{model}</code> · kalitlar: {keys}{rotation}\n"
+    "Bugun: {calls}/{limit} so'rov (✅ {ok}, ❌ {failed}), keshdan: {cache_hits}\n"
+    "Keshda jami: {cached_total} ta javob{paused}\n\n"
+    "<i>Faqat ishonchi past yoki ruscha/inglizcha e'lonlar uchun ishlatiladi. "
+    "Xato bo'lsa — regex.</i>"
+)
+AI_ON = "✅ ishlayapti"
+AI_OFF_ADMIN = "⏸ admin o'chirgan"
+AI_NO_KEY = "⚪️ kalit yo'q (.env → GEMINI_API_KEY) — hammasi regex bilan"
+AI_OFF_CONFIG = "⚪️ settings.yaml da o'chiq (ai.enabled: false)"
+AI_ROTATION = " (aylanish YOQILGAN)"
+AI_PAUSED = "\nDam olayotgan kalitlar: {list}"
+BTN_AI_ON = "▶️ Yoqish"
+BTN_AI_OFF = "⏸ O'chirish"
+STATS_AI = "\n🤖 AI bugun: {calls}/{limit} so'rov · /ai"
+
 # ------------------------------------------------------------------ admin: moderation
 MOD_HEAD = (
     "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"
@@ -267,7 +287,8 @@ ADMIN_HELP = (
     "⏸ /pause — kanalga joylashni to'xtatish · ▶️ /resume — davom ettirish\n\n"
     "🧾 /addword ban|spam|scam so'z · /delword so'z · /words — filtr so'zlari\n"
     "🚫 /ban &lt;id | @username&gt; · /unban — foydalanuvchini bloklash\n"
-    "📣 /broadcast matn — hamma foydalanuvchilarga (tasdiqlash bilan)\n\n"
+    "📣 /broadcast matn — hamma foydalanuvchilarga (tasdiqlash bilan)\n"
+    "🤖 /ai — Gemini yordamchi: holat, bugungi so'rovlar, yoqish/o'chirish\n\n"
     "📡 /sources — manbalar (kanallar, saytlar): pauza, yoqish, o'chirish, statistika\n"
     "➕ /addsource &lt;@kanal | t.me/kanal | t.me/+taklif | web:nom | rss:URL&gt;\n\n"
     "🖼 /images — rasm bo'shliqlari · /images &lt;kasb&gt; — rasmlar ro'yxati\n"

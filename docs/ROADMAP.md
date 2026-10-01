@@ -487,6 +487,8 @@ o'chiradi.
 
 ## BOSQICH 15 — Gemini yordamchi (ixtiyoriy) ⏱ 2 soat · Model: `opus`
 
+- [x] Kod + testlar bajarildi — 2026-10-01 (AI mock bilan; kalit qo'yilgach haqiqiy sinov kerak)
+
 > Oldin: aistudio.google.com → API key (bepul). Hozirgi bepul modellar va limitlarni AI Studio'da tekshiring.
 
 ```text

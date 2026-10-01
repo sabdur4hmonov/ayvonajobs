@@ -1126,3 +1126,41 @@ Kutilgan: `783 passed`, `All checks passed!`.
   bazada). Serverda bir nechta nusxa bo'lsa — boshqa storage kerak bo'ladi.
 - Obuna va eslatma xabarlari worker'dan ketadi: worker `--no-publish` yoki tokensiz bo'lsa — ketmaydi.
 - "Ko'p hudud" e'lonlari aniq hudud qidiruvida chiqmaydi; kunlik/soatbay maoshlar maosh filtrida hisobga olinmaydi.
+
+
+---
+
+## Bosqich 15 — 🤖 Gemini yordamchi (2026-10-01, avtonom, ikkinchi tun)
+
+Nima qilindi (`src/ayvona/ai/`):
+- **`client.py`** — Gemini REST (`generateContent`, JSON sxema) `httpx` orqali. Xatolar: 429 → `AIRateLimited`,
+  5xx/timeout/tarmoq → `AIUnavailable`, noto'g'ri javob → `AIBadResponse`, 400/401/403/404 → `AIAuthError`.
+- **`helper.py` → `AIHelper`**: qachon (regex ishonchi < 0.7, ru/en, `low_quality`; aloqasiz e'lon — hech qachon),
+  maskalash (`[PHONE] [USER] [EMAIL] [LINK]`), `ai_cache`, kunlik limit (200), so'rovlar orasida 4 s, circuit breaker
+  (429 → 60 daq, xato → 5 daq, noto'g'ri kalit → 6 soat), **sifat tekshiruvi** (lavozim bor, kirill yo'q, uzun matn
+  inglizcha qolmagan, maska qolmagan), regex bilan birlashtirish (**aloqa har doim regex'dan**), `parse_method=gemini`.
+- **Pipeline**: extract → AI → low_quality tekshiruvi → dedup → format. Worker start'idagi navbat qayta formatlashi
+  **faqat keshdan** foydalanadi (yangi so'rov yubormaydi, AI tarjimasi yo'qolmaydi).
+- **`/ai`** (admin): holat (ishlayapti / admin o'chirgan / kalit yo'q), model, kalitlar soni, bugungi so'rovlar
+  (✅/❌/keshdan), dam olayotgan kalitlar, [⏸ O'chirish] / [▶️ Yoqish] (`kv_store ai:disabled` — kod/YAML tahrirsiz).
+  `/stats` da "🤖 AI bugun: N/200".
+- Sozlamalar: `.env` → `GEMINI_API_KEY`, `GEMINI_MODEL` (standart `gemini-flash-latest`), `GEMINI_API_KEYS`,
+  `GEMINI_ALLOW_KEY_ROTATION=false`; `settings.yaml → ai:`. `.env.example` va README yangilandi.
+
+Qarorlar (Sardor yo'qligida):
+1. **SDK (google-genai) o'rniga REST + httpx** — bitta yengil kutubxona (veb-manbalar ham ishlatadi), testda
+   `httpx.MockTransport`, server xotirasi tejaladi. Agar Google REST formatini o'zgartirsa — faqat `client.py`.
+2. **Kalit aylanishi standart O'CHIQ.** Google bepul limitlari loyiha bo'yicha; limitni chetlab o'tish uchun ko'p
+   akkaunt/kalit — shartlarga zid bo'lishi va bloklanishga olib kelishi mumkin. Yoqilsa ham faqat kalit "dam olayotganda"
+   keyingisiga o'tadi. Tavsiya: bitta kalit + kesh — kuniga ~200 so'rov bizga yetadi.
+3. **Model `gemini-flash-latest`** (Google'ning doim joriy "flash" modeliga havola) — eski model nomi o'chirilsa ham
+   ishlayveradi. Aniq model kerak bo'lsa `.env` da `GEMINI_MODEL=...`.
+4. **AI "e'lon emas" desa — regex qarori qoladi** (faqat logga yoziladi). Sabab: "hech bir e'lon yo'qolmasin" va
+   AI xato qilishi mumkin; reklama filtrini regex/filters.yaml boshqaradi.
+5. **Sifatsiz javob tashlanadi** (masalan lavozimda kirill qoldi) — e'lon regex bilan chiqadi, keshdagi javob qoladi
+   (xuddi shu matn uchun qayta so'ralmaydi).
+6. Kunlik hisob Toshkent kuni bo'yicha (Google'niki Tinch okeani vaqti — shuning uchun limit 200, zaxira bilan).
+
+Testlar: `tests/test_ai.py` (+20): maskalash, klient (muvaffaqiyat, 429, 503, timeout, noto'g'ri JSON), tarjima va
+aloqa saqlanishi, kesh, limit, admin o'chirishi, kalitsiz, aylanish, sifat tekshiruvi, pipeline (hamma xatoda e'lon
+chiqadi), `/ai`. **803 passed.**

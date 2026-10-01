@@ -22,6 +22,15 @@ Yangi sessiya yoki boshqa Windows foydalanuvchisi shu faylni birinchi o'qisin, k
 - [x] 5. Bosqich 14 — yopish, muddat, to'liq statistika (oxirgi commit)
 Qarorlar va sabablari — PROGRESS.md dagi har bosqich bo'limida; ertalabki buyruqlar — PROGRESS.md oxirida.
 
+## Avtonom ish — ikkinchi tun (2026-10-01)
+Qoidalar o'sha: jarayonlar ishga tushirilmaydi, haqiqiy baza/.env/session'ga tegilmaydi, haqiqiy saytlarga/Gemini'ga
+so'rov yo'q (faqat mock va `tests/fixtures/web/`), har vazifa alohida commit + push.
+- [x] 1. Bosqich 15 — Gemini yordamchi (`ai/`, `/ai`)
+- [ ] 2. Bosqich 16 — veb-manbalar: RSS → Himalayas → Remotive → Jobicy → Remote OK → Oson Ish → hh.uz → (vacancy.gov.uz)
+- [ ] 3. Bosqich 17 — o'z veb-sayti (FastAPI + Jinja2, read-only birinchi)
+- [ ] 4. Deploy tayyorligi (SETUP_ORACLE.md, systemd, deploy.sh; toza klonda `uv sync --locked` + testlar)
+- [ ] 5. Hujjatlarni yakunlash + Sardorga hisobot
+
 ## Keyingi ishlar (tartib bilan — bittadan)
 1. [ ] **Migratsiya + qayta ishga tushirish** (PROGRESS.md oxiridagi "TUNGI ISH HISOBOTI" dagi buyruqlar).
 2. [ ] Botni telefonda sinash (o'sha yerdagi ro'yxat). "Yangi foydalanuvchi" tekshiruvini **ikkinchi akkaunt** bilan

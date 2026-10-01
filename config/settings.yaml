@@ -192,3 +192,17 @@ expiry:
 # --- /broadcast (admin: hamma foydalanuvchilarga xabar) -------------------------
 broadcast:
   per_second: 20                     # sekundiga shuncha xabar (Bot API chegarasidan past)
+
+# --- 🤖 Gemini yordamchi (ixtiyoriy, ai/) ---------------------------------------
+# Faqat .env da GEMINI_API_KEY bo'lsa ishlaydi. Kalit yo'q yoki xato bo'lsa — hammasi regex bilan (avvalgidek).
+# Admin botda: /ai — holat, bugungi so'rovlar, yoqish/o'chirish.
+ai:
+  enabled: true
+  min_confidence: 0.7                # regex ishonchi shundan past bo'lsa (yoki e'lon ruscha/inglizcha) — Gemini'dan so'raladi
+  translate_foreign: true            # ru/en e'lonni to'liq o'zbek lotinga o'giradi
+  daily_limit: 200                   # kuniga ko'pi bilan nechta so'rov (Toshkent kuni, hamma kalitlar)
+  min_interval_seconds: 4            # so'rovlar orasida (bepul tarif daqiqasiga bir necha so'rov)
+  timeout_seconds: 10
+  pause_minutes_rate_limited: 60     # 429 (limit) dan keyin shu kalit shuncha daqiqa ishlatilmaydi
+  pause_minutes_error: 5             # 5xx / timeout / tarmoq xatosidan keyin
+  max_input_chars: 3000              # e'lon matni shundan uzun bo'lsa qisqartirib yuboriladi

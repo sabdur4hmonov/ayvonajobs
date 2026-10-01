@@ -53,6 +53,10 @@ class BroadcastCb(CallbackData, prefix="bc"):
     action: str  # send | cancel
 
 
+class AICb(CallbackData, prefix="ai"):
+    action: str  # on | off
+
+
 class ModCb(CallbackData, prefix="mod"):
     """Admin decision on a user job waiting for review: ok | no | ban."""
 

@@ -59,6 +59,7 @@ ADMIN_COMMANDS = [
     BotCommand(command="ban", description="Bloklash: /ban <id|@username>"),
     BotCommand(command="unban", description="Blokdan chiqarish"),
     BotCommand(command="broadcast", description="Hammaga xabar"),
+    BotCommand(command="ai", description="Gemini yordamchi"),
     BotCommand(command="cancel", description="Bekor qilish"),
     BotCommand(command="help", description="Admin yordami"),
 ]

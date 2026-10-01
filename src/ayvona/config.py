@@ -52,9 +52,26 @@ class EnvSettings(BaseSettings):
     db_path: str = "data/ayvona.db"
     log_level: str = "INFO"
     tz: str = "Asia/Tashkent"
+    # Gemini (Bosqich 15, optional): empty key = everything works with regex only.
+    gemini_api_key: SecretStr | None = None
+    # Extra keys, comma separated — used ONLY if gemini_allow_key_rotation (default off).
+    gemini_api_keys: SecretStr | None = None
+    gemini_allow_key_rotation: bool = False
+    gemini_model: str = "gemini-flash-latest"
+    # hh.uz official API (Bosqich 16): the app token from dev.hh.ru; empty = the source is off.
+    hh_access_token: SecretStr | None = None
+    hh_user_agent: str = ""
 
     @field_validator(
-        "api_id", "admin_chat_id", "api_hash", "bot_token", "channel_id", mode="before"
+        "api_id",
+        "admin_chat_id",
+        "api_hash",
+        "bot_token",
+        "channel_id",
+        "gemini_api_key",
+        "gemini_api_keys",
+        "hh_access_token",
+        mode="before",
     )
     @classmethod
     def _empty_to_none(cls, v: Any) -> Any:
@@ -269,6 +286,21 @@ class BroadcastConfig(BaseModel):
     per_second: float = Field(default=20, gt=0, le=30)
 
 
+class AIConfig(BaseModel):
+    """Gemini helper (ai/). Works only with GEMINI_API_KEY in .env; any error -> regex result."""
+
+    enabled: bool = True  # the admin can also switch it off at runtime: /ai (kv_store)
+    # Called for a job ad whose regex confidence is below this, or that is Russian / English.
+    min_confidence: float = Field(default=0.7, ge=0, le=1)
+    translate_foreign: bool = True
+    daily_limit: int = Field(default=200, ge=0)  # requests per day (Asia/Tashkent), all keys
+    min_interval_seconds: float = Field(default=4, ge=0)  # free tier: a few requests a minute
+    timeout_seconds: float = Field(default=10, gt=0)
+    pause_minutes_rate_limited: float = Field(default=60, gt=0)  # after HTTP 429
+    pause_minutes_error: float = Field(default=5, gt=0)  # after 5xx / timeout / network
+    max_input_chars: int = Field(default=3000, ge=200)
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -298,6 +330,7 @@ class AppConfig(BaseModel):
     alerts: AlertsConfig = Field(default_factory=AlertsConfig)
     expiry: ExpiryConfig = Field(default_factory=ExpiryConfig)
     broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
+    ai: AIConfig = Field(default_factory=AIConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 

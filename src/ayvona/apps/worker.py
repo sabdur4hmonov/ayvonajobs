@@ -42,6 +42,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramUnauthorizedError
 from loguru import logger
 
+from ayvona.ai.helper import AIHelper
 from ayvona.apps.runtime import (
     SessionFactory,
     heartbeat_loop,
@@ -134,7 +135,25 @@ async def backfill_search_text(sf: SessionFactory) -> int:
     return total
 
 
-async def reformat_queue(settings: Settings, sf: SessionFactory) -> ReformatReport | None:
+def make_ai(settings: Settings, sf: SessionFactory) -> AIHelper | None:
+    """The Gemini helper if a key is in .env (Bosqich 15), else ``None`` = regex only."""
+    if not AIHelper.api_keys(settings):
+        logger.info("Gemini kaliti yo'q — e'lonlar faqat regex bilan ishlanadi (bu normal).")
+        return None
+    rotation = settings.env.gemini_allow_key_rotation
+    logger.info(
+        "Gemini yordamchi: model {}, kalitlar: {}{}. Kunlik limit {}.",
+        settings.env.gemini_model,
+        len(AIHelper.api_keys(settings)),
+        " (aylanish YOQILGAN)" if rotation else "",
+        settings.app.ai.daily_limit,
+    )
+    return AIHelper(settings, sf)
+
+
+async def reformat_queue(
+    settings: Settings, sf: SessionFactory, ai: AIHelper | None = None
+) -> ReformatReport | None:
     """Start-up, before the publisher: the queue gets the current formatter / branding.
 
     Formatter code and ``branding`` only change with a restart (deploy, settings.yaml), so doing
@@ -143,7 +162,7 @@ async def reformat_queue(settings: Settings, sf: SessionFactory) -> ReformatRepo
     if not settings.app.worker.reformat_queued_on_start:
         return None
     try:
-        report = await reformat_queued(settings, sf)
+        report = await reformat_queued(settings, sf, ai=ai)
     except Exception:
         logger.exception("Navbatni qayta formatlashda xato — e'lonlar eski matn bilan qoladi")
         return None
@@ -189,15 +208,17 @@ async def run_worker(
     publish: bool = True,
     once: bool = False,
     monitor: bool = True,
+    ai: AIHelper | None = None,
 ) -> None:
     """Everything after the process setup (tests call this with a mocked Bot API).
 
     ``monitor``: also run the monitoring and the daily backup (not in ``once`` mode).
+    ``ai``: the optional Gemini helper (``make_ai``); ``None`` = regex only.
     """
     await skip_existing_posts(sf)
     await reset_stuck_processing(sf)
     notifier = Notifier(bot, admin_chat, sf)
-    pipeline = Pipeline(settings, sf, notifier)
+    pipeline = Pipeline(settings, sf, notifier, ai=ai)
 
     publisher: Publisher | None = None
     if publish and bot is not None and channel is not None:
@@ -211,7 +232,7 @@ async def run_worker(
     else:
         logger.info("--no-publish: kanalga hech narsa yuborilmaydi, faqat qayta ishlash.")
     await skip_old_queue(settings, sf)
-    await reformat_queue(settings, sf)
+    await reformat_queue(settings, sf, ai)
     await backfill_search_text(sf)
 
     cfg = settings.app.worker
@@ -306,6 +327,7 @@ async def main(*, once: bool = False, publish: bool = True) -> int:
             admin_chat=admin_chat,
             publish=publish,
             once=once,
+            ai=make_ai(settings, sf),
         )
         return 0
     finally:

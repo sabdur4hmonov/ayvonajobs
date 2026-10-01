@@ -93,6 +93,16 @@ start data\preview.html                            # brauzerda ochish
 ```
 Haqiqiy rasmlarni `assets\images\<kategoriya>\<kasb>\` ga qo'ying (docs/IMAGES.md) — vaqtinchaliklari o'zi ishlatilmay qoladi.
 
+## 5a. Gemini yordamchi (ixtiyoriy)
+
+`.env` ga `GEMINI_API_KEY=...` (aistudio.google.com, bepul) qo'ysangiz, worker ishonchi past va ruscha/inglizcha
+e'lonlarni Gemini bilan o'zbek lotinga o'giradi. Kalit bo'lmasa — hammasi avvalgidek regex bilan ishlaydi.
+Botda admin: `/ai` (holat, bugungi so'rovlar, yoqish/o'chirish).
+
+> ⚠️ **Google shartlari:** bepul limitlar loyiha (project) bo'yicha hisoblanadi. Limitni chetlab o'tish uchun bir necha
+> akkaunt/kalit ochish Google shartlariga zid bo'lishi va akkauntlar bloklanishiga olib kelishi mumkin. Shuning uchun
+> `GEMINI_ALLOW_KEY_ROTATION=false` (standart) — faqat bitta kalit ishlatiladi. Bizning hajmga bitta kalit + kesh yetadi.
+
 ## 6. Dasturchi uchun
 
 ```powershell

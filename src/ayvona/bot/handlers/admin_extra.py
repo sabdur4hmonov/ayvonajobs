@@ -16,8 +16,9 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.ai.helper import AIHelper, set_admin_disabled
 from ayvona.bot import texts as T
-from ayvona.bot.callbacks import BroadcastCb
+from ayvona.bot.callbacks import AICb, BroadcastCb
 from ayvona.bot.handlers.admin import log_admin
 from ayvona.config import Settings
 from ayvona.db.models import FilterKind
@@ -110,6 +111,57 @@ async def unban_cmd(
     message: Message, command: CommandObject, sf: SessionFactory, settings: Settings
 ) -> None:
     await _ban(message, command, sf, settings, False)
+
+
+# ------------------------------------------------------------------ 🤖 /ai
+async def ai_view(sf: SessionFactory, settings: Settings) -> tuple[str, InlineKeyboardMarkup]:
+    st = await AIHelper(settings, sf).status()
+    if not st.configured:
+        state = T.AI_NO_KEY
+    elif not st.config_enabled:
+        state = T.AI_OFF_CONFIG
+    elif st.admin_disabled:
+        state = T.AI_OFF_ADMIN
+    else:
+        state = T.AI_ON
+    text = T.AI_STATUS.format(
+        state=state,
+        model=html.escape(st.model),
+        keys=st.keys,
+        rotation=T.AI_ROTATION if st.rotation else "",
+        calls=st.calls_today,
+        limit=st.daily_limit,
+        ok=st.ok_today,
+        failed=st.failed_today,
+        cache_hits=st.cache_hits_today,
+        cached_total=st.cached_total,
+        paused=T.AI_PAUSED.format(list=", ".join(st.paused)) if st.paused else "",
+    )
+    button = (
+        InlineKeyboardButton(text=T.BTN_AI_ON, callback_data=AICb(action="on").pack())
+        if st.admin_disabled
+        else InlineKeyboardButton(text=T.BTN_AI_OFF, callback_data=AICb(action="off").pack())
+    )
+    return text, InlineKeyboardMarkup(inline_keyboard=[[button]])
+
+
+@router.message(Command("ai"))
+async def ai_cmd(message: Message, sf: SessionFactory, settings: Settings) -> None:
+    text, kb = await ai_view(sf, settings)
+    await message.answer(text, reply_markup=kb)
+
+
+@router.callback_query(AICb.filter())
+async def ai_switch(
+    query: CallbackQuery, callback_data: AICb, sf: SessionFactory, settings: Settings
+) -> None:
+    async with sf() as s, s.begin():
+        await set_admin_disabled(s, callback_data.action == "off")
+    logger.info("admin {}: /ai -> {}", query.from_user.id, callback_data.action)
+    await query.answer()
+    text, kb = await ai_view(sf, settings)
+    if isinstance(query.message, Message):
+        await query.message.edit_text(text, reply_markup=kb)
 
 
 # ------------------------------------------------------------------ broadcast

@@ -184,6 +184,7 @@ class Extraction:
     confidence: float = 0.0
     low_quality: bool = False
     reasons: tuple[str, ...] = field(default=())
+    ai_used: bool = False  # improved / translated by the Gemini helper (ai/helper.py)
 
     @property
     def multi(self) -> bool:

@@ -33,6 +33,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.ai.helper import AIHelper
 from ayvona.config import Settings
 from ayvona.db.models import (
     Job,
@@ -182,7 +183,13 @@ def job_fields(ex: Extraction, description: str, out: FormattedPost) -> dict[str
         "description": description,
         "contact_phone": _cut(ex.phones[0], 20) if ex.phones else None,
         "contact_username": _cut(ex.usernames[0], 64) if ex.usernames else None,
-        "parse_method": ParseMethod.FALLBACK if out.fallback else ParseMethod.REGEX,
+        "parse_method": (
+            ParseMethod.GEMINI
+            if ex.ai_used
+            else ParseMethod.FALLBACK
+            if out.fallback
+            else ParseMethod.REGEX
+        ),
         "confidence": ex.confidence,
         "formatted_text": out.html,
         "search_text": search_text(
@@ -217,10 +224,12 @@ class Pipeline:
         settings: Settings,
         session_factory: async_sessionmaker[AsyncSession],
         notifier: Notifier | None = None,
+        ai: AIHelper | None = None,
     ) -> None:
         self.settings = settings
         self.sf = session_factory
         self.notifier = notifier
+        self.ai = ai  # optional Gemini helper (ai/helper.py); None = regex only
         self.cfg = settings.app.worker
         self.publisher_cfg = settings.app.publisher
         self.classifier = Classifier(settings.filters, settings.source_rules)
@@ -347,6 +356,7 @@ class Pipeline:
         if not ex.has_contact:
             await self._set_status(post, RawPostStatus.NO_CONTACT)
             return RawPostStatus.NO_CONTACT
+        ex = await self.enhance(post, ex)
         if ex.low_quality:
             await self._set_status(post, RawPostStatus.LOW_QUALITY, ", ".join(ex.reasons))
             return RawPostStatus.LOW_QUALITY
@@ -381,6 +391,21 @@ class Pipeline:
             await self._store_entry(s, post, entry, match)
         self.index.add(entry, match.original if match else None)
         return status
+
+    # ------------------------------------------------------------------ AI (optional)
+    async def enhance(
+        self, post: LogicalPost, ex: Extraction, *, cache_only: bool = False
+    ) -> Extraction:
+        """The Gemini-improved extraction when the helper is on and it helps; else ``ex``.
+        ``cache_only``: never a new API call (start-up re-render of the queue)."""
+        if self.ai is None:
+            return ex
+        try:
+            better = await self.ai.enhance(post.input.text, ex, cache_only=cache_only)
+        except Exception:  # AI must never stop a job
+            logger.exception("{}: AI yordamchida kutilmagan xato — regex natijasi", post.label)
+            return ex
+        return better or ex
 
     # ------------------------------------------------------------------ rendering
     def render(self, post: LogicalPost, ex: Extraction) -> tuple[FormattedPost, dict[str, Any]]:

@@ -25,6 +25,7 @@ from typing import Any
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from ayvona.ai.helper import AIHelper
 from ayvona.config import Settings
 from ayvona.db.models import Job
 from ayvona.db.repositories import jobs_repo, kv_repo
@@ -93,6 +94,7 @@ async def _rebuild(pipeline: Pipeline, s: AsyncSession, job: Job) -> dict[str, A
     ex = pipeline.extractor.extract(post.input)
     if not ex.has_contact:
         return "hozirgi qoidalar bo'yicha aloqa topilmadi — eski matn qoldi"
+    ex = await pipeline.enhance(post, ex, cache_only=True)  # AI answers kept (cache, no API call)
     if ex.low_quality:
         return "hozirgi qoidalar bo'yicha sifatsiz (low_quality) — eski matn qoldi"
     out, fields = pipeline.render(post, ex)
@@ -104,9 +106,11 @@ async def reformat_queued(
     sf: async_sessionmaker[AsyncSession],
     *,
     dry_run: bool = False,
+    ai: AIHelper | None = None,
 ) -> ReformatReport:
-    """Re-render every ``queued`` / ``retry`` job. ``dry_run``: only report, write nothing."""
-    pipeline = Pipeline(settings, sf)  # no notifier; its dedup index is never loaded
+    """Re-render every ``queued`` / ``retry`` job. ``dry_run``: only report, write nothing.
+    ``ai``: reuse cached Gemini answers (never a new request)."""
+    pipeline = Pipeline(settings, sf, ai=ai)  # no notifier; its dedup index is never loaded
     report = ReformatReport(dry_run=dry_run)
     async with sf() as s:
         jobs = await jobs_repo.list_sendable(s)

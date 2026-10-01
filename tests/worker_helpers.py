@@ -37,7 +37,15 @@ def make_settings(
     """Test settings. Never points at the real data/ayvona.db: the backup is off unless
     ``db_file`` + ``backup_dir`` (temporary paths) are given. No network: the USD rate is off."""
     s = load_settings(DEFAULT_CONFIG_DIR, env_file=None)
-    env = s.env.model_copy(update={"db_path": str(db_file or "/nonexistent/test.db")})
+    env = s.env.model_copy(
+        update={
+            "db_path": str(db_file or "/nonexistent/test.db"),
+            # never a real AI / hh.uz key in tests, whatever the OS environment has
+            "gemini_api_key": None,
+            "gemini_api_keys": None,
+            "hh_access_token": None,
+        }
+    )
     app = s.app.model_copy(
         update={
             "backup": s.app.backup.model_copy(
