@@ -1262,3 +1262,18 @@ start http://127.0.0.1:8080
 ```
 
 Testlar: `tests/test_web.py` (+8, ASGI orqali — server ham, tarmoq ham yo'q). **837 passed**, ruff toza.
+
+
+---
+
+## Deploy tayyorligi (2026-10-01, avtonom)
+
+- **`scripts/deploy.sh`**: servislar ro'yxatiga `ayvona-web` qo'shildi (faqat `enable` qilingan bo'lsa tegadi);
+  yangi qadam — bo'sh rasm papkalariga vaqtinchalik rasmlar (`make_placeholder_images.py`, borlariga tegmaydi;
+  Bosqich 6 dagi eslatma bajarildi). Endi 8 qadam. `bash -n` bilan sintaksis tekshirildi.
+- **`deploy/SETUP_ORACLE.md`**: 4 ta servis jadvali, yangi `.env` kalitlari (Gemini, hh.uz — ixtiyoriy), yangi
+  **10a-qadam** — veb-sayt: DuckDNS, Oracle Security List (80/443), iptables, Caddy, `website.base_url`,
+  `ayvona-web` ni yoqish; deploy.sh migratsiyalarni (`f2b6d8a4c1e3`, `a7c3e9f1b5d8`, `b8d4f0a2c6e9`) o'zi qo'llashi.
+- **Toza klon sinovi** (serverdagidek): `git clone` → vaqtinchalik papka (`.env`/`data/` yo'q) →
+  `uv sync --locked` ✅ → `uv run ruff check .` ✅ → `uv run pytest` **837 passed** ✅. Klon keyin o'chirildi.
+  (Git Bash'da "dubious ownership" — global sozlamaga tegilmadi, faqat `git -c safe.directory=*` bilan.)

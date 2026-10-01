@@ -8,8 +8,12 @@
 #    3) bazaning zaxira nusxasi — data/backups/deploy/*.db (oxirgi 5 tasi qoladi)
 #    4) uv sync             — kutubxonalar (uv.lock bo'yicha, aynan o'sha versiyalar)
 #    5) alembic upgrade head — baza migratsiyalari
-#    6) systemd unit fayllar o'zgargan bo'lsa — /etc/systemd/system/ ga nusxalaydi
-#    7) servislarni qayta ishga tushiradi va holatini ko'rsatadi
+#    6) vaqtinchalik rasmlar — bo'sh rasm papkalariga (git'da yo'q; borlariga tegmaydi)
+#    7) systemd unit fayllar o'zgargan bo'lsa — /etc/systemd/system/ ga nusxalaydi
+#    8) servislarni qayta ishga tushiradi va holatini ko'rsatadi
+#
+#  Servislar: ayvona-collector, ayvona-worker, ayvona-bot, ayvona-web (veb-sayt, ixtiyoriy).
+#  Faqat "enable" qilinganlari to'xtatiladi/yoqiladi.
 #
 #  Ishlatish (serverda, ubuntu foydalanuvchisidan):
 #    sudo bash /home/ayvona/ayvona/scripts/deploy.sh
@@ -27,7 +31,7 @@ main() {
     local app_user="${APP_USER:-ayvona}"
     local app_dir="${APP_DIR:-/home/${app_user}/ayvona}"
     local uv="/home/${app_user}/.local/bin/uv"
-    local services=(ayvona-collector ayvona-worker ayvona-bot)
+    local services=(ayvona-collector ayvona-worker ayvona-bot ayvona-web)
     local keep_backups=5
 
     if [[ "${EUID}" -ne 0 ]]; then
@@ -63,17 +67,17 @@ main() {
     }
     trap 'on_error' ERR
 
-    echo "==> 1/7 git pull"
+    echo "==> 1/8 git pull"
     as_app git pull --ff-only
     as_app git log -1 --oneline
 
-    echo "==> 2/7 Servislarni to'xtatish: ${enabled_list}"
+    echo "==> 2/8 Servislarni to'xtatish: ${enabled_list}"
     if ((${#enabled[@]})); then
         systemctl stop "${enabled[@]}"
     fi
 
     # Alohida papka: worker'ning kunlik backup'lari (data/backups/ayvona_YYYY-MM-DD.db) bilan aralashmasin.
-    echo "==> 3/7 Baza zaxirasi (data/backups/deploy/)"
+    echo "==> 3/8 Baza zaxirasi (data/backups/deploy/)"
     as_app mkdir -p data/backups/deploy
     if [[ -f "${app_dir}/data/ayvona.db" ]]; then
         local stamp
@@ -89,13 +93,16 @@ main() {
         echo "    data/ayvona.db hali yo'q — o'tkazib yuborildi"
     fi
 
-    echo "==> 4/7 uv sync --locked"
+    echo "==> 4/8 uv sync --locked"
     as_app "${uv}" sync --locked
 
-    echo "==> 5/7 alembic upgrade head"
+    echo "==> 5/8 alembic upgrade head"
     as_app "${uv}" run --no-sync alembic upgrade head
 
-    echo "==> 6/7 systemd unit fayllar"
+    echo "==> 6/8 Vaqtinchalik rasmlar (faqat bo'sh papkalarga)"
+    as_app "${uv}" run --no-sync python scripts/make_placeholder_images.py | tail -n 1
+
+    echo "==> 7/8 systemd unit fayllar"
     local changed=0 unit src dst
     for s in "${services[@]}"; do
         unit="${s}.service"
@@ -113,7 +120,7 @@ main() {
         echo "    o'zgarish yo'q"
     fi
 
-    echo "==> 7/7 Servislarni ishga tushirish: ${enabled_list}"
+    echo "==> 8/8 Servislarni ishga tushirish: ${enabled_list}"
     if ((${#enabled[@]})); then
         systemctl start "${enabled[@]}"
         sleep 5

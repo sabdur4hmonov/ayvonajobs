@@ -28,6 +28,7 @@ kompyuteringiz o'chiq bo'lsa ham kanalga postlar chiqib turishigacha.
 8. [.env, session va bazani ko'chirish (scp)](#8-qadam-env-session-va-bazani-kochirish-scp)
 9. [Kutubxonalar, migratsiya va sinov](#9-qadam-kutubxonalar-migratsiya-va-sinov)
 10. [systemd servislarni yoqish](#10-qadam-systemd-servislarni-yoqish)
+10a. [Veb-sayt: Caddy + DuckDNS (ixtiyoriy)](#10a-qadam-veb-sayt-caddy--duckdns-ixtiyoriy)
 11. [Loglarni ko'rish (journalctl)](#11-qadam-loglarni-korish-journalctl)
 12. [Yangilash (deploy.sh)](#12-qadam-yangilash-deploysh)
 13. [Backup'dan tiklash](#13-qadam-backupdan-tiklash)
@@ -51,7 +52,8 @@ kompyuteringiz o'chiq bo'lsa ham kanalga postlar chiqib turishigacha.
 - Yangi limit 2026-06-15 dan kuchga kirdi. Foydalanuvchilarga kelgan Oracle xatiga ko'ra 2026-08-18 dan
   limitdan katta Always Free serverlar avtomatik o'chiriladi. Internetdagi eski qo'llanmalarda "4 OCPU / 24 GB"
   deb yozilgan — **ularga ishonmang**.
-- Bizga **1 OCPU / 6 GB** yetarli (3 ta Python jarayon ~0.5–1 GB ishlatadi). Bu limitning yarmi — xavfsiz.
+- Bizga **1 OCPU / 6 GB** yetarli (3–4 ta Python jarayon — collector, worker, bot va ixtiyoriy veb-sayt —
+  ~0.6–1.2 GB ishlatadi). Bu limitning yarmi — xavfsiz.
 - Disk: jami 200 GB bepul (server diski standart ~47–50 GB). Trafik: oyiga 10 TB — bizga juda ko'p.
 - Always Free resurslar faqat **Home Region**da (akkaunt ochishda tanlanadi, **keyin o'zgartirib bo'lmaydi**).
 
@@ -287,8 +289,9 @@ Oracle serverida **ikki qavat** himoya bor:
 2. **Ubuntu ichidagi iptables** — Oracle'ning Ubuntu image'ida allaqachon sozlangan: 22-port ochiq,
    qolgan kiruvchi ulanishlar yopiq.
 
-**Bizning dastur hech qanday port ochishni talab qilmaydi:** collector ham, bot ham Telegram'ga o'zi ulanadi
-(chiquvchi ulanish), bot esa "long polling" ishlatadi (webhook emas). Shuning uchun:
+**Collector, worker va bot hech qanday port ochishni talab qilmaydi:** ular Telegram'ga o'zi ulanadi
+(chiquvchi ulanish), bot esa "long polling" ishlatadi (webhook emas). Faqat **veb-sayt** (ixtiyoriy, 10a-qadam)
+uchun 80 va 443 portlar ochiladi — o'sha qadamda ko'rsatilgan. Shuning uchun hozir:
 - ✅ Hech narsani ochmang, hech narsani o'zgartirmang.
 - ❌ `ufw` o'rnatmang/yoqmang — Oracle image'idagi iptables qoidalari bilan to'qnashadi va SSH'dan
   qulflanib qolishingiz mumkin.
@@ -443,6 +446,8 @@ nano .env
 - `DB_PATH=data/ayvona.db` va `TELETHON_SESSION=data/ayvona` — shunday qolsin (loyiha papkasiga nisbatan).
 - `CHANNEL_ID` — sinov kanali emas, **haqiqiy kanal** (@ayvonajobs) ekanini tekshiring.
 - `BOT_TOKEN`, `ADMIN_IDS`, `ADMIN_CHAT_ID` to'ldirilgan bo'lsin.
+- Ixtiyoriy (bo'sh qolsa ham hammasi ishlaydi): `GEMINI_API_KEY` (AI yordamchi), `HH_ACCESS_TOKEN` va
+  `HH_USER_AGENT` (hh.uz manbasi). `GEMINI_ALLOW_KEY_ROTATION=false` shunday qolsin.
 - Saqlash: **Ctrl+O**, Enter; chiqish: **Ctrl+X**.
 
 > **Variant B (session'ni ko'chirmasdan):** serverda to'g'ridan-to'g'ri login qilish ham mumkin:
@@ -496,13 +501,14 @@ Logda manbalar o'qilgani va yangi postlar saqlangani ko'rinsa — tayyor. Endi `
 **systemd** — Linux'ning "xizmatlar boshqaruvchisi". U dasturimizni: server yoqilganda avtomatik ishga tushiradi,
 yiqilsa **10 soniyadan keyin qayta ishga tushiradi** (`Restart=always`, `RestartSec=10`), loglarni saqlaydi.
 
-Bizda 3 ta servis (`deploy/systemd/`):
+Bizda 4 ta servis (`deploy/systemd/`):
 
 | Servis | Nima qiladi | Qachon yoqamiz |
 |---|---|---|
-| `ayvona-collector` | kanallardan postlarni o'qiydi, bazaga yozadi | doim |
-| `ayvona-worker` | postlarni qayta ishlaydi, kanalga joylaydi, har kuni 03:00 da backup | doim |
-| `ayvona-bot` | @ayvona_jobs_bot (hozircha admin buyruqlari, keyin ommaviy bot) | `.env` da `BOT_TOKEN` bo'lsa |
+| `ayvona-collector` | kanallar, saytlar va RSS'dan postlarni o'qiydi, bazaga yozadi | doim |
+| `ayvona-worker` | postlarni qayta ishlaydi (+ ixtiyoriy Gemini), kanalga joylaydi, obuna xabarlari, muddat, 03:00 backup | doim |
+| `ayvona-bot` | @ayvona_jobs_bot — ommaviy menyu va admin buyruqlari | `.env` da `BOT_TOKEN` bo'lsa |
+| `ayvona-web` | o'z veb-sayti (faqat o'qiydi), 127.0.0.1:8080 | xohlasangiz, 10a-qadamdan keyin |
 
 ```bash
 # 🐧 server (ubuntu)
@@ -511,6 +517,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now ayvona-collector ayvona-worker ayvona-bot
 systemctl status ayvona-collector ayvona-worker ayvona-bot --no-pager
 ```
+(`ayvona-web` ni hozircha yoqmang — 10a-qadamda.)
 
 - `enable` — server qayta yoqilganda avtomatik ishga tushsin; `--now` — hozir ham ishga tushir.
 - `status` da har uchalasi **`Active: active (running)`** (yashil) bo'lishi kerak. Chiqish: `q`.
@@ -530,6 +537,47 @@ sudo systemctl stop ayvona-collector       # to'xtatish (enable bo'lsa, reboot'd
 sudo systemctl disable ayvona-collector    # avtomatik ishga tushishni o'chirish
 systemctl list-units 'ayvona-*' --all      # hamma ayvona servislarining holati
 ```
+
+---
+
+## 10a-qadam. Veb-sayt: Caddy + DuckDNS (ixtiyoriy)
+
+Sayt (`ayvona-web`) serverda faqat `127.0.0.1:8080` da ishlaydi. Tashqi dunyoga **Caddy** chiqaradi — u bepul
+HTTPS sertifikatni (Let's Encrypt) o'zi oladi va yangilab turadi. Manzil — bepul **DuckDNS** subdomeni.
+
+1. **duckdns.org** → GitHub/Google bilan kiring → subdomen yozing (masalan `ayvona`) → **add domain** →
+   `current ip` ga serverning ochiq IP'sini (`<IP>`) yozing → **update ip**. Manzil: `ayvona.duckdns.org`.
+2. **Oracle saytida portlarni oching:** ☰ → Networking → Virtual Cloud Networks → (sizning VCN) → Subnet →
+   Security List → **Add Ingress Rules**: Source CIDR `0.0.0.0/0`, TCP, Destination port `80`; yana bir qoida — `443`.
+3. **Serverda iptables** (Oracle Ubuntu'sining o'z firewall'i):
+   ```bash
+   # 🐧 server (ubuntu)
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   sudo apt install -y iptables-persistent      # "Save current rules?" — Yes
+   sudo netfilter-persistent save
+   ```
+4. **Caddy:**
+   ```bash
+   # 🐧 server (ubuntu)
+   sudo apt install -y caddy
+   sudo cp /home/ayvona/ayvona/deploy/Caddyfile.example /etc/caddy/Caddyfile
+   sudo nano /etc/caddy/Caddyfile        # "ayvona.duckdns.org" ni o'z manzilingizga almashtiring
+   sudo systemctl reload caddy
+   ```
+5. **Sayt manzili sozlamada** (`sudo -iu ayvona`, `nano ~/ayvona/config/settings.yaml`):
+   `website:` → `base_url: "https://ayvona.duckdns.org"`. (Bu fayl git'da — keyingi `git pull` da konflikt bo'lmasligi
+   uchun bu o'zgarishni kompyuterda qilib, push qilganingiz ma'qul.)
+6. **Servisni yoqish:**
+   ```bash
+   # 🐧 server (ubuntu)
+   sudo systemctl enable --now ayvona-web
+   curl -s http://127.0.0.1:8080/healthz      # "ok"
+   ```
+   Brauzerda `https://ayvona.duckdns.org` — bosh sahifa ochilishi kerak. `.../sitemap.xml` ni Google Search Console'ga
+   qo'shsangiz bo'ladi (bepul).
+
+Sayt bazadan **faqat o'qiydi** — yiqilsa ham collector/worker/bot ishlayveradi. Xotira chegarasi: 300 MB.
 
 ---
 
@@ -578,9 +626,12 @@ sudo bash /home/ayvona/ayvona/scripts/deploy.sh
 2. **yoqilgan** servislarni to'xtatadi (enable qilinmagan servisga tegmaydi);
 3. bazaning zaxira nusxasini oladi → `data/backups/deploy/` (oxirgi 5 tasi qoladi);
 4. `uv sync --locked`;
-5. `alembic upgrade head`;
-6. `deploy/systemd/*.service` o'zgargan bo'lsa — `/etc/systemd/system/` ga nusxalab, `daemon-reload`;
-7. servislarni qayta ishga tushirib, holatini (`active`) ko'rsatadi.
+5. `alembic upgrade head` (yangi migratsiyalar — masalan Bosqich 12–14 dagi `f2b6d8a4c1e3`, `a7c3e9f1b5d8`,
+   `b8d4f0a2c6e9` — shu yerda o'zi qo'llanadi);
+6. bo'sh rasm papkalariga vaqtinchalik rasmlar (borlariga tegmaydi);
+7. `deploy/systemd/*.service` o'zgargan bo'lsa — `/etc/systemd/system/` ga nusxalab, `daemon-reload`
+   (yangi servis — masalan `ayvona-web` — avval 10a-qadamdagidek bir marta qo'lda o'rnatiladi);
+8. servislarni qayta ishga tushirib, holatini (`active`) ko'rsatadi.
 
 Collector bir necha soniya to'xtaydi — bu xavfsiz: har manbaning `last_seen_id` sidan davom etadi, post yo'qolmaydi.
 
@@ -620,7 +671,7 @@ Hammasi oddiy SQLite fayl — tiklash = faylni `data/ayvona.db` o'rniga qo'yish.
 
 ```bash
 # 🐧 server (ubuntu)
-sudo systemctl stop ayvona-collector ayvona-worker ayvona-bot
+sudo systemctl stop ayvona-collector ayvona-worker ayvona-bot ayvona-web
 sudo -iu ayvona
 ```
 ```bash
