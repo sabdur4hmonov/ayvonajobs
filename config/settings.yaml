@@ -101,7 +101,8 @@ worker:
 
 # --- Publisher (kanalga joylash) ---------------------------------------
 publisher:
-  publish_interval_seconds: 60       # kanalga postlar orasidagi minimal vaqt
+  publish_interval_seconds: 300      # kanalga postlar orasidagi minimal vaqt (300 = 5 daqiqa)
+  quiet_hours: "23:00-07:00"         # tungi tanaffus (Toshkent vaqti): kanalga chiqmaydi, navbat kutadi. "" = o'chiq
   max_publish_attempts: 8            # shuncha xatodan keyin "failed" + admin'ga xabar
   hold_minutes: 20                   # yangi e'lon shuncha kutadi: boshqa kanalda to'liqroq nusxasi chiqsa, o'sha chiqadi
   publish_backfill: false            # kanal qo'shilganda olingan ESKI postlar ham chiqsinmi (initial_backfill)

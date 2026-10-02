@@ -14,6 +14,7 @@ from aiogram.methods import EditMessageText, SendMessage
 from aiogram.types import Update
 from sqlalchemy import select
 
+from ayvona.bot.handlers.admin import eta_text
 from ayvona.bot.handlers.admin_images import ImageDelCb, resolve_target
 from ayvona.bot.handlers.admin_sources import AddSourceCb, SourceCb
 from ayvona.bot.setup import build_dispatcher
@@ -130,11 +131,27 @@ async def test_stats_and_queue(harness: BotHarness, session_factory: SF) -> None
     await add_job(session_factory)
     await harness.send(message_update("/stats"))
     stats = harness.texts()[-1]
-    assert "Keldi (post): 1 / 1" in stats and "Navbat: 1" in stats
+    assert "Keldi (post): 1 / 1" in stats
+    assert "Navbat: 1 ta, taxminan 1 daqiqada chiqadi" in stats
     assert "Collector ⚪️" in stats
 
     await harness.send(message_update("/queue"))
     assert "Kutmoqda: 1" in harness.texts()[-1] and "Sotuvchi" in harness.texts()[-1]
+
+
+@pytest.mark.parametrize(
+    ("seconds", "text"),
+    [
+        (0, "1 daqiqa"),
+        (40 * 60, "40 daqiqa"),
+        (60 * 60, "1 soat"),
+        (90 * 60, "1,5 soat"),
+        (9 * 3600, "9 soat"),
+        (26.4 * 3600, "26 soat"),
+    ],
+)
+def test_queue_eta_text(seconds: float, text: str) -> None:
+    assert eta_text(timedelta(seconds=seconds)) == text
 
 
 async def test_failed_retry_pause_resume(harness: BotHarness, session_factory: SF) -> None:

@@ -58,6 +58,7 @@ def make_settings(
                 update={
                     "publish_interval_seconds": 0,
                     "idle_poll_seconds": 0.01,
+                    "quiet_hours": None,  # tests must not depend on the time of day
                     **(publisher or {}),
                 }
             ),

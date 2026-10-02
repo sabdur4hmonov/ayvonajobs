@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ayvona.config import PublisherConfig
 from ayvona.db.models import (
     Job,
     JobOrigin,
@@ -137,6 +138,20 @@ async def queue_overview(session: AsyncSession, now: datetime, limit: int = 10) 
     )
     paused = await kv_repo.get_bool(session, kv_repo.PUBLISHER_PAUSED)
     return QueueOverview(paused, counts, due, upcoming)
+
+
+def queue_eta(count: int, now: datetime, cfg: PublisherConfig, tz: ZoneInfo) -> timedelta:
+    """Roughly how long until ``count`` waiting jobs are all in the channel: one every
+    ``publish_interval_seconds``, none during ``quiet_hours`` (the too-old rule may drop some)."""
+    t = now
+    step = timedelta(seconds=cfg.publish_interval_seconds)
+    for i in range(count):
+        if i:
+            t += step
+        until = cfg.quiet_until(t, tz)
+        if until is not None:
+            t = until
+    return t - now
 
 
 async def failed_jobs(session: AsyncSession, limit: int = 20) -> list[Job]:

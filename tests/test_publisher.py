@@ -7,8 +7,9 @@ and ``publisher.max_age_hours`` (too old -> ``skipped_old``).
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 from aiogram.methods import SendMessage, SendPhoto
@@ -28,6 +29,7 @@ from ayvona.publisher.outbox import (
     skip_old_jobs,
     too_old_reason,
 )
+from ayvona.services.stats import queue_eta
 from ayvona.timeutil import utcnow
 from tests.fake_bot import CHANNEL, FakeBotSession, make_bot
 from tests.worker_helpers import (
@@ -311,6 +313,109 @@ def test_max_age_default_is_24_hours() -> None:
 
 
 # ------------------------------------------------------------------ helpers
+# ------------------------------------------------------------------ pacing: interval, quiet hours
+TASHKENT = ZoneInfo("Asia/Tashkent")
+
+
+def tashkent(hour: int, minute: int = 0) -> datetime:
+    """2026-10-02 at ``hour:minute`` Asia/Tashkent, as UTC."""
+    return datetime(2026, 10, 2, hour, minute, tzinfo=TASHKENT).astimezone(UTC)
+
+
+NIGHT = "23:00-07:00"
+
+
+@pytest.mark.parametrize(
+    ("local", "until"),
+    [
+        ((22, 59), None),
+        ((23, 0), (3, 7)),  # -> next morning 07:00
+        ((2, 30), (2, 7)),
+        ((6, 59), (2, 7)),
+        ((7, 0), None),
+        ((12, 0), None),
+    ],
+)
+def test_quiet_until_over_midnight(local: tuple[int, int], until: tuple[int, int] | None) -> None:
+    cfg = make_settings().app.publisher.model_copy(update={"quiet_hours": NIGHT})
+    got = cfg.quiet_until(tashkent(*local), TASHKENT)
+    if until is None:
+        assert got is None
+    else:
+        day, hour = until
+        assert got == datetime(2026, 10, day, hour, tzinfo=TASHKENT)
+
+
+def test_quiet_hours_within_one_day_and_off() -> None:
+    cfg = make_settings().app.publisher.model_copy(update={"quiet_hours": "13:00-14:00"})
+    assert cfg.quiet_until(tashkent(13, 30), TASHKENT) == datetime(2026, 10, 2, 14, tzinfo=TASHKENT)
+    assert cfg.quiet_until(tashkent(14, 0), TASHKENT) is None
+    assert cfg.quiet_until(tashkent(23, 0), TASHKENT) is None
+    off = cfg.model_copy(update={"quiet_hours": None})
+    assert off.quiet_until(tashkent(13, 30), TASHKENT) is None
+
+
+async def test_quiet_hours_hold_the_queue_until_morning(session_factory: SF) -> None:
+    job_id = await add_job(session_factory)
+    pub, session, notifier = publisher(session_factory, quiet_hours=NIGHT)
+
+    res = await pub.publish_next(tashkent(23, 30))
+    assert res.outcome is Outcome.QUIET and res.wait_seconds == 7.5 * 3600
+    assert session.requests == [] and notifier.messages == []
+    assert (await get_job(session_factory, job_id)).status is JobStatus.QUEUED
+
+    res = await pub.publish_next(tashkent(7, 0) + timedelta(days=1))
+    assert res.outcome is Outcome.PUBLISHED and res.job_id == job_id
+
+
+async def test_too_old_rule_still_works_during_quiet_hours(session_factory: SF) -> None:
+    night = tashkent(2, 0)
+    old = await add_job_from_post(session_factory, timedelta(hours=25), now=night)
+    fresh = await add_job_from_post(session_factory, timedelta(hours=20), now=night)
+    pub, session, _ = publisher(session_factory, quiet_hours=NIGHT)
+
+    assert (await pub.publish_next(night)).outcome is Outcome.QUIET
+    assert (await get_job(session_factory, old)).status is JobStatus.SKIPPED_OLD
+    assert (await get_job(session_factory, fresh)).status is JobStatus.QUEUED
+    assert session.requests == []
+
+
+async def test_restart_waits_for_the_interval_since_the_last_post(session_factory: SF) -> None:
+    await add_job(session_factory)
+    await add_job(session_factory)
+    pub, session, _ = publisher(session_factory, publish_interval_seconds=300)
+    assert await pub.spacing_wait() == 0  # nothing in the channel yet
+    assert (await pub.publish_next()).outcome is Outcome.PUBLISHED
+
+    # a "restarted" publisher: the first post waits for the rest of the 5 minutes
+    restarted, _, _ = publisher(session_factory, publish_interval_seconds=300)
+    waits: list[float] = []
+
+    async def stop_on_first_sleep(seconds: float) -> bool:
+        waits.append(seconds)
+        return True
+
+    await restarted.run(stop_on_first_sleep)
+    assert len(waits) == 1 and 290 < waits[0] <= 300
+    assert len(session.requests) == 1  # the second job was not sent yet
+    later = utcnow() + timedelta(seconds=301)
+    assert await restarted.spacing_wait(later) == 0
+
+
+def test_queue_eta_counts_interval_and_quiet_hours() -> None:
+    cfg = make_settings().app.publisher.model_copy(
+        update={"publish_interval_seconds": 300, "quiet_hours": NIGHT}
+    )
+    evening = tashkent(22, 0)
+    assert queue_eta(0, evening, cfg, TASHKENT) == timedelta(0)
+    assert queue_eta(1, evening, cfg, TASHKENT) == timedelta(0)  # goes out right away
+    assert queue_eta(12, evening, cfg, TASHKENT) == timedelta(minutes=55)  # 22:00 ... 22:55
+    assert queue_eta(13, evening, cfg, TASHKENT) == timedelta(hours=9)  # 13th: 07:00 next day
+    assert queue_eta(1, tashkent(3, 0), cfg, TASHKENT) == timedelta(hours=4)
+    day = cfg.model_copy(update={"quiet_hours": None})
+    assert queue_eta(25, evening, day, TASHKENT) == timedelta(hours=2)
+
+
 def test_backoff_doubles_up_to_the_cap() -> None:
     assert [backoff_seconds(n, 30, 3600) for n in (1, 2, 3, 8, 20)] == [30, 60, 120, 3600, 3600]
 

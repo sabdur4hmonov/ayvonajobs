@@ -21,7 +21,8 @@ def test_repository_config_loads() -> None:
     assert all(src.identifier.startswith("@") for src in s.app.sources)
     assert s.app.collector.poll_interval_seconds == 90
     assert s.app.collector.initial_backfill == 0
-    assert s.app.publisher.publish_interval_seconds == 60
+    assert s.app.publisher.publish_interval_seconds == 300
+    assert s.app.publisher.quiet_hours == "23:00-07:00"
     assert s.app.publisher.max_publish_attempts == 8
     assert FALLBACK_CATEGORY in s.categories
     assert s.regions.regions and s.regions.remote_keywords
@@ -84,6 +85,32 @@ def test_sources_from_yaml(tmp_path: Path) -> None:
     assert s.app.sources[1].enabled is False
     assert s.app.collector.initial_backfill == 5
     assert s.app.collector.poll_interval_seconds == 90  # default kept
+
+
+def test_publisher_pacing_from_yaml(tmp_path: Path) -> None:
+    (tmp_path / "settings.yaml").write_text(
+        "publisher:\n"
+        "  publish_interval_seconds: 120\n"
+        "  quiet_hours: ' 22:30 - 06:00 '\n" + BRANDING_YAML,
+        encoding="utf-8",
+    )
+    pub = load_settings(tmp_path, env_file=None).app.publisher
+    assert pub.publish_interval_seconds == 120
+    assert pub.quiet_hours == "22:30 - 06:00"
+
+    (tmp_path / "settings.yaml").write_text(
+        "publisher:\n  quiet_hours: ''\n" + BRANDING_YAML, encoding="utf-8"
+    )
+    assert load_settings(tmp_path, env_file=None).app.publisher.quiet_hours is None  # off
+
+
+@pytest.mark.parametrize("bad", ["23:00", "25:00-07:00", "23:00-07:61", "07:00-07:00", "kech"])
+def test_bad_quiet_hours_rejected(tmp_path: Path, bad: str) -> None:
+    (tmp_path / "settings.yaml").write_text(
+        f"publisher:\n  quiet_hours: '{bad}'\n" + BRANDING_YAML, encoding="utf-8"
+    )
+    with pytest.raises(ValidationError):
+        load_settings(tmp_path, env_file=None)
 
 
 def test_invalid_timezone_rejected(monkeypatch: pytest.MonkeyPatch) -> None:

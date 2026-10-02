@@ -25,6 +25,11 @@ A crash while ``sending`` -> the job is queued again on the next start (at-least
 Too old: before taking a job, every waiting job whose source post appeared more than
 ``max_age_hours`` ago becomes ``skipped_old`` (kept in the DB, never sent; logged, no admin
 notice). The worker does the same once on start, before re-rendering the queue.
+
+Quiet hours (``publisher.quiet_hours``, e.g. "23:00-07:00" Asia/Tashkent): nothing is sent; the
+queue keeps filling and publishing resumes when they end. The too-old rule above still applies.
+After a restart the first post waits until ``publish_interval_seconds`` have passed since the last
+one in the channel.
 """
 
 from __future__ import annotations
@@ -67,9 +72,10 @@ from ayvona.db.models import Job, JobOrigin, JobStatus
 from ayvona.db.repositories import images_repo, jobs_repo, kv_repo
 from ayvona.processing.images import PickedImage, pick_image
 from ayvona.services.notifier import Notifier
-from ayvona.timeutil import utcnow
+from ayvona.timeutil import ensure_utc, to_local, utcnow
 
 SleepFn = Callable[[float], Awaitable[bool]]  # returns True if we should stop
+QUIET_RECHECK_SECONDS = 60.0  # during quiet hours the publisher looks at the clock this often
 
 _PARSE_ERROR_RE = re.compile(r"can't parse entities|unsupported start tag|can't find end", re.I)
 _FILE_ERROR_RE = re.compile(r"wrong file identifier|file reference|wrong remote file|file_id", re.I)
@@ -186,6 +192,7 @@ class Outcome(StrEnum):
     FAILED = "failed"  # attempts used up
     FLOOD = "flood"  # Telegram asked to wait
     CONFIG = "config"  # token / channel / rights problem
+    QUIET = "quiet"  # quiet hours (night)
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,6 +268,7 @@ class Publisher:
         self.sf = session_factory
         self.sender = sender
         self.notifier = notifier
+        self._quiet = False  # inside quiet hours (logged once when they start / end)
 
     async def _notify(self, text: str, key: str | None = None) -> None:
         if self.notifier is not None:
@@ -299,6 +307,9 @@ class Publisher:
         """Publish (or try) the next due job."""
         now = now or utcnow()
         await skip_old_jobs(self.settings, self.sf, now)
+        quiet = self._quiet_hours(now)
+        if quiet is not None:
+            return quiet
         early, job, image = await self._take(now)
         if early is not None:
             return early
@@ -355,6 +366,37 @@ class Publisher:
         if job.origin == JobOrigin.USER and job.author_id:
             await self._tell_author(job.author_id, result.message_id)
         return PublishResult(Outcome.PUBLISHED, job.id)
+
+    def _quiet_hours(self, now: datetime) -> PublishResult | None:
+        """Inside ``quiet_hours``: a QUIET result (wait = time until they end), else ``None``."""
+        tz = self.settings.timezone
+        until = self.cfg.quiet_until(now, tz)
+        if until is None:
+            if self._quiet:
+                self._quiet = False
+                logger.info("Tungi tanaffus tugadi — kanalga joylash davom etadi")
+            return None
+        if not self._quiet:
+            self._quiet = True
+            logger.info(
+                "Tungi tanaffus ({}): {} gacha kanalga chiqmaydi, navbat kutadi",
+                self.cfg.quiet_hours,
+                to_local(until, tz).strftime("%H:%M"),
+            )
+        return PublishResult(Outcome.QUIET, None, (until - now).total_seconds())
+
+    async def spacing_wait(self, now: datetime | None = None) -> float:
+        """Seconds until ``publish_interval_seconds`` have passed since the last channel post
+        (so a restart does not post sooner than the interval)."""
+        interval = self.cfg.publish_interval_seconds
+        if interval <= 0:
+            return 0.0
+        async with self.sf() as s:
+            last = await jobs_repo.last_published_at(s)
+        if last is None:
+            return 0.0
+        passed = ((now or utcnow()) - ensure_utc(last)).total_seconds()
+        return max(interval - passed, 0.0)
 
     async def _tell_author(self, author_id: int, message_id: int) -> None:
         """A user's job is in the channel: send them the link. Never fails the publishing."""
@@ -413,6 +455,16 @@ class Publisher:
 
     async def run(self, sleep: SleepFn, *, once: bool = False) -> None:
         """Loop until ``sleep`` reports stop. ``once``: publish what is due now, then return."""
+        if not once:
+            try:
+                first = await self.spacing_wait()
+            except Exception:
+                logger.exception("publisher: oxirgi post vaqti o'qilmadi")
+                first = 0.0
+            if first > 0:
+                logger.info("Oxirgi postdan beri interval o'tmagan — {} s kutiladi", round(first))
+                if await sleep(first):
+                    return
         while True:
             try:
                 res = await self.publish_next()
@@ -425,6 +477,8 @@ class Publisher:
                 wait = self.cfg.publish_interval_seconds
             elif res.outcome in (Outcome.IDLE, Outcome.PAUSED, Outcome.FAILED):
                 wait = self.cfg.idle_poll_seconds
+            elif res.outcome is Outcome.QUIET:  # re-check now and then (clock, laptop sleep)
+                wait = max(min(res.wait_seconds, QUIET_RECHECK_SECONDS), self.cfg.idle_poll_seconds)
             else:  # RETRY / FLOOD / CONFIG: wait as computed (a network error hits every job)
                 wait = max(res.wait_seconds, self.cfg.idle_poll_seconds)
             if await sleep(wait):

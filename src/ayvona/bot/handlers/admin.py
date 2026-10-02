@@ -30,6 +30,7 @@ from ayvona.services.stats import (
     day_start,
     failed_jobs,
     period_stats,
+    queue_eta,
     queue_overview,
 )
 from ayvona.timeutil import ensure_utc, to_local, utcnow
@@ -49,6 +50,16 @@ def ago(delta: timedelta) -> str:
     if minutes < 48 * 60:
         return f"{minutes // 60} soat"
     return f"{minutes // 1440} kun"
+
+
+def eta_text(delta: timedelta) -> str:
+    """Queue ETA: under an hour -> "40 daqiqa"; else hours, one decimal ("1,5 soat")."""
+    minutes = max(round(delta.total_seconds() / 60), 1)
+    if minutes < 60:
+        return T.ETA_MINUTES.format(n=minutes)
+    hours = round(minutes / 60, 1)
+    shown = f"{hours:g}" if hours < 10 else str(round(hours))
+    return T.ETA_HOURS.format(n=shown.replace(".", ","))
 
 
 def local_time(dt: datetime | None, settings: Settings) -> str:
@@ -119,13 +130,23 @@ async def stats_cmd(message: Message, sf: SessionFactory, settings: Settings) ->
         for c, n in week.categories[:12]
     )
     queued = queue.counts.get("queued", 0) + queue.counts.get("retry", 0)
+    pub = settings.app.publisher
+    eta = queue_eta(queued, now, pub, tz)
+    quiet_until = pub.quiet_until(now, tz)
     await message.answer(
         T.STATS.format(
             now=local_time(now, settings),
             d=today,
             w=week,
             queue=queued,
+            eta=T.QUEUE_ETA.format(eta=eta_text(eta)) if queued else "",
             paused=T.PAUSED_MARK if queue.paused else "",
+            quiet=T.QUIET_MARK.format(
+                span=html.escape(pub.quiet_hours or ""),
+                until=to_local(quiet_until, tz).strftime("%H:%M"),
+            )
+            if quiet_until
+            else "",
             categories=cats or T.STATS_NO_CATEGORIES,
             processes=", ".join(processes),
         )

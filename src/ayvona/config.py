@@ -9,7 +9,8 @@ Use :func:`get_settings` everywhere; it loads once and caches.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import re
+from datetime import datetime, time, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -142,8 +143,28 @@ class CollectorConfig(BaseModel):
     heartbeat_interval_seconds: float = 60
 
 
+_QUIET_RE = re.compile(r"^\s*(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})\s*$")
+
+
+@lru_cache(maxsize=32)
+def parse_quiet_hours(value: str | None) -> tuple[time, time] | None:
+    """``"23:00-07:00"`` -> (23:00, 07:00); empty / ``None`` -> ``None`` (no quiet hours)."""
+    if value is None or not value.strip():
+        return None
+    m = _QUIET_RE.match(value)
+    if m is None:
+        raise ValueError(f"quiet_hours must look like '23:00-07:00', got {value!r}")
+    h1, m1, h2, m2 = (int(g) for g in m.groups())
+    if h1 > 23 or h2 > 23 or m1 > 59 or m2 > 59:
+        raise ValueError(f"quiet_hours: bad time in {value!r}")
+    start, end = time(h1, m1), time(h2, m2)
+    if start == end:
+        raise ValueError(f"quiet_hours: start and end are the same in {value!r}")
+    return start, end
+
+
 class PublisherConfig(BaseModel):
-    publish_interval_seconds: float = 60
+    publish_interval_seconds: float = Field(default=300, ge=0)
     max_publish_attempts: int = Field(default=8, ge=1)
     # A new job waits this long before publishing: a fuller copy from another channel may come.
     hold_minutes: float = Field(default=20, ge=0)
@@ -159,6 +180,29 @@ class PublisherConfig(BaseModel):
     config_error_pause_seconds: float = Field(default=300, gt=0)
     # Publisher checks the queue this often when it is empty.
     idle_poll_seconds: float = Field(default=5, gt=0)
+    # Night pause, local time (``TZ``, Asia/Tashkent), e.g. "23:00-07:00": nothing is sent to the
+    # channel; collector, worker and the queue keep going, publishing resumes when it ends.
+    # Empty / null = off.
+    quiet_hours: str | None = None
+
+    @field_validator("quiet_hours")
+    @classmethod
+    def _valid_quiet_hours(cls, v: str | None) -> str | None:
+        return v.strip() if parse_quiet_hours(v) else None
+
+    def quiet_until(self, now: datetime, tz: ZoneInfo) -> datetime | None:
+        """Inside quiet hours: when they end (aware). Outside / off: ``None``."""
+        span = parse_quiet_hours(self.quiet_hours)
+        if span is None:
+            return None
+        start, end = span
+        local = now.astimezone(tz)
+        t = local.time()
+        inside = (start <= t < end) if start < end else (t >= start or t < end)
+        if not inside:
+            return None
+        until = datetime.combine(local.date(), end, tzinfo=tz)
+        return until if until > local else until + timedelta(days=1)
 
     def too_old_before(self, now: datetime) -> datetime | None:
         """Source posts older than this are not published (``None``: the rule is off)."""

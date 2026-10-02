@@ -1352,3 +1352,16 @@ Hammasi qolgan (server hali yo'q): **1** akkaunt → **2** SSH kalit → **3** s
   vacancy.gov.uz — qo'shilmadi.
 - Saytdan e'lon joylash, Telegram Login Widget, saytda saqlanganlar/obunalar va admin panel — keyin (server kerak).
 - Gemini bepul limitlari Google tomonidan o'zgarishi mumkin — `/ai` da xatolar ko'paysa `ai.daily_limit` ni kamaytiring.
+
+## Kanalga chiqarish tezligi: 5 daqiqa + tungi tanaffus (2026-10-02)
+- `config/settings.yaml` → `publisher.publish_interval_seconds: 300` — postlar orasida 5 daqiqa
+  (avval 60 s). Worker qayta yoqilsa ham birinchi post oxirgi kanal postidan 5 daqiqa o'tgach chiqadi.
+- `publisher.quiet_hours: "23:00-07:00"` (Toshkent vaqti) — shu vaqtda kanalga hech narsa chiqmaydi;
+  collector, worker va navbat ishlayveradi, 07:00 dan davom etadi. `""` = tanaffus o'chiq.
+  Format xato bo'lsa (masalan `25:00-07:00`) jarayon ishga tushmaydi va xatoni aytadi.
+- 24 soatlik eskirish qoidasi (`max_age_hours`) o'zgarmadi — tun davomida ham ishlaydi.
+- `/stats`: "📬 Navbat: N ta, taxminan M soatda chiqadi" (interval va tungi tanaffusni hisobga oladi);
+  tanaffus vaqtida "🌙 Tungi tanaffus ... gacha kanalga chiqmaydi" qatori ham chiqadi.
+- Sozlamani o'zgartirish: `settings.yaml` dagi qiymatni o'zgartirib, **worker'ni qayta yoqing**.
+- Eslatma: 5 daqiqada 1 ta va tunda tanaffus = kuniga ~192 ta post. Navbatga bundan ko'p kelsa,
+  eng eskilari 24 soatdan oshib `skipped_old` bo'ladi — `/stats` dagi "Eskirgan" sonini kuzating.

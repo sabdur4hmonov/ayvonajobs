@@ -37,6 +37,11 @@ async def next_due(session: AsyncSession, now: datetime) -> Job | None:
     return (await session.scalars(stmt)).first()
 
 
+async def last_published_at(session: AsyncSession) -> datetime | None:
+    """When the newest job reached the channel (``None``: nothing published yet)."""
+    return await session.scalar(select(func.max(Job.published_at)))
+
+
 async def claim(session: AsyncSession, job: Job) -> bool:
     """``queued``/``retry`` -> ``sending`` if nobody changed the job meanwhile. Does not commit."""
     result = await session.execute(
