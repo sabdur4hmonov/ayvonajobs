@@ -59,9 +59,15 @@ class EnvSettings(BaseSettings):
     gemini_api_keys: SecretStr | None = None
     gemini_allow_key_rotation: bool = False
     gemini_model: str = "gemini-flash-latest"
+    # Free-tier guards: override ai.daily_limit / ai.min_interval_seconds from settings.yaml.
+    gemini_daily_limit: int | None = Field(default=None, ge=0)
+    gemini_min_interval_seconds: float | None = Field(default=None, ge=0)
     # hh.uz official API (Bosqich 16): the app token from dev.hh.ru; empty = the source is off.
     hh_access_token: SecretStr | None = None
     hh_user_agent: str = ""
+    # Public address of the website; overrides website.base_url of settings.yaml. The server setup
+    # sets it through a systemd drop-in, so the tracked YAML never has to be edited on the server.
+    website_base_url: str | None = None
 
     @field_validator(
         "api_id",
@@ -71,7 +77,10 @@ class EnvSettings(BaseSettings):
         "channel_id",
         "gemini_api_key",
         "gemini_api_keys",
+        "gemini_daily_limit",
+        "gemini_min_interval_seconds",
         "hh_access_token",
+        "website_base_url",
         mode="before",
     )
     @classmethod
@@ -342,6 +351,8 @@ class AIConfig(BaseModel):
     timeout_seconds: float = Field(default=10, gt=0)
     pause_minutes_rate_limited: float = Field(default=60, gt=0)  # after HTTP 429
     pause_minutes_error: float = Field(default=5, gt=0)  # after 5xx / timeout / network
+    # Both pauses double with every failure in a row (exponential backoff), up to this many minutes.
+    pause_minutes_max: float = Field(default=360, gt=0)
     max_input_chars: int = Field(default=3000, ge=200)
 
 
@@ -620,6 +631,9 @@ def load_settings(
     config_dir = Path(config_dir)
     env = EnvSettings(_env_file=env_file)  # type: ignore[call-arg]
     app = AppConfig.model_validate(_read_yaml(config_dir / "settings.yaml"))
+    if env.website_base_url:
+        site = app.website.model_copy(update={"base_url": env.website_base_url.strip().rstrip("/")})
+        app = app.model_copy(update={"website": site})
     categories_yaml = _read_yaml(config_dir / "categories.yaml")
     categories_raw = categories_yaml.get("categories") or {}
     categories = {k: CategoryConfig.model_validate(v) for k, v in categories_raw.items()}

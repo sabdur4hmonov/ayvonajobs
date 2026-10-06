@@ -206,6 +206,7 @@ ai:
   timeout_seconds: 10
   pause_minutes_rate_limited: 60     # 429 (limit) dan keyin shu kalit shuncha daqiqa ishlatilmaydi
   pause_minutes_error: 5             # 5xx / timeout / tarmoq xatosidan keyin
+  pause_minutes_max: 360             # ketma-ket xatolarda dam olish ikki barobar oshadi, ko'pi bilan shuncha daqiqa
   max_input_chars: 3000              # e'lon matni shundan uzun bo'lsa qisqartirib yuboriladi
 
 # --- 🌐 Veb-saytlar, API va RSS manbalar (sources/web/) ------------------------

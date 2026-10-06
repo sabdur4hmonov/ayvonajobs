@@ -117,3 +117,29 @@ def test_invalid_timezone_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TZ", "Mars/Olympus")
     with pytest.raises(ValidationError):
         load_settings(DEFAULT_CONFIG_DIR, env_file=None)
+
+
+def test_website_base_url_comes_from_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The server setup sets WEBSITE_BASE_URL in a systemd drop-in; it wins over settings.yaml
+    (and over .env), so the tracked YAML is never edited on the server."""
+    monkeypatch.delenv("WEBSITE_BASE_URL", raising=False)
+    assert load_settings(DEFAULT_CONFIG_DIR, env_file=None).app.website.base_url == ""
+
+    monkeypatch.setenv("WEBSITE_BASE_URL", " https://ayvona.example.org/ ")
+    s = load_settings(DEFAULT_CONFIG_DIR, env_file=None)
+    assert s.app.website.base_url == "https://ayvona.example.org"
+    assert s.app.website.port == 8080  # the rest of the website block is untouched
+
+    monkeypatch.setenv("WEBSITE_BASE_URL", "")  # blank = not set
+    assert load_settings(DEFAULT_CONFIG_DIR, env_file=None).app.website.base_url == ""
+
+
+def test_gemini_free_tier_guards_from_env_file(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+    env.write_text("GEMINI_DAILY_LIMIT=120\nGEMINI_MIN_INTERVAL_SECONDS=\n", encoding="utf-8")
+    s = load_settings(DEFAULT_CONFIG_DIR, env_file=env)
+    assert s.env.gemini_daily_limit == 120
+    assert s.env.gemini_min_interval_seconds is None  # blank -> falls back to settings.yaml
+    assert s.app.ai.daily_limit == 200 and s.app.ai.pause_minutes_max == 360

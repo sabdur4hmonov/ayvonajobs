@@ -11,7 +11,11 @@ How:
 * ``ai_cache``: the same text is never sent twice (also used by the worker's start-up re-render);
 * limits: ``ai.daily_limit`` requests per Tashkent day, ``ai.min_interval_seconds`` between them;
 * circuit breaker: 429 -> that key paused ``pause_minutes_rate_limited``, 5xx/timeout/network ->
-  ``pause_minutes_error``; then the regex result is used — AI never stops a job from publishing;
+  ``pause_minutes_error``; the pause DOUBLES with every failure in a row (exponential backoff, at
+  most ``pause_minutes_max``; a ``Retry-After`` header is honoured) and resets after a success;
+  then the regex result is used — AI never stops a job from publishing;
+* the free-tier limits can be tightened from ``.env`` without touching YAML:
+  ``GEMINI_DAILY_LIMIT`` and ``GEMINI_MIN_INTERVAL_SECONDS``;
 * keys: ``GEMINI_API_KEY``; ``GEMINI_API_KEYS`` are used only with
   ``GEMINI_ALLOW_KEY_ROTATION=true`` (default OFF: several accounts to get around Google's limits
   may break Google's terms — docs/PROGRESS.md);
@@ -42,7 +46,7 @@ from ayvona.ai.client import (
     AIRateLimited,
     GeminiClient,
 )
-from ayvona.config import Settings
+from ayvona.config import AIConfig, Settings
 from ayvona.db.models import AICache
 from ayvona.db.repositories import kv_repo
 from ayvona.processing.extract import Extraction
@@ -79,6 +83,18 @@ SYSTEM = (
 
 
 # --------------------------------------------------------------------------- helpers
+def _with_env_limits(settings: Settings) -> AIConfig:
+    """``settings.app.ai`` with ``GEMINI_DAILY_LIMIT`` / ``GEMINI_MIN_INTERVAL_SECONDS`` applied
+    (.env wins over YAML, so the free-tier cap can be changed on the server without a commit)."""
+    cfg = settings.app.ai
+    update: dict[str, Any] = {}
+    if settings.env.gemini_daily_limit is not None:
+        update["daily_limit"] = settings.env.gemini_daily_limit
+    if settings.env.gemini_min_interval_seconds is not None:
+        update["min_interval_seconds"] = settings.env.gemini_min_interval_seconds
+    return cfg.model_copy(update=update) if update else cfg
+
+
 def mask(text: str) -> str:
     """Contacts never leave the machine."""
     text = _URL_RE.sub("[LINK]", text)
@@ -286,13 +302,14 @@ class AIHelper:
         client: GeminiClient | None = None,
     ) -> None:
         self.settings = settings
-        self.cfg = settings.app.ai
+        self.cfg = _with_env_limits(settings)
         self.sf = sf
         self.keys = self.api_keys(settings)
         self.model = settings.env.gemini_model
         self.client = client or GeminiClient(self.model, timeout=self.cfg.timeout_seconds)
         self._schema = schema(settings)
         self._last_call = 0.0
+        self._cap_logged_day = ""
 
     @staticmethod
     def api_keys(settings: Settings) -> list[str]:
@@ -394,6 +411,13 @@ class AIHelper:
         async with self.sf() as s, s.begin():
             calls = int(await kv_repo.get(s, f"ai:calls:{day}") or 0)
             if calls >= self.cfg.daily_limit:
+                if self._cap_logged_day != day:
+                    self._cap_logged_day = day
+                    logger.info(
+                        "AI: kunlik limit tugadi ({}/{}) — ertagacha hammasi regex bilan",
+                        calls,
+                        self.cfg.daily_limit,
+                    )
                 return None
             key_index = None
             for i in range(len(self.keys)):
@@ -419,17 +443,33 @@ class AIHelper:
             return None
         async with self.sf() as s, s.begin():
             await _incr(s, f"ai:ok:{day}")
+            if await kv_repo.get(s, f"ai:streak:{key_index}"):
+                await kv_repo.set_value(s, f"ai:streak:{key_index}", "0")  # backoff starts over
         return data
 
     async def _failed(self, key_index: int, e: AIError, now: datetime, day: str) -> None:
-        if isinstance(e, AIRateLimited):
-            pause = timedelta(minutes=self.cfg.pause_minutes_rate_limited)
-        elif isinstance(e, AIAuthError):
+        backoff = not isinstance(e, AIAuthError | AIBadResponse)
+        streak_key = f"ai:streak:{key_index}"
+        streak = 0
+        if backoff:
+            async with self.sf() as s, s.begin():
+                streak = int(await kv_repo.get(s, streak_key) or 0) + 1
+                await kv_repo.set_value(s, streak_key, str(streak))
+        if isinstance(e, AIAuthError):
             pause = timedelta(hours=6)  # wrong key / model: no point retrying soon
         elif isinstance(e, AIBadResponse):
             pause = timedelta(0)
         else:
-            pause = timedelta(minutes=self.cfg.pause_minutes_error)
+            base = (
+                self.cfg.pause_minutes_rate_limited
+                if isinstance(e, AIRateLimited)
+                else self.cfg.pause_minutes_error
+            )
+            minutes = min(base * 2 ** min(streak - 1, 10), self.cfg.pause_minutes_max)
+            retry_after = getattr(e, "retry_after", None)
+            if retry_after:  # the server said how long: never come back earlier than that
+                minutes = max(minutes, min(retry_after / 60, 24 * 60))
+            pause = timedelta(minutes=minutes)
         async with self.sf() as s, s.begin():
             await _incr(s, f"ai:fail:{day}")
             if pause:

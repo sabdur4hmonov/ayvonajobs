@@ -20,7 +20,14 @@ class AIError(Exception):
 
 
 class AIRateLimited(AIError):
-    """HTTP 429 — the key's quota (per minute or per day) is used up."""
+    """HTTP 429 — the key's quota (per minute or per day) is used up.
+
+    ``retry_after`` (seconds) is the server's ``Retry-After`` header when it sent one.
+    """
+
+    def __init__(self, message: str = "429 Too Many Requests", retry_after: float | None = None):
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 class AIUnavailable(AIError):
@@ -33,6 +40,15 @@ class AIBadResponse(AIError):
 
 class AIAuthError(AIError):
     """400/401/403: the key is wrong or the model name does not exist."""
+
+
+def _retry_after(resp: httpx.Response) -> float | None:
+    """``Retry-After: 30`` (seconds) -> 30.0; missing / a date / garbage -> ``None``."""
+    try:
+        value = float(resp.headers.get("retry-after", ""))
+    except ValueError:
+        return None
+    return value if value > 0 else None
 
 
 class GeminiClient:
@@ -72,7 +88,7 @@ class GeminiClient:
             raise AIUnavailable(f"network: {type(e).__name__}: {e}") from e
 
         if resp.status_code == 429:
-            raise AIRateLimited("429 Too Many Requests")
+            raise AIRateLimited("429 Too Many Requests", _retry_after(resp))
         if resp.status_code >= 500:
             raise AIUnavailable(f"HTTP {resp.status_code}")
         if resp.status_code in (400, 401, 403, 404):

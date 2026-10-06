@@ -282,3 +282,88 @@ async def test_ai_admin_command(harness: BotHarness, session_factory: SF) -> Non
     assert "ishlayapti" in h.texts()[-1]
     await h.send(message_update("/stats"))
     assert "AI bugun: 0/200" in h.texts()[-1]
+
+
+# ------------------------------------------------------------------ free-tier guards (deploy)
+async def _pause_until(sf: SF, key: int = 0) -> Any:
+    from ayvona.db.repositories import kv_repo
+
+    async with sf() as s:
+        return await kv_repo.get_time(s, f"ai:pause:{key}")
+
+
+async def test_pause_doubles_after_repeated_429_and_resets_after_a_success(
+    session_factory: SF,
+) -> None:
+    from datetime import timedelta
+
+    from ayvona.timeutil import utcnow
+
+    st = ai_settings(pause_minutes_rate_limited=10, pause_minutes_max=60)
+    limited = AIRateLimited("429")
+    fake = FakeClient(limited, limited, limited, limited, GOOD, limited)
+    helper = AIHelper(st, session_factory, fake)  # type: ignore[arg-type]
+    now = utcnow()
+    minutes: list[float] = []
+    for i in range(4):  # 429 four times in a row: 10, 20, 40, then capped at 60
+        assert await helper.enhance(f"{RU_POST}\n{i}", extraction(st), now=now) is None
+        until = await _pause_until(session_factory)
+        minutes.append((until - now).total_seconds() / 60)
+        now = until + timedelta(seconds=1)  # the key is awake again
+    assert minutes == [10, 20, 40, 60]
+
+    assert await helper.enhance(f"{RU_POST}\nok", extraction(st), now=now) is not None  # success
+    assert await helper.enhance(f"{RU_POST}\nnext", extraction(st), now=now) is None  # 429 again
+    until = await _pause_until(session_factory)
+    assert (until - now).total_seconds() / 60 == 10  # backoff started over
+
+
+async def test_retry_after_is_honoured(session_factory: SF) -> None:
+    from ayvona.timeutil import utcnow
+
+    st = ai_settings(pause_minutes_rate_limited=10)
+    fake = FakeClient(AIRateLimited("429", retry_after=2 * 3600))
+    helper = AIHelper(st, session_factory, fake)  # type: ignore[arg-type]
+    now = utcnow()
+    assert await helper.enhance(RU_POST, extraction(st), now=now) is None
+    assert (await _pause_until(session_factory) - now).total_seconds() / 60 == 120
+
+
+async def test_client_reads_retry_after_header() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, headers={"Retry-After": "30"}, json={})
+
+    with pytest.raises(AIRateLimited) as info:
+        await _client(handler).generate_json("K", "s", "p", {})
+    assert info.value.retry_after == 30
+
+    def date_handler(_: httpx.Request) -> httpx.Response:  # an HTTP date is not parsed: ignored
+        return httpx.Response(429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"})
+
+    with pytest.raises(AIRateLimited) as info2:
+        await _client(date_handler).generate_json("K", "s", "p", {})
+    assert info2.value.retry_after is None
+
+
+async def test_env_overrides_the_daily_cap_and_interval(session_factory: SF) -> None:
+    st = ai_settings(daily_limit=100, min_interval_seconds=0)
+    st = st.model_copy(
+        update={
+            "env": st.env.model_copy(
+                update={"gemini_daily_limit": 1, "gemini_min_interval_seconds": 7}
+            )
+        }
+    )
+    fake = FakeClient()
+    helper = AIHelper(st, session_factory, fake)  # type: ignore[arg-type]
+    assert (helper.cfg.daily_limit, helper.cfg.min_interval_seconds) == (1, 7)
+    assert await helper.enhance(RU_POST, extraction(st)) is not None
+    assert await helper.enhance(RU_POST + "\nx", extraction(st)) is None  # env cap reached
+    assert len(fake.calls) == 1 and (await helper.status()).daily_limit == 1
+
+
+def test_blank_env_limits_mean_not_set() -> None:
+    from ayvona.config import EnvSettings
+
+    env = EnvSettings(_env_file=None, gemini_daily_limit="", gemini_min_interval_seconds=" ")  # type: ignore[arg-type,call-arg]
+    assert env.gemini_daily_limit is None and env.gemini_min_interval_seconds is None
