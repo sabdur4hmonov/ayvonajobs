@@ -1,0 +1,21 @@
+# Ayvona Jobs — kunlik baza zaxirasi (faqat serverda, lokal, 7 kun saqlanadi).
+# Timer: ayvona-backup.timer. Qo'lda ishga tushirish:  sudo systemctl start ayvona-backup
+# Natija: journalctl -u ayvona-backup -n 20 --no-pager
+
+[Unit]
+Description=Ayvona Jobs - kunlik SQLite zaxirasi
+
+[Service]
+Type=oneshot
+User=ayvona
+Group=ayvona
+WorkingDirectory=/home/ayvona/ayvona
+ExecStart=/bin/bash /home/ayvona/ayvona/scripts/backup.sh
+# Zaxira olish boshqa servislarni sekinlashtirmasin.
+Nice=19
+IOSchedulingClass=idle
+CPUWeight=10
+MemoryMax=64M
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true

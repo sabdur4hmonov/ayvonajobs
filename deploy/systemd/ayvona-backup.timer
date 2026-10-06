@@ -1,0 +1,15 @@
+# Ayvona Jobs — kunlik zaxira vaqti: har kuni 03:30 (server vaqti; server-setup.sh uni Asia/Tashkent
+# qiladi). Worker'ning o'z 03:00 zaxirasidan (admin chatga yuboriladi) mustaqil — worker yoki
+# Telegram ishlamasa ham bu zaxira olinadi.
+# Server o'chiq turgan bo'lsa, yoqilgach o'tkazib yuborilgan zaxira darrov olinadi (Persistent).
+
+[Unit]
+Description=Ayvona Jobs - kunlik zaxira (taymer)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -93,8 +93,10 @@ main() {
         echo "    data/ayvona.db hali yo'q — o'tkazib yuborildi"
     fi
 
-    echo "==> 4/8 uv sync --locked"
-    as_app "${uv}" sync --locked
+    # --no-dev: pytest/ruff serverda kerak emas. --compile-bytecode: .pyc oldindan tayyor bo'ladi —
+    # aks holda yangi kutubxona birinchi ishga tushganda ~100 MB qo'shimcha xotira ketadi (1 GB server).
+    echo "==> 4/8 uv sync --locked --no-dev --compile-bytecode"
+    as_app "${uv}" sync --locked --no-dev --compile-bytecode
 
     echo "==> 5/8 alembic upgrade head"
     as_app "${uv}" run --no-sync alembic upgrade head
@@ -104,18 +106,25 @@ main() {
 
     echo "==> 7/8 systemd unit fayllar"
     local changed=0 unit src dst
-    for s in "${services[@]}"; do
-        unit="${s}.service"
+    # Servislar faqat allaqachon o'rnatilgan bo'lsa yangilanadi (yoqilmaganiga tegmaymiz); kunlik
+    # zaxira (ayvona-backup) esa yo'q bo'lsa o'rnatiladi va yoqiladi.
+    for unit in "${services[@]/%/.service}" ayvona-backup.service ayvona-backup.timer; do
         src="${app_dir}/deploy/systemd/${unit}"
         dst="/etc/systemd/system/${unit}"
+        [[ -f "${src}" ]] || continue
         if [[ -f "${dst}" ]] && ! cmp -s "${src}" "${dst}"; then
             install -m 644 "${src}" "${dst}"
             echo "    yangilandi: ${unit}"
+            changed=1
+        elif [[ ! -f "${dst}" && "${unit}" == ayvona-backup.* ]]; then
+            install -m 644 "${src}" "${dst}"
+            echo "    o'rnatildi: ${unit}"
             changed=1
         fi
     done
     if ((changed)); then
         systemctl daemon-reload
+        systemctl enable --now ayvona-backup.timer >/dev/null 2>&1 || true
     else
         echo "    o'zgarish yo'q"
     fi
@@ -123,7 +132,7 @@ main() {
     echo "==> 8/8 Servislarni ishga tushirish: ${enabled_list}"
     if ((${#enabled[@]})); then
         systemctl start "${enabled[@]}"
-        sleep 5
+        sleep 10  # 1 GB serverda aiogram/telethon yuklanishi bir necha soniya oladi
         for s in "${enabled[@]}"; do
             printf '    %-18s %s\n' "${s}" "$(systemctl is-active "${s}" || true)"
         done
@@ -131,7 +140,8 @@ main() {
 
     trap - ERR
     echo ""
-    echo "✅ Deploy tugadi. Loglarni ko'rish:  journalctl -u ayvona-collector -n 50 --no-pager"
+    echo "✅ Deploy tugadi. 1–2 daqiqadan keyin tekshiring:  sudo bash ${app_dir}/scripts/healthcheck.sh"
+    echo "   Loglar:  journalctl -u ayvona-collector -n 50 --no-pager"
 }
 
 main "$@"

@@ -2,13 +2,16 @@
 # va har kuni 03:00 (Toshkent) da bazani backup qiladi.
 #
 # BOT_TOKEN bo'lmasa ham ishlaydi: pipeline yuradi, postlar navbatda kutadi, faqat kanalga joylanmaydi.
-# Baza eng oxirgi migratsiyada bo'lmasa ishga tushmaydi — avval: uv run alembic upgrade head.
+# Baza eng oxirgi migratsiyada bo'lmasa ishga tushmaydi — avval: alembic upgrade head.
 #
 # Yoqish:
 #   sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-worker.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now ayvona-worker
 # Loglar:  journalctl -u ayvona-worker -f
+#
+# Xotira (1 GB server, 2 GB swap bilan): o'lchangan ~230 MB (aiogram o'zi ~130 MB — bu kutubxonaning
+# narxi). Chegaralar haqida: ayvona-collector.service va DEPLOY.md "Xotira".
 
 [Unit]
 Description=Ayvona Jobs - worker (qayta ishlash va kanalga joylash)
@@ -21,12 +24,18 @@ Type=simple
 User=ayvona
 Group=ayvona
 WorkingDirectory=/home/ayvona/ayvona
-ExecStart=/home/ayvona/.local/bin/uv run --no-sync python -m ayvona.apps.worker
+ExecStart=/home/ayvona/ayvona/.venv/bin/python -m ayvona.apps.worker
 Environment=PYTHONUNBUFFERED=1
+Environment=MALLOC_ARENA_MAX=2
 Restart=always
 RestartSec=10
 KillSignal=SIGTERM
 TimeoutStopSec=30
+Nice=5
+CPUWeight=100
+MemoryHigh=250M
+MemoryMax=300M
+OOMScoreAdjust=500
 NoNewPrivileges=true
 ProtectSystem=full
 PrivateTmp=true

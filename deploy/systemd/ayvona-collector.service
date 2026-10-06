@@ -1,13 +1,17 @@
 # Ayvona Jobs — collector: manba kanallardan yangi postlarni o'qib, bazaga (raw_posts) yozadi.
 #
-# O'rnatish (serverda, ubuntu foydalanuvchisidan) — batafsil: deploy/SETUP_ORACLE.md
+# O'rnatish (serverda) — scripts/server-setup.sh o'zi qiladi; qo'lda: DEPLOY.md
 #   sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-*.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now ayvona-collector
 # Loglar:  journalctl -u ayvona-collector -f
 #
-# `uv run --no-sync`: kutubxonalarni faqat scripts/deploy.sh o'rnatadi (uv sync).
-# Servis ishga tushayotganda .venv'ga tegmaydi — 3 ta servis bir vaqtda sync qilib, bir-birini buzmaydi.
+# Python to'g'ridan-to'g'ri .venv'dan ishga tushadi (`uv run` o'rniga): uv jarayoni xotirada
+# turib qolmaydi (1 GB serverda har MB muhim). Kutubxonalarni faqat scripts/deploy.sh o'rnatadi.
+#
+# Xotira (1 GB server, 2 GB swap bilan): o'lchangan ~100 MB. MemoryHigh — yumshoq chegara (shundan
+# oshsa jarayon sekinlashadi, o'ldirilmaydi), MemoryMax — qattiq chegara (oshsa shu servis
+# o'chiriladi va 10 s da qayta yonadi; sshd va boshqalarga tegmaydi). Sizlari: DEPLOY.md, "Xotira".
 
 [Unit]
 Description=Ayvona Jobs - collector (Telegram kanallarni o'qish)
@@ -21,13 +25,22 @@ Type=simple
 User=ayvona
 Group=ayvona
 WorkingDirectory=/home/ayvona/ayvona
-ExecStart=/home/ayvona/.local/bin/uv run --no-sync python -m ayvona.apps.collector
+ExecStart=/home/ayvona/ayvona/.venv/bin/python -m ayvona.apps.collector
 Environment=PYTHONUNBUFFERED=1
+# glibc har thread uchun alohida xotira maydoni ochmasin (aiosqlite thread ishlatadi)
+Environment=MALLOC_ARENA_MAX=2
 Restart=always
 RestartSec=10
 # Collector SIGTERM'da toza to'xtaydi (joriy tranzaksiyani tugatadi); 30 soniya kutamiz.
 KillSignal=SIGTERM
 TimeoutStopSec=30
+# Resurslar: eng past ustuvorlik (bot javob berishi muhimroq), xotira chegaralari.
+Nice=10
+CPUWeight=50
+MemoryHigh=140M
+MemoryMax=180M
+# Xotira yetmasa kernel avval shu servislarni o'ldirsin, sshd'ni emas.
+OOMScoreAdjust=500
 # Himoya: tizim fayllarini o'zgartira olmasin, root huquqini ololmasin.
 NoNewPrivileges=true
 ProtectSystem=full
