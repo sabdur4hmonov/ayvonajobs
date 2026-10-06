@@ -13,25 +13,29 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from aiogram import Bot
-from aiogram.enums import ParseMode
-from aiogram.types import FSInputFile, LinkPreviewOptions
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.db.repositories import kv_repo
 from ayvona.timeutil import utcnow
 
+if TYPE_CHECKING:
+    from aiogram import Bot
+
+    from ayvona.litebot import LiteBot
+
 THROTTLE_SECONDS = 600
 KEY_PREFIX = "notify:"
 MAX_MESSAGE_LEN = 4000  # Telegram: 4096
+NO_LINK_PREVIEW: dict[str, Any] = {"is_disabled": True}
 
 
 class Notifier:
     def __init__(
         self,
-        bot: Bot | None,
+        bot: Bot | LiteBot | None,
         chat_id: int | str | None,
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         *,
@@ -93,11 +97,13 @@ class Notifier:
             logger.warning("[admin'ga, yuborilmadi — bot/ADMIN_CHAT_ID yo'q] {}", text)
             return False
         try:
+            # Plain values (no aiogram types): the collector sends these through LiteBot, and
+            # aiogram would cost it ~130 MB of RAM just to be imported.
             await self.bot.send_message(
                 target,
                 text[:MAX_MESSAGE_LEN],
-                parse_mode=ParseMode.HTML,
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                parse_mode="HTML",
+                link_preview_options=NO_LINK_PREVIEW,
             )
         except Exception as e:
             logger.error(
@@ -113,6 +119,9 @@ class Notifier:
             logger.warning("[admin'ga, yuborilmadi — bot/ADMIN_CHAT_ID yo'q] fayl: {}", path)
             return False
         assert self.bot is not None and self.chat_id is not None
+        from aiogram.enums import ParseMode
+        from aiogram.types import FSInputFile
+
         try:
             await self.bot.send_document(
                 self.chat_id,

@@ -6,7 +6,6 @@ off for hours, the next poll simply returns everything it missed (in ``fetch_lim
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from loguru import logger
@@ -15,27 +14,15 @@ from telethon.errors import FloodWaitError
 from telethon.tl import types
 
 from ayvona.sources.base import BaseSource, FetchResult, RawItem, SourceError, SourceRateLimited
+from ayvona.sources.identifiers import normalize_identifier
 from ayvona.timeutil import ensure_utc
 
 if TYPE_CHECKING:
     from ayvona.config import Settings
 
-_TME_RE = re.compile(r"^(?:https?://)?(?:t\.me|telegram\.me)/(?:s/)?([A-Za-z0-9_]+)/?$")
-
 
 class TelegramConfigError(RuntimeError):
     """Missing API keys / session. Message is user-facing (Uzbek)."""
-
-
-def normalize_identifier(identifier: str) -> str | int:
-    """``t.me/kanal``, ``https://t.me/s/kanal``, ``kanal`` -> ``@kanal``; ``-100123`` -> int."""
-    ident = identifier.strip()
-    if re.fullmatch(r"-?\d+", ident):
-        return int(ident)
-    m = _TME_RE.match(ident)
-    if m:
-        return "@" + m.group(1)
-    return ident if ident.startswith("@") else "@" + ident
 
 
 def _media_type(msg: Any) -> str | None:

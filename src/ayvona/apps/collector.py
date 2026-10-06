@@ -21,16 +21,15 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from aiogram import Bot
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.apps.runtime import SleepFn, install_signal_handlers, stop_aware_sleep
-from ayvona.botapi import BotConfigError, create_bot
 from ayvona.config import CollectorConfig, Settings, get_settings
 from ayvona.db.models import Source, SourceStatus, SourceType
 from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
+from ayvona.litebot import LiteBot
 from ayvona.logging_setup import setup_logging
 from ayvona.services.notifier import Notifier
 from ayvona.services.sources_admin import process_pending
@@ -408,11 +407,18 @@ async def main(once: bool = False) -> int:
         logger.info("Collector to'xtadi.")
 
 
-async def _optional_bot(settings: Settings) -> Bot | None:
-    """Bot for admin messages (results of /addsource); ``None`` without BOT_TOKEN."""
+async def _optional_bot(settings: Settings) -> LiteBot | None:
+    """Bot for admin messages (results of /addsource); ``None`` without BOT_TOKEN.
+
+    A tiny httpx client, not aiogram: aiogram alone costs the collector ~130 MB of RAM.
+    """
+    token = settings.env.bot_token
+    if token is None:
+        logger.info("Admin xabarlari faqat logda: BOT_TOKEN .env faylida yo'q.")
+        return None
     try:
-        return create_bot(settings)
-    except BotConfigError as e:
+        return LiteBot(token.get_secret_value())
+    except ValueError as e:
         logger.info("Admin xabarlari faqat logda: {}", e)
         return None
 

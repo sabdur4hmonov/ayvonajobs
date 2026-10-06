@@ -18,16 +18,13 @@ from typing import Any
 import httpx
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from telethon import errors
-from telethon.tl import types
-from telethon.tl.functions.messages import CheckChatInviteRequest, ImportChatInviteRequest
 
 from ayvona.config import Settings
 from ayvona.db.models import Source, SourceAddedVia, SourceStatus, SourceType
 from ayvona.db.repositories import sources_repo
 from ayvona.services.notifier import Notifier
 from ayvona.sources.base import SourceError
-from ayvona.sources.telegram_source import normalize_identifier
+from ayvona.sources.identifiers import normalize_identifier
 from ayvona.sources.web import base as web_base
 from ayvona.sources.web.rss import parse_feed
 
@@ -140,6 +137,12 @@ def _channel_identifier(entity: Any) -> str:
 
 async def _join_invite(client: Any, invite_hash: str) -> Any:
     """Our reader account joins the private channel (or is already in it)."""
+    # Telethon is imported here, not at module level: only the collector runs this, and the
+    # bot process (which imports this module) saves ~45 MB of RAM that way.
+    from telethon import errors
+    from telethon.tl import types
+    from telethon.tl.functions.messages import CheckChatInviteRequest, ImportChatInviteRequest
+
     check = await client(CheckChatInviteRequest(invite_hash))
     if isinstance(check, types.ChatInviteAlready | types.ChatInvitePeek):
         return check.chat
@@ -156,6 +159,8 @@ async def _join_invite(client: Any, invite_hash: str) -> Any:
 
 async def check_telegram_source(client: Any, identifier: str) -> CheckResult:
     """Can our reader account read this channel? Never raises."""
+    from telethon import errors  # lazy, see _join_invite
+
     try:
         if identifier.startswith("+"):
             entity = await _join_invite(client, identifier[1:])
