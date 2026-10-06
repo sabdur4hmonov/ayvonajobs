@@ -14,7 +14,7 @@ import pytest
 from ayvona.litebot import LiteBot, LiteBotError
 from ayvona.services.notifier import Notifier
 
-TOKEN = "123456789:AAE-secret_token_value_0123456789"
+TOKEN = "123456789:fake-token-for-tests-0123456789"
 ROOT = Path(__file__).resolve().parents[1]
 
 
