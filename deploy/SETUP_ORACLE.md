@@ -3,6 +3,13 @@
 Bu qo'llanma sizni **noldan** to'liq ishlaydigan serverga olib boradi: Oracle akkaunt ochishdan tortib,
 kompyuteringiz o'chiq bo'lsa ham kanalga postlar chiqib turishigacha.
 
+> **Server allaqachon yaratilganmi (Ubuntu 24.04, `VM.Standard.E2.1.Micro`, 1 GB RAM)?** Unda shu uzun
+> qo'llanma emas, [DEPLOY.md](../DEPLOY.md) ni oching: u bitta skript (`scripts/server-setup.sh`) va bitta
+> PowerShell yordamchisi bilan hammasini qisqa qiladi, swap va xotira chegaralarini ham sozlaydi.
+> Quyidagi matn asosan **akkaunt ochish, SSH kalit, "Out of capacity"** va umumiy ma'lumot uchun foydali.
+> Unda tilga olingan `uv run ...` bilan ishga tushadigan unit fayllar va "A1, 1 OCPU / 6 GB" tavsiyasi eskirgan:
+> servislar endi `.venv/bin/python` ni to'g'ridan-to'g'ri ishga tushiradi va xotira chegaralari bor.
+
 - ⏱ Vaqt: 2–3 soat (Oracle'da "Out of capacity" bo'lsa — bir necha kun kutish mumkin, pastda yozilgan).
 - 💰 Narx: **0 so'm**. Faqat "Always Free" belgili narsalarni tanlaymiz.
 - 🖥 Kompyuterda: Windows 11, **PowerShell** (VS Code ichidagi terminal ham bo'ladi).

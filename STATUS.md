@@ -1,119 +1,107 @@
-# STATUS — Ayvona Jobs (audit: 2026-10-06)
+# STATUS — Ayvona Jobs (2026-10-06): 1 GB Oracle serverga tayyorlash
 
-Audit `main` = `6c67d27` ustida qilindi. Bu fayl va `DEPLOY.md` faqat `deploy-ready` branch'ida (main'ga merge qilinmagan).
-Kod o'zgartirilmadi — faqat hujjatlar qo'shildi.
+Maqsad: loyiha **VM.Standard.E2.1.Micro (1/8 OCPU, 1 GB RAM, Ubuntu 24.04)** da ishonchli ishlasin va deploy
+**bitta skript + bitta qo'llanma** bilan bo'lsin. Hammasi bepul. To'liq buyruqlar: [DEPLOY.md](DEPLOY.md).
 
-## 1. HOLAT
+## 1. Nima o'zgardi
 
-Loyiha **kod jihatidan tayyor, lekin hali hech qachon serverda ishlamagan**. Bosqich 0–17 yozilgan,
-860 ta test o'tadi. Aggregator (collector → worker → kanal) laptopda haqiqiy Telegram bilan ishlagan:
-bazada 20 ta kanal, 1306 ta post, kanalga 45 ta e'lon chiqqan. Ammo worker va bot oxirgi marta **2026-09-30** da,
-collector **2026-10-01** da ishlagan. Ommaviy bot (Bosqich 10–14), Gemini (15), veb-manbalar (16) va sayt (17)
-faqat mock bilan sinalgan: `users` jadvali bo'sh, `ai_cache` bo'sh. Oxirgi ish (2026-10-02): avval bazani yangi
-migratsiyaga ko'tarish — baza hozir `b8d4f0a2c6e9 (head)` da, HANDOFF.md dagi "1-ish" bajarilgan. Keyin kanalga
-chiqarish tezligini sozlash: postlar orasida 5 daqiqa, 23:00–07:00 tungi tanaffus, `/stats` da navbat ETA.
-Keyingi rejadagi qadam — botni telefonda sinash va Oracle serverga chiqarish edi.
+**Yangi fayllar**
+- `scripts/server-setup.sh` — yangi Ubuntu 24.04 uchun bir martalik, qayta ishga tushirsa xavfsiz o'rnatuvchi
+- `scripts/push-secrets-from-windows.ps1` — `.env` + session + baza'ni serverga yuboradi (xavfsiz nusxa, lokal jarayon tekshiruvi)
+- `scripts/healthcheck.sh` — servislar, xotira/swap/disk, bazadagi oxirgi faollik (collector/publisher), navbat
+- `scripts/backup.sh`, `deploy/systemd/ayvona-backup.service` + `.timer` — kunlik SQLite zaxirasi (7 kun, lokal)
+- `src/ayvona/litebot.py` — collector uchun yengil (`httpx`) admin-xabar mijozi (aiogram o'rniga)
+- `src/ayvona/sources/identifiers.py` — `normalize_identifier` (Telethon'siz modulga ko'chirildi)
+- `tests/test_litebot.py` — LiteBot va "qaysi jarayon nimani import qilmaydi" himoyasi
 
-Git: lokal `main` va GitHub `main` **bir xil** (0 ahead / 0 behind), ishchi papka toza, boshqa branch, stash yoki tag yo'q.
+**O'zgargan fayllar**
+- `deploy/systemd/ayvona-{collector,worker,bot,web}.service` — xotira/CPU chegaralari, `OOMScoreAdjust`, `.venv/bin/python` to'g'ridan-to'g'ri
+- `scripts/deploy.sh` — `uv sync --locked --no-dev --compile-bytecode`, zaxira unitlari, healthcheck eslatmasi
+- `src/ayvona/ai/{client,helper}.py`, `config.py`, `config/settings.yaml` — Gemini: eksponensial kutish, `Retry-After`, `.env` dan limitlar
+- `src/ayvona/apps/collector.py`, `services/notifier.py`, `services/sources_admin.py`, `sources/telegram_source.py` — lazy importlar
+- `.env.example` (yangi: `GEMINI_DAILY_LIMIT`, `GEMINI_MIN_INTERVAL_SECONDS`, `WEBSITE_BASE_URL`), `DEPLOY.md` (qayta yozildi), `deploy/SETUP_ORACLE.md` (yuqorisiga eslatma), `tests/test_ai.py`, `tests/test_config.py`
 
-## 2. TAYYOR (ishlaydi)
+**Tekshiruv:** `uv sync --locked` toza nusxada ✅ · `pytest` **874 passed** (oldin 860) ✅ · `ruff check` toza ✅ ·
+`bash -n` va `shellcheck` (ogohlantirish darajasigacha toza; faqat uslub eslatmalari) barcha `.sh` va serverda ishlaydigan
+`apply.sh` uchun ✅ · PowerShell sintaksisi ✅ · push skripti `-DryRun` bilan lokal sinaldi: ishlayotgan `python -m ayvona.apps.*`
+bo'lsa **rad etadi**, bo'lmasa xavfsiz nusxa + butunlik tekshiruvi ✅ · `backup.sh` (zaxira, gzip, 7 tagacha tozalash,
+tiklash) va `healthcheck.sh` lokal sinaldi ✅ — `sqlite3` o'rniga Python bilan yozilgan almashtirgich ishlatildi
+(haqiqiy `sqlite3` CLI sinalmadi).
 
-| Qism | Holat | Dalil |
-|---|---|---|
-| Collector (Telethon, 20 kanal, cursor, catch-up) | ✅ jonli sinalgan | `apps/collector.py`, bazada 1306 post |
-| Qayta ishlash: normalize, dedup, classify, extract, kategoriya, format | ✅ jonli sinalgan | `processing/`, 341 `done`, 98 `duplicate` |
-| Publisher → @ayvonajobs (navbat, retry, 24 soat qoidasi) | ✅ jonli sinalgan | `publisher/outbox.py`, 45 `published` |
-| 5 daqiqa oraliq + tungi tanaffus + `/stats` ETA | ✅ faqat testlarda | `6c67d27`, `tests/test_publisher.py` |
-| Admin buyruqlari, monitoring, kunlik backup | ✅ kod + test | `bot/handlers/admin*.py`, `services/heartbeat.py`, `services/backup.py` |
-| Migratsiyalar (8 ta) | ✅ toza bazada head'gacha; `alembic check` — model va sxema mos | `migrations/versions/` |
-| Veb-sayt (o'qish uchun) | ✅ lokal ishga tushirib tekshirildi: `/`, `/ish`, `/soha/*`, `sitemap.xml`, `robots.txt`, `/healthz` → 200 | `apps/web.py`, `web/app.py` |
-| Deploy: systemd (4 servis), Caddy + Let's Encrypt, `deploy.sh`, Oracle qo'llanma | ✅ fayllar bor; **haqiqiy serverda sinalmagan** | `deploy/`, `scripts/deploy.sh`, `DEPLOY.md` |
-| Sifat | ✅ `uv sync --locked` toza klonda, **860 passed**, `ruff check` toza | audit, 2026-10-06 |
-| Sirlar | ✅ git tarixida `.env`/session/baza/token yo'q; `.env.example` to'liq | audit |
+## 2. Xotira o'lchovlari va tanlangan limitlar
 
-## 3. ISHLAMAYAPTI / TUGALLANMAGAN (muhimlik tartibida)
+O'lchov (Windows, Python 3.12, haqiqiy baza nusxasi, tarmoqsiz; har jarayon o'z xotirasini o'zi o'lchadi). ⚠️ **Linux'da
+boshqacha** (odatda biroz kam); collector va bot soxta Telegram bilan o'lchandi — haqiqiy ulanish 10–30 MB qo'shishi mumkin.
 
-| # | Ish | Ta'siri | Hajm |
-|---|---|---|---|
-| 1 | Serverga chiqarish (DEPLOY.md 1–8) — serverda hech qachon ishga tushmagan; Oracle Linux qismlari va `deploy.sh` jonli sinalmagan | **deploy'ni to'sadi** | o'rta (1–2 soat) |
-| 2 | `.env`, `data/ayvona.session` va bazani serverga ko'chirish; laptopdagi jarayonlarni butunlay to'xtatish | **deploy'ni to'sadi** | kichik |
-| 3 | Ommaviy botni telefonda sinash: e'lon joylash, qidiruv, saqlash, obuna, yopish (Bosqich 10–14 — faqat mock) | kutsa bo'ladi (bot ishlaydi, lekin xatolar jonli chiqishi mumkin) | o'rta |
-| 4 | Eski navbat: 295 `queued` va 432 `new` post 24 soatdan eski — serverda `skipped_old` bo'ladi, kanalga chiqmaydi (kutilgan xatti-harakat) | kutsa bo'ladi | — |
-| 5 | Gemini: kalit `.env` da bor, lekin hech qachon jonli ishlamagan | kutsa bo'ladi | kichik |
-| 6 | Veb-manbalar (Himalayas, Remotive, Jobicy, Remote OK, Oson Ish, hh.uz) — hammasi o'chiq; Oson Ish HTML tuzilishi tekshirilmagan; hh.uz token kutyapti; vacancy.gov.uz yo'q | kutsa bo'ladi | kichik–o'rta |
-| 7 | Sayt: domen + `website.base_url` (hozir bo'sh — canonical/sitemap'da to'liq manzil bo'lmaydi) | sayt uchun kerak, bot uchun emas | kichik |
-| 8 | Haqiqiy post rasmlari: 249 ta faylning hammasi vaqtinchalik (placeholder) | kutsa bo'ladi | o'rta (dizayn ishi) |
-| 9 | Saytdan e'lon joylash, Telegram Login Widget, saytda saqlanganlar/obunalar, admin panel | kutsa bo'ladi | katta |
-| 10 | `ruff format --check`: 3 fayl formatlanmagan (`apps/bot.py`, `apps/worker.py`, `bot/texts.py`) — faqat ko'rinish | kutsa bo'ladi | kichik |
-| 11 | Hujjatlar mos emas: ROADMAP'da `/addsource` belgilanmagan (kod bor); "Admin chat" belgilanmagan (`ADMIN_CHAT_ID` to'ldirilgan); SETUP_ORACLE.md repo'ni private deydi (aslida public) | kutsa bo'ladi | kichik |
-| 12 | `/healthz` faqat "ok" qaytaradi, bazani tekshirmaydi (asosiy kuzatuv — heartbeat + `/stats`) | kutsa bo'ladi | kichik |
-| 13 | Bot FSM xotirada: bot qayta yonsa, yarim to'ldirilgan forma yo'qoladi (yuborilganlar saqlanadi) | kutsa bo'ladi | o'rta |
+| Servis | O'lchangan (WS / private) | MemoryHigh | MemoryMax | CPUWeight / Nice |
+|---|---|---|---|---|
+| collector | 112 / 92 MB | 140 MB | 180 MB | 50 / 10 |
+| worker | 232 / 211 MB | 250 MB | 300 MB | 100 / 5 |
+| bot | 216 / 195 MB | 230 MB | 270 MB | 200 / 0 |
+| web (ixtiyoriy, standart O'CHIQ) | 96 / 76 MB | 100 MB | 130 MB | 50 / 10 |
+| **jami, websiz** | **560 / 498 MB** | **620 MB** | **750 MB** | |
 
-## 4. SERVERGA QO'YISH
+Hammasida `Restart=always`, `RestartSec=10`, `OOMScoreAdjust=500`; sshd'ga `-900` (setup qo'yadi) — xotira tugasa SSH emas,
+ilova servisi o'ladi. 2 GB swap, `vm.swappiness=10`.
 
-**Hozir qo'ysa bo'ladimi? Ha — kod tomondan to'siq yo'q.** `main` branch'i o'zi yetarli (`deploy-ready` faqat
-hujjat qo'shadi). Qolgan to'siqlar faqat sizda: serverga SSH, `.env` + session + bazani ko'chirish va laptopdagi
-collector/worker/bot'ni to'xtatish. Ogohlantirish: bu birinchi jonli server, shuning uchun birinchi soatda loglarni kuzating.
+Xotirani kamaytirgan narsalar (o'lchab): **collector `aiogram` ni yuklamaydi** (import xotirasi 235 → 95 MB, `LiteBot`),
+**bot `telethon` ni yuklamaydi** (234 → 199 MB), **`--compile-bytecode`** (Telethon importidagi ~225 MB sakrash yo'qoladi,
+barqaror xotira 89 → 52 MB — aks holda `MemoryMax` bilan o'ldirilish ehtimoli bor edi), `uv run` o'rniga to'g'ridan-to'g'ri
+`.venv/bin/python` (⚠️ `uv` jarayonining xotirasi o'lchanmadi), `MALLOC_ARENA_MAX=2`, `--no-dev`, sayt/Caddy ixtiyoriy.
+Worker parallelligi: kamaytiradigan narsa topilmadi (hammasi allaqachon ketma-ket).
 
-Ubuntu uchun qisqa yo'l (Oracle Linux, firewall, domen/HTTPS — to'liq [DEPLOY.md](DEPLOY.md) da):
+**Qaror (qilinmadi):** eng katta xarajat — `aiogram` o'zi (~130 MB worker'da va yana shuncha bot'da). Ikkalasini bitta
+jarayonga birlashtirish ~200 MB tejardi, lekin bu ishlayotgan mantiqni o'zgartiradi (signal, heartbeat, qayta yonish) va
+haqiqiy Telegram'da sinab bo'lmaydi. Birinchi hafta `healthcheck.sh` da xotira yetmasa — keyingi qadam shu.
 
+## 3. Serverga qo'yish — aniq buyruqlar (copy-paste)
+
+```powershell
+# 💻 PowerShell — oldin collector/worker/bot oynalarida Ctrl+C (kompyuterda ular BIR HAM yonmasin)
+ssh -i "$HOME\.ssh\<kalit>" ubuntu@<IP>
+```
 ```bash
-# 🐧 server (ubuntu)
-sudo apt update && sudo apt install -y git curl sqlite3 fonts-dejavu-core fail2ban
-sudo timedatectl set-timezone Asia/Tashkent
-sudo useradd --create-home --shell /bin/bash ayvona
-sudo -iu ayvona bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
-sudo -iu ayvona git clone https://github.com/sabdur4hmonov/ayvonajobs.git /home/ayvona/ayvona
+# 🐧 server (ubuntu) — 5–15 daqiqa; "KEYINGI QADAMLAR" blokini chop etadi
+curl -fsSLO https://raw.githubusercontent.com/sabdur4hmonov/ayvonajobs/main/scripts/server-setup.sh
+bash server-setup.sh
+exit
 ```
 ```powershell
-# 💻 PowerShell (laptop) — avval collector/worker/bot'ni Ctrl+C bilan to'xtating
+# 💻 PowerShell — avval sinov (serverga ulanmaydi), keyin haqiqiysi
 cd "D:\Coding projects\ayvona"
-uv run python -c "import sqlite3; s=sqlite3.connect('data/ayvona.db'); d=sqlite3.connect('data/ayvona-copy.db'); s.backup(d); d.close(); s.close()"
-scp -i "$HOME\.ssh\<kalit>" .env data\ayvona.session data\ayvona-copy.db "ubuntu@<IP>:~/"
+.\scripts\push-secrets-from-windows.ps1 -HostName <IP> -KeyFile "$HOME\.ssh\<kalit>" -DryRun
+.\scripts\push-secrets-from-windows.ps1 -HostName <IP> -KeyFile "$HOME\.ssh\<kalit>"
 ```
 ```bash
-# 🐧 server (ubuntu)
-sudo -u ayvona mkdir -p /home/ayvona/ayvona/data
-sudo install -o ayvona -g ayvona -m 600 ~/.env           /home/ayvona/ayvona/.env
-sudo install -o ayvona -g ayvona -m 600 ~/ayvona.session /home/ayvona/ayvona/data/ayvona.session
-sudo install -o ayvona -g ayvona -m 600 ~/ayvona-copy.db /home/ayvona/ayvona/data/ayvona.db
-rm ~/.env ~/ayvona.session ~/ayvona-copy.db
-sudo -iu ayvona bash -c 'cd ~/ayvona && ~/.local/bin/uv sync --locked && ~/.local/bin/uv run alembic upgrade head && ~/.local/bin/uv run python scripts/make_placeholder_images.py && ~/.local/bin/uv run python -m ayvona.apps.collector --once'
-sudo cp /home/ayvona/ayvona/deploy/systemd/ayvona-*.service /etc/systemd/system/
-sudo systemctl daemon-reload
+# 🐧 server (ubuntu) — "reboot kerak" desa avval: sudo reboot
 sudo systemctl enable --now ayvona-collector ayvona-worker ayvona-bot
-systemctl status ayvona-collector ayvona-worker ayvona-bot --no-pager
+sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh       # 1–2 daqiqadan keyin
+journalctl -u 'ayvona-*' -f
 ```
-Keyingi yangilashlar: `git push` (laptop) → `sudo bash /home/ayvona/ayvona/scripts/deploy.sh` (server).
+Keyin: `sudo bash /home/ayvona/ayvona/scripts/deploy.sh` (yangilash). Sayt kerak bo'lsa: DEPLOY.md, Ilova B.
 
-## 5. SAVOLLAR (faqat siz hal qilasiz)
+## 4. Qolgan risklar va menga kerak bo'ladigan narsalar
 
-1. **Server OS va shape:** Ubuntu yoki Oracle Linux? A1 Flex (ARM, 6 GB) yoki E2.1.Micro (1 GB)? 1 GB bo'lsa swap shart.
-2. **Session:** laptopdagi `ayvona.session` ni ko'chirasizmi yoki serverda yangi login qilasizmi? Ikkalasida ham laptop
-   collector'i keyin shu session bilan ishlamasligi kerak.
-3. **Kanal:** `.env` dagi `CHANNEL_ID` haqiqiy @ayvonajobs'mi yoki test kanal? (Men qiymatlarni ko'rmadim.)
-4. **Sayt hozirmi yoki keyinmi?** Hozir bo'lsa — DuckDNS (bepul) yoki o'z domeningiz?
-5. **Repo public:** ROADMAP'da "Private qiling" deyilgan, hozir public. Repo'da sir yo'q, lekin kanal ro'yxati,
-   real e'lon namunalari (telefon raqamlari bilan, `tests/fixtures/`) va HANDOFF.md dagi email ochiq turibdi.
-6. **Gemini:** serverda darhol yoqilsinmi? (Kalit bor, jonli sinalmagan; `/ai` bilan o'chirsa bo'ladi.)
-7. **Veb-manbalar:** qaysilarini yoqamiz? hh.uz uchun dev.hh.ru da ilova ochasizmi?
-8. **`deploy-ready` → `main`:** bu ikki hujjatni main'ga merge qilaymi yoki o'zingiz ko'rib chiqasizmi?
+**Sinalmagan (hammasi birinchi jonli ishga tushirishda aniqlanadi):**
+- `server-setup.sh` haqiqiy Ubuntu 24.04 da **ishga tushirilmadi** (laptopda ishga tushirish taqiqlangan edi) — faqat
+  sintaksis, shellcheck va iptables/massiv mantiqi namunaviy matnda sinaldi. Oracle image'idagi iptables va `netfilter-persistent`
+  haqidagi taxminlar hujjatdan; Caddy rasmiy repo qadamlari ham sinalmagan (ishlamasa Ubuntu paketiga o'tadi).
+- Push skriptining serverdagi qismi (`apply.sh`) faqat shellcheck bilan tekshirildi; `ssh/scp` haqiqiy serverga ulanmadi.
+- systemd chegaralari va xotira sonlari Linux'da o'lchanmadi (Windows o'lchovi + zaxira). OOM yuz bersa:
+  `journalctl -k | grep -i oom`, `healthcheck.sh`.
+- Ommaviy bot, Gemini, veb-manbalar (Bosqich 10–17) hali hech qachon haqiqiy Telegram/Gemini bilan ishlamagan (oldingi audit).
+- 1/8 OCPU: startda aiogram/telethon yuklanishi 30–60 s olishi mumkin; collector sikli sekin bo'lishi mumkin.
 
----
+**Oracle idle xavfi** (7 kun CPU/tarmoq < 20% bo'lsa qaytarib olinishi mumkin): soxta yuk qo'shilmadi; DEPLOY.md 9-bo'lim —
+qonuniy faollik, OCI Metrics'ni kuzatish, ogohlantirish, zaxira/tiklash. Joriy qoidani Oracle sahifasida tekshiring.
 
-### Ilova: audit tafsilotlari
+**Menga/sizga kerak:** (1) serverning **Public IP** va **SSH kalit fayli**; (2) Gemini kaliti — `.env` da **allaqachon bor**
+(qiymatni ko'rmadim), kunlik chegarani xohlasangiz `GEMINI_DAILY_LIMIT`; (3) **DuckDNS tokeni kerak emas** — Caddy HTTP-01
+bilan sertifikat oladi; faqat saytni yoqsangiz: DuckDNS'da subdomen → IP, OCI'da 80/443 Ingress qoidasi; (4) hh.uz tokeni
+(ixtiyoriy).
 
-- **Stack:** Python 3.12 (uv, `uv.lock`), Telethon 1.45, aiogram 3, SQLAlchemy 2.1 async + aiosqlite, SQLite (WAL, FTS5),
-  Alembic, FastAPI + Jinja2 + uvicorn, httpx, rapidfuzz, Pillow, loguru, pydantic-settings. Test: pytest, ruff.
-- **Jarayonlar:** `python -m ayvona.apps.{collector,worker,bot,web}`. Tashqi xizmatlar: Telegram MTProto + Bot API,
-  Gemini REST (ixtiyoriy), cbu.uz (USD kursi), Himalayas/Remotive/Jobicy/Remote OK/Oson Ish/hh.uz (o'chiq).
-- **Sozlamalar:** `.env` (sirlar) + `config/*.yaml`. `.env` dagi 12 ta kalit to'ldirilgan; `GEMINI_MODEL`,
-  `GEMINI_API_KEYS`, `HH_ACCESS_TOKEN`, `HH_USER_AGENT` yo'q (ixtiyoriy, standart qiymat ishlaydi).
-- **Jarayonlar sirsiz (toza klonda):** bot va collector tushunarli xabar bilan chiqadi (exit 1), worker
-  `--once --no-publish` toza ishlaydi.
-- **Portlar:** faqat sayt `127.0.0.1:8080` (Caddy orqasida); `forwarded_allow_ips=127.0.0.1`. CORS kerak emas —
-  sayt server tomonda HTML chizadi, ochiq API yo'q. Auth: admin buyruqlari `ADMIN_IDS` bo'yicha.
-- **Lokal kuzatuv:** bu kompyuterda 8080-port boshqa dastur tomonidan band — sayt lokal sinovi 18080 da qilindi
-  (loyihaga ta'siri yo'q).
-- **Audit izi:** lokal bazani faqat o'qish rejimida ochdim; SQLite ikkita bo'sh yordamchi fayl (`-wal`, `-shm`)
-  yaratgan edi — o'chirildi, `ayvona.db` o'zgarmadi (vaqt belgisi 2026-10-02).
+**Savol bermay tanlangan eng oddiy bepul variantlar:** Docker o'rniga mavjud systemd; yo'l `/home/ayvona/ayvona` (barcha
+unitlar/`deploy.sh` shuni kutadi; `/opt` emas); servislar `uv run` o'rniga `.venv/bin/python`; saytsiz va fail2ban'siz
+(bayroq bilan); SSH sozlamalariga tegilmadi (faqat ogohlantirish); zaxira worker'nikidan alohida (`data/backups/daily/`,
+taymer, lokal); repo public bo'lib qoldi (clone HTTPS); setup skripti bo'sh baza yaratadi va push skripti uni
+almashtiradi; `deploy-ready` → `main` merge qilindi va push qilindi.
