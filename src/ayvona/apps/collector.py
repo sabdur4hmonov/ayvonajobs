@@ -31,7 +31,7 @@ from ayvona.db.repositories import kv_repo, raw_posts_repo, sources_repo
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
 from ayvona.litebot import LiteBot
 from ayvona.logging_setup import setup_logging
-from ayvona.services.notifier import Notifier
+from ayvona.services.notifier import for_settings as notifier_for
 from ayvona.services.sources_admin import process_pending
 from ayvona.sources.base import BaseSource, SourceRateLimited
 from ayvona.sources.registry import SourceDeps, create_source
@@ -372,7 +372,7 @@ async def main(once: bool = False) -> int:
             logger.info("Telegram'ga ulandi: {}", getattr(me, "username", None) or me.id)
 
         bot = await _optional_bot(settings)
-        notifier = Notifier(bot, settings.env.admin_chat_id, sf)
+        notifier = notifier_for(bot, settings, sf)
         deps = SourceDeps(
             collector=settings.app.collector, telegram_client=client, settings=settings
         )

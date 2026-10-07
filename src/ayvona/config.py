@@ -68,6 +68,9 @@ class EnvSettings(BaseSettings):
     # Public address of the website; overrides website.base_url of settings.yaml. The server setup
     # sets it through a systemd drop-in, so the tracked YAML never has to be edited on the server.
     website_base_url: str | None = None
+    # False (default): the admin gets ONLY the approval request of a new user ad; errors,
+    # monitoring, backups, stats ... are written to the log. True = the old behaviour.
+    admin_extra_notifications: bool = False
 
     @field_validator(
         "api_id",
@@ -87,6 +90,12 @@ class EnvSettings(BaseSettings):
     def _empty_to_none(cls, v: Any) -> Any:
         """``API_ID=`` (left blank in .env) means "not set", not a validation error."""
         return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("admin_extra_notifications", mode="before")
+    @classmethod
+    def _blank_flag_is_off(cls, v: Any) -> Any:
+        """``ADMIN_EXTRA_NOTIFICATIONS=`` (blank) means the default: off."""
+        return False if isinstance(v, str) and not v.strip() else v
 
     @field_validator("admin_ids", mode="before")
     @classmethod

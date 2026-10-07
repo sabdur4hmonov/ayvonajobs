@@ -1,5 +1,12 @@
 """Messages to the admin chat: errors, failed posts, suspicious posts, silent processes, backups.
 
+THE ADMIN GETS ONE KIND OF PUSH: a new user ad waiting for approval (bot/moderation.py, which
+does not use this class). Everything this class would send to the admin chat on its own
+(errors, silent-process alerts, backups, suspicious posts, ...) is only written to the log —
+journald and ``data/logs`` — unless ``ADMIN_EXTRA_NOTIFICATIONS=true`` (``extra_enabled``).
+A message with an explicit ``chat_id`` is the answer to something that admin asked for (the result
+of ``/addsource``) and is always delivered.
+
 Rules:
 * the same notice (same ``key``, default = the text) goes out at most once per
   ``throttle_seconds`` (10 min). The last-sent time lives in ``kv_store`` (``notify:<hash>``), so
@@ -11,6 +18,8 @@ Rules:
 from __future__ import annotations
 
 import hashlib
+import html
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -24,12 +33,37 @@ from ayvona.timeutil import utcnow
 if TYPE_CHECKING:
     from aiogram import Bot
 
+    from ayvona.config import Settings
     from ayvona.litebot import LiteBot
 
 THROTTLE_SECONDS = 600
 KEY_PREFIX = "notify:"
 MAX_MESSAGE_LEN = 4000  # Telegram: 4096
 NO_LINK_PREVIEW: dict[str, Any] = {"is_disabled": True}
+
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def plain(text: str) -> str:
+    """An HTML notice as one log line: no tags, entities decoded, newlines folded."""
+    return " | ".join(
+        ln.strip() for ln in _TAG_RE.sub("", html.unescape(text)).splitlines() if ln.strip()
+    )
+
+
+def for_settings(
+    bot: Bot | LiteBot | None,
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession] | None = None,
+) -> Notifier:
+    """The Notifier of a running process: admin pushes only with ``ADMIN_EXTRA_NOTIFICATIONS``."""
+    return Notifier(
+        bot,
+        settings.env.admin_chat_id,
+        session_factory,
+        extra_enabled=settings.env.admin_extra_notifications,
+    )
 
 
 class Notifier:
@@ -40,7 +74,11 @@ class Notifier:
         session_factory: async_sessionmaker[AsyncSession] | None = None,
         *,
         throttle_seconds: float = THROTTLE_SECONDS,
+        extra_enabled: bool = True,
     ) -> None:
+        # Direct constructions (tests, scripts) keep the old behaviour; the three processes pass
+        # ``settings.env.admin_extra_notifications`` (default False) — see :func:`for_settings`.
+        self.extra_enabled = extra_enabled
         self.bot = bot
         self.chat_id = chat_id
         self.sf = session_factory
@@ -87,6 +125,10 @@ class Notifier:
 
         ``chat_id``: another chat than the admin chat (e.g. the admin who asked for something).
         """
+        if chat_id is None and not self.extra_enabled:
+            # not asked for by anybody: the fact stays in the log (journald / data/logs)
+            logger.info("[admin xabari — faqat logda] {}", plain(text))
+            return False
         now = utcnow()
         key = key or text
         target = chat_id if chat_id is not None else self.chat_id
@@ -115,6 +157,11 @@ class Notifier:
 
     async def send_document(self, path: Path, caption: str = "") -> bool:
         """Send a file (DB backup). Not throttled. True if it reached Telegram."""
+        if not self.extra_enabled:
+            logger.info(
+                "[admin xabari — faqat logda] fayl yuborilmaydi: {} {}", path, plain(caption)
+            )
+            return False
         if not self.enabled:
             logger.warning("[admin'ga, yuborilmadi — bot/ADMIN_CHAT_ID yo'q] fayl: {}", path)
             return False

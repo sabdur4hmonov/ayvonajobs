@@ -217,7 +217,7 @@ async def run_worker(
     """
     await skip_existing_posts(sf)
     await reset_stuck_processing(sf)
-    notifier = Notifier(bot, admin_chat, sf)
+    notifier = Notifier(bot, admin_chat, sf, extra_enabled=settings.env.admin_extra_notifications)
     pipeline = Pipeline(settings, sf, notifier, ai=ai)
 
     publisher: Publisher | None = None
@@ -303,9 +303,7 @@ async def main(*, once: bool = False, publish: bool = True) -> int:
     bot: Bot | None = None
     try:
         if not await schema_is_ready(engine):
-            logger.error(
-                "Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head"
-            )
+            logger.error("Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head")
             return 1
         sf = create_session_factory(engine)
         bot = await _setup_bot(settings)

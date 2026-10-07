@@ -25,7 +25,7 @@ from ayvona.config import Settings, get_settings
 from ayvona.db.session import create_engine, create_session_factory, schema_is_ready
 from ayvona.logging_setup import setup_logging
 from ayvona.services.heartbeat import Monitor
-from ayvona.services.notifier import Notifier
+from ayvona.services.notifier import for_settings as notifier_for
 
 PROCESS_NAME = "bot"
 NO_ADMINS = (
@@ -51,7 +51,7 @@ async def set_admin_commands(bot: Bot, admin_ids: list[int]) -> None:
 async def run_bot(settings: Settings, sf: SessionFactory, bot: Bot) -> None:
     dp = build_dispatcher(settings, sf)
     stop = asyncio.Event()
-    notifier = Notifier(bot, settings.env.admin_chat_id, sf)
+    notifier = notifier_for(bot, settings, sf)
     monitor = Monitor(settings, sf, notifier, ("worker",), watch_sources=False)
     tasks = [
         asyncio.create_task(
@@ -78,9 +78,7 @@ async def main() -> int:
     engine = create_engine(settings.db_url)
     try:
         if not await schema_is_ready(engine):
-            logger.error(
-                "Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head"
-            )
+            logger.error("Baza tayyor emas yoki eski versiyada. Avval: uv run alembic upgrade head")
             return 1
         try:
             me = await bot.get_me()
