@@ -53,8 +53,7 @@ BTN_PREV = "⬅️"
 BTN_NEXT = "➡️"
 BTN_REMOVE = "🗑 Olib tashlash"
 FAV_EMPTY = (
-    "⭐ Saqlangan e'lonlar yo'q.\n"
-    "Kanal postidagi yoki qidiruvdagi «⭐ Saqlash» tugmasini bosing."
+    "⭐ Saqlangan e'lonlar yo'q.\nKanal postidagi yoki qidiruvdagi «⭐ Saqlash» tugmasini bosing."
 )
 FAV_HEAD = "⭐ <b>Saqlanganlar</b> — {total} ta (sahifa {page}/{pages})"
 CARD_CLOSED = " ❌ Yopilgan"
@@ -270,7 +269,11 @@ MOD_HEAD = (
 MOD_OK = "✅ Tasdiqlash"
 MOD_NO = "❌ Rad etish"
 MOD_BAN = "🚫 Ban"
-MOD_DONE_OK = "\n\n✅ <b>Tasdiqlandi</b> ({admin})"
+MOD_DONE_PUBLISHED = "\n\n✅ <b>Tasdiqlandi va kanalga chiqdi</b> ({admin})"
+MOD_DONE_QUEUED = (
+    "\n\n✅ <b>Tasdiqlandi</b> ({admin}) — kanalga hozir chiqmadi, navbatga qo'yildi "
+    "(yo'qolmaydi; sababi logda)"
+)
 MOD_DONE_NO = "\n\n❌ <b>Rad etildi</b> ({admin})"
 MOD_DONE_BAN = "\n\n🚫 <b>Rad etildi, muallif bloklandi</b> ({admin})"
 MOD_ALREADY = "Bu e'lon allaqachon ko'rib chiqilgan."

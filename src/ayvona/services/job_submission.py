@@ -420,13 +420,24 @@ async def submit(
 
 
 # --------------------------------------------------------------------------- admin decision
-async def approve(session: AsyncSession, job_id: int, now: datetime) -> Job | None:
-    """``pending_review`` -> ``queued`` (due now); the author becomes trusted. ``None`` if the
-    job was already decided. Does not commit."""
+async def approve(
+    session: AsyncSession, job_id: int, now: datetime, *, publish_now: bool = False
+) -> Job | None:
+    """The admin approves a job in ``pending_review``; the author becomes trusted. ``None`` if the
+    job was already decided (so a double click or a second admin changes nothing). Does not
+    commit.
+
+    ``publish_now=False``: the job goes to the queue (``queued``, due now) — the old behaviour,
+    also used while the publisher is paused. ``publish_now=True``: the job is moved straight to
+    ``sending`` in the same conditional UPDATE, i.e. CLAIMED by the caller, who must send it right
+    after the commit (``Publisher.publish_claimed``). It never sits in the queue, and the worker's
+    publisher cannot take it, so it cannot be published twice.
+    """
+    target = JobStatus.SENDING if publish_now else JobStatus.QUEUED
     result = await session.execute(
         update(Job)
         .where(Job.id == job_id, Job.status == JobStatus.PENDING_REVIEW)
-        .values(status=JobStatus.QUEUED, next_retry_at=now, last_error=None)
+        .values(status=target, next_retry_at=now, last_error=None)
         .execution_options(synchronize_session=False)
     )
     if (result.rowcount or 0) != 1:
@@ -437,6 +448,18 @@ async def approve(session: AsyncSession, job_id: int, now: datetime) -> Job | No
         if job.author_id is not None and (author := await session.get(User, job.author_id)):
             author.trust_level = max(author.trust_level, TRUST_TRUSTED)
     return job
+
+
+async def requeue_claimed(session: AsyncSession, job_id: int, now: datetime) -> bool:
+    """A job claimed with ``approve(publish_now=True)`` that cannot be sent (no channel
+    configured) goes to the normal queue. Does not commit."""
+    result = await session.execute(
+        update(Job)
+        .where(Job.id == job_id, Job.status == JobStatus.SENDING)
+        .values(status=JobStatus.QUEUED, next_retry_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    return (result.rowcount or 0) == 1
 
 
 async def reject(session: AsyncSession, job_id: int, reason: str = "admin") -> Job | None:

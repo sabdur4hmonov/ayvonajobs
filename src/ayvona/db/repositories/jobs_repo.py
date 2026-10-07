@@ -113,16 +113,23 @@ async def release(
     await session.execute(update(Job).where(Job.id == job_id).values(**values))
 
 
-async def reset_stuck_sending(session: AsyncSession, now: datetime) -> list[int]:
+async def reset_stuck_sending(
+    session: AsyncSession, now: datetime, older_than: datetime | None = None
+) -> list[int]:
     """On start: jobs left in ``sending`` by a crash go back to the queue (``retry``, due now).
 
     At-least-once: if Telegram accepted the post just before the crash, it is posted twice —
     a rare duplicate is better than a lost job (CLAUDE.md, hard rule 2). Does not commit.
     """
-    ids = list((await session.scalars(select(Job.id).where(Job.status == JobStatus.SENDING))).all())
+    stmt = select(Job.id).where(Job.status == JobStatus.SENDING)
+    if older_than is not None:  # only those nobody touched since ``older_than`` (a send is running)
+        stmt = stmt.where(Job.updated_at < older_than)
+    ids = list((await session.scalars(stmt)).all())
     if ids:
         await session.execute(
-            update(Job).where(Job.id.in_(ids)).values(status=JobStatus.RETRY, next_retry_at=now)
+            update(Job)
+            .where(Job.id.in_(ids), Job.status == JobStatus.SENDING)
+            .values(status=JobStatus.RETRY, next_retry_at=now)
         )
     return ids
 

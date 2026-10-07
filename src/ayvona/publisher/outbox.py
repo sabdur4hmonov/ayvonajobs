@@ -76,6 +76,8 @@ from ayvona.timeutil import ensure_utc, to_local, utcnow
 
 SleepFn = Callable[[float], Awaitable[bool]]  # returns True if we should stop
 QUIET_RECHECK_SECONDS = 60.0  # during quiet hours the publisher looks at the clock this often
+# A send takes seconds; a job in ``sending`` for longer belongs to a process that died.
+STALE_SENDING_MINUTES = 10
 
 _PARSE_ERROR_RE = re.compile(r"can't parse entities|unsupported start tag|can't find end", re.I)
 _FILE_ERROR_RE = re.compile(r"wrong file identifier|file reference|wrong remote file|file_id", re.I)
@@ -310,12 +312,49 @@ class Publisher:
         quiet = self._quiet_hours(now)
         if quiet is not None:
             return quiet
+        await self._requeue_stale(now)
         early, job, image = await self._take(now)
         if early is not None:
             return early
         assert job is not None
-        previous = job.status  # queued | retry (claim() saw it)
+        return await self._deliver(job, image, job.status, now)  # queued | retry (claim() saw it)
 
+    async def publish_claimed(self, job_id: int, now: datetime | None = None) -> PublishResult:
+        """Send ONE job right now: the caller already moved it to ``sending`` (the admin's
+        approval of a user ad does that in the same transaction as the decision). Not paused by
+        quiet hours / the spacing — a manual decision is published at once. On a Telegram error
+        the job goes back to the queue (never lost, the worker finishes it)."""
+        now = now or utcnow()
+        async with self.sf() as s, s.begin():
+            job = await s.get(Job, job_id)
+            if job is None or job.status != JobStatus.SENDING:
+                return PublishResult(Outcome.IDLE, job_id)  # someone else has it / already done
+            image: PickedImage | None = None
+            try:
+                image = await pick_image(s, self.settings, job.category, job.profession, now)
+            except Exception:
+                logger.exception("job #{}: rasm tanlanmadi — rasmsiz yuboriladi", job.id)
+        return await self._deliver(job, image, JobStatus.QUEUED, now)
+
+    async def _requeue_stale(self, now: datetime) -> None:
+        """``sending`` for more than ``STALE_SENDING_MINUTES``: the process that took it died
+        (the worker also does this once on start) — queue it again (at-least-once)."""
+        async with self.sf() as s, s.begin():
+            ids = await jobs_repo.reset_stuck_sending(
+                s, now, older_than=now - timedelta(minutes=STALE_SENDING_MINUTES)
+            )
+        if ids:
+            logger.warning(
+                "{} ta e'lon {} daqiqadan beri 'sending' — qayta navbatda: {}",
+                len(ids),
+                STALE_SENDING_MINUTES,
+                ids,
+            )
+
+    async def _deliver(
+        self, job: Job, image: PickedImage | None, previous: JobStatus, now: datetime
+    ) -> PublishResult:
+        """Send a claimed (``sending``) job; mark it published or hand it back."""
         if not job.formatted_text:
             return await self._attempt_failed(job, "formatted_text bo'sh", final=True)
 
