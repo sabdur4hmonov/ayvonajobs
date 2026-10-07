@@ -139,6 +139,7 @@ async def add_job(
     category: str = "savdo",
     buttons: list[Any] | None = None,
     raw_post_id: int | None = None,
+    **extra: Any,  # any other jobs column (priority_tier, created_at, title, ...)
 ) -> int:
     async with sf() as s, s.begin():
         job = Job(
@@ -157,6 +158,8 @@ async def add_job(
             attempts=attempts,
             next_retry_at=next_retry_at,
         )
+        for name, value in extra.items():
+            setattr(job, name, value)
         s.add(job)
         await s.flush()
         return job.id

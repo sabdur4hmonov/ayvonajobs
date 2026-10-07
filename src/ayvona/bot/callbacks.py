@@ -14,8 +14,13 @@ class FavPageCb(CallbackData, prefix="favp"):
     page: int
 
 
+class ProjPageCb(CallbackData, prefix="prp"):
+    page: int
+
+
 class PostCb(CallbackData, prefix="pj"):
-    """📢 E'lon joylash form: cat <key> | reg <key> | send | edit | field <name> | cancel."""
+    """📢 E'lon joylash form: kind job|project | cat <key> | reg <key> | days <n> | send | edit |
+    field <name> | cancel."""
 
     action: str
     value: str = ""

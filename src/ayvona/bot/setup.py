@@ -24,6 +24,7 @@ from ayvona.bot.handlers import (
     favorites,
     my_jobs,
     post_job,
+    projects,
     search,
     start,
 )
@@ -45,6 +46,7 @@ ADMIN_COMMANDS = [
     BotCommand(command="start", description="Bosh menyu"),
     BotCommand(command="stats", description="Statistika"),
     BotCommand(command="queue", description="Navbat"),
+    BotCommand(command="why", description="E'lon ustuvorligi sababi: /why <id>"),
     BotCommand(command="failed", description="Chiqmay qolganlar"),
     BotCommand(command="retry", description="Qayta navbatga: /retry <id|all>"),
     BotCommand(command="pause", description="Kanalga joylashni to'xtatish"),
@@ -110,6 +112,7 @@ def build_dispatcher(
         *_detached(
             start.router,
             favorites.router,
+            projects.router,
             search.router,
             alerts.router,
             my_jobs.router,

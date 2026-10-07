@@ -1,10 +1,16 @@
 """📢 E'lon joylash — the step-by-step form (FSM). Every decision is in
 services/job_submission.py; this module only asks, stores the answers and shows the result.
 
-Steps: 1 soha (buttons) → 2 lavozim → 3 kompaniya (skip) → 4 maosh ("Kelishiladi" / text) →
+First the TYPE: 💼 Ish (a salaried job) or 🧩 Loyiha (a one-time paid project).
+
+Ish: 1 soha (buttons) → 2 lavozim → 3 kompaniya (skip) → 4 maosh ("Kelishiladi" / text) →
 5 hudud (buttons, "Masofaviy") + manzil (skip) → 6 ish vaqti (skip) → 7 talablar (skip) →
 8 ALOQA (required: "📱 Raqamni yuborish", own @username or typed) → 9 MUDDAT (how many days the
 ad stays active: buttons) → preview (the channel caption) → ✅ Yuborish / ✏️ Tahrirlash.
+
+Loyiha: 1 nomi → 2 tavsif → 3 byudjet (bir martalik; "Kelishiladi" / text) → 4 muddat (skip) →
+5 ALOQA (required) → 6 MUDDAT (how many days it stays active) → preview → Yuborish.
+
 "⬅️ Orqaga" and "❌ Bekor qilish" work on every step; a menu button leaves the form.
 """
 
@@ -31,7 +37,7 @@ from ayvona.bot.callbacks import PostCb
 from ayvona.bot.keyboards import main_menu
 from ayvona.bot.moderation import notify_review
 from ayvona.config import Settings
-from ayvona.db.models import User
+from ayvona.db.models import JobKind, User
 from ayvona.services import job_submission as js
 from ayvona.services.job_submission import Draft, LimitHit, LimitReason, Outcome
 from ayvona.timeutil import utcnow
@@ -41,8 +47,12 @@ router = Router(name="public_post_job")
 
 
 class PostJob(StatesGroup):
+    kind = State()
     category = State()
     title = State()
+    description = State()
+    budget = State()
+    deadline = State()
     company = State()
     salary = State()
     region = State()
@@ -54,7 +64,8 @@ class PostJob(StatesGroup):
     preview = State()
 
 
-STEPS = [
+STEPS_JOB = [
+    "kind",
     "category",
     "title",
     "company",
@@ -66,9 +77,11 @@ STEPS = [
     "contact",
     "duration",
 ]
-STATE_OF = {name: getattr(PostJob, name) for name in STEPS}
-SKIPPABLE = {"company", "city", "schedule", "requirements"}
-NO_NUMBER = {"city"}  # a follow-up of "region", not a question of its own
+STEPS_PROJECT = ["kind", "title", "description", "budget", "deadline", "contact", "duration"]
+STATE_OF = {name: getattr(PostJob, name) for name in dict.fromkeys(STEPS_JOB + STEPS_PROJECT)}
+STEP_OF_STATE = {state.state: name for name, state in STATE_OF.items()}
+SKIPPABLE = {"company", "city", "schedule", "requirements", "deadline"}
+NO_NUMBER = {"kind", "city"}  # the type question / a follow-up of "region"
 FORM_STATES = StateFilter(*STATE_OF.values(), PostJob.preview)
 
 
@@ -115,6 +128,22 @@ def _duration_kb(settings: Settings) -> InlineKeyboardMarkup:
     )
 
 
+def _kind_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=T.BTN_KIND_JOB, callback_data=PostCb(action="kind", value="job").pack()
+                ),
+                InlineKeyboardButton(
+                    text=T.BTN_KIND_PROJECT,
+                    callback_data=PostCb(action="kind", value="project").pack(),
+                ),
+            ]
+        ]
+    )
+
+
 def _preview_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -127,10 +156,11 @@ def _preview_kb() -> InlineKeyboardMarkup:
     )
 
 
-def _edit_kb() -> InlineKeyboardMarkup:
+def _edit_kb(draft: Draft) -> InlineKeyboardMarkup:
+    fields = T.PROJECT_FIELDS if draft.is_project else T.POST_FIELDS
     buttons = [
         InlineKeyboardButton(text=label, callback_data=PostCb(action="field", value=name).pack())
-        for name, label in T.POST_FIELDS.items()
+        for name, label in fields.items()
     ]
     return InlineKeyboardMarkup(
         inline_keyboard=[buttons[i : i + 3] for i in range(0, len(buttons), 3)]
@@ -155,9 +185,14 @@ def limit_text(hit: LimitHit, settings: Settings) -> str:
     return T.POST_LIMIT_WAITING
 
 
-def numbered(step: str, text: str) -> str:
+def steps_of(draft: Draft) -> list[str]:
+    """The questions of this ad type, in order (the first one is the type itself)."""
+    return STEPS_PROJECT if draft.is_project else STEPS_JOB
+
+
+def numbered(step: str, text: str, draft: Draft) -> str:
     """``"3/9. <question>"`` — the number of the step among the numbered ones."""
-    steps = [s for s in STEPS if s not in NO_NUMBER]
+    steps = [s for s in steps_of(draft) if s not in NO_NUMBER]
     if step in NO_NUMBER:
         return text
     return f"{steps.index(step) + 1}/{len(steps)}. {text}"
@@ -166,30 +201,52 @@ def numbered(step: str, text: str) -> str:
 async def ask(step: str, message: Message, state: FSMContext, settings: Settings) -> None:
     """Show the question of ``step`` and wait for its answer."""
     await state.set_state(STATE_OF[step])
+    draft = await _draft(state)
     skip = [KeyboardButton(text=T.BTN_SKIP)] if step in SKIPPABLE else None
-    if step == "category":
-        await message.answer(numbered(step, T.POST_ASK_CATEGORY), reply_markup=_nav())
+    if step == "kind":
+        await message.answer(T.POST_ASK_KIND, reply_markup=_nav())
+        await message.answer(T.POST_NEED_BUTTON, reply_markup=_kind_kb())
+    elif step == "description":
+        await message.answer(numbered(step, T.POST_ASK_DESCRIPTION, draft), reply_markup=_nav())
+    elif step == "budget":
+        await message.answer(
+            numbered(step, T.POST_ASK_BUDGET.format(negotiable=T.BTN_NEGOTIABLE), draft),
+            reply_markup=_nav([KeyboardButton(text=T.BTN_NEGOTIABLE)]),
+        )
+    elif step == "deadline":
+        await message.answer(
+            numbered(step, T.POST_ASK_DEADLINE, draft), reply_markup=_nav(skip or [])
+        )
+    elif step == "category":
+        await message.answer(numbered(step, T.POST_ASK_CATEGORY, draft), reply_markup=_nav())
         await message.answer(T.POST_NEED_BUTTON, reply_markup=_category_kb(settings))
     elif step == "title":
-        await message.answer(numbered(step, T.POST_ASK_TITLE), reply_markup=_nav())
+        question = T.POST_ASK_PROJECT_TITLE if draft.is_project else T.POST_ASK_TITLE
+        await message.answer(numbered(step, question, draft), reply_markup=_nav())
     elif step == "company":
-        await message.answer(numbered(step, T.POST_ASK_COMPANY), reply_markup=_nav(skip or []))
+        await message.answer(
+            numbered(step, T.POST_ASK_COMPANY, draft), reply_markup=_nav(skip or [])
+        )
     elif step == "salary":
         await message.answer(
-            numbered(step, T.POST_ASK_SALARY.format(negotiable=T.BTN_NEGOTIABLE)),
+            numbered(step, T.POST_ASK_SALARY.format(negotiable=T.BTN_NEGOTIABLE), draft),
             reply_markup=_nav([KeyboardButton(text=T.BTN_NEGOTIABLE)]),
         )
     elif step == "region":
-        await message.answer(numbered(step, T.POST_ASK_REGION), reply_markup=_nav())
+        await message.answer(numbered(step, T.POST_ASK_REGION, draft), reply_markup=_nav())
         await message.answer(T.POST_NEED_BUTTON, reply_markup=_region_kb(settings))
     elif step == "city":
         await message.answer(T.POST_ASK_CITY, reply_markup=_nav(skip or []))
     elif step == "schedule":
-        await message.answer(numbered(step, T.POST_ASK_SCHEDULE), reply_markup=_nav(skip or []))
+        await message.answer(
+            numbered(step, T.POST_ASK_SCHEDULE, draft), reply_markup=_nav(skip or [])
+        )
     elif step == "requirements":
-        await message.answer(numbered(step, T.POST_ASK_REQUIREMENTS), reply_markup=_nav(skip or []))
+        await message.answer(
+            numbered(step, T.POST_ASK_REQUIREMENTS, draft), reply_markup=_nav(skip or [])
+        )
     elif step == "duration":
-        await message.answer(numbered(step, T.POST_ASK_DURATION), reply_markup=_nav())
+        await message.answer(numbered(step, T.POST_ASK_DURATION, draft), reply_markup=_nav())
         await message.answer(T.POST_NEED_BUTTON, reply_markup=_duration_kb(settings))
     elif step == "contact":
         row = [KeyboardButton(text=T.BTN_SEND_PHONE, request_contact=True)]
@@ -198,7 +255,7 @@ async def ask(step: str, message: Message, state: FSMContext, settings: Settings
         if own:
             row.append(KeyboardButton(text=T.BTN_MY_USERNAME.format(username=own)))
         await message.answer(
-            numbered(step, T.POST_ASK_CONTACT.format(phone=T.BTN_SEND_PHONE)),
+            numbered(step, T.POST_ASK_CONTACT.format(phone=T.BTN_SEND_PHONE), draft),
             reply_markup=_nav(row),
         )
 
@@ -209,7 +266,8 @@ async def advance(step: str, message: Message, state: FSMContext, settings: Sett
     if data.get("editing") and step != "region":  # region is followed by its city question
         await show_preview(message, state, settings)
         return
-    nxt = STEPS[STEPS.index(step) + 1] if step != STEPS[-1] else None
+    steps = steps_of(await _draft(state))
+    nxt = steps[steps.index(step) + 1] if step != steps[-1] else None
     if nxt is None:
         await show_preview(message, state, settings)
     else:
@@ -246,7 +304,7 @@ async def start_form(
         return
     await state.update_data(draft=Draft().to_dict(), editing=False)
     await message.answer(T.POST_INTRO.format(back=T.BTN_BACK, cancel=T.BTN_CANCEL))
-    await ask("category", message, state, settings)
+    await ask("kind", message, state, settings)
 
 
 # ------------------------------------------------------------------ navigation
@@ -258,16 +316,17 @@ async def cancel_btn(message: Message, state: FSMContext) -> None:
 @router.message(FORM_STATES, F.text == T.BTN_BACK)
 async def back_btn(message: Message, state: FSMContext, settings: Settings) -> None:
     current = await state.get_state()
-    names = [s.state for s in STATE_OF.values()]
+    steps = steps_of(await _draft(state))
     if current == PostJob.preview.state:
-        await ask(STEPS[-1], message, state, settings)
+        await ask(steps[-1], message, state, settings)
         return
-    idx = names.index(current) if current in names else 0
-    if idx == 0:
+    step = STEP_OF_STATE.get(current or "", steps[0])
+    idx = steps.index(step) if step in steps else 0
+    if idx == 0:  # "Orqaga" on the first question = leave the form
         await cancel_form(message, state)
         return
     await state.update_data(editing=False)
-    await ask(STEPS[idx - 1], message, state, settings)
+    await ask(steps[idx - 1], message, state, settings)
 
 
 @router.callback_query(PostCb.filter(F.action == "cancel"))
@@ -278,6 +337,24 @@ async def cancel_cb(query: CallbackQuery, state: FSMContext) -> None:
 
 
 # ------------------------------------------------------------------ choice steps
+@router.callback_query(StateFilter(PostJob.kind), PostCb.filter(F.action == "kind"))
+async def kind_cb(
+    query: CallbackQuery, callback_data: PostCb, state: FSMContext, settings: Settings
+) -> None:
+    await query.answer()
+    if callback_data.value not in (JobKind.JOB.value, JobKind.PROJECT.value) or not isinstance(
+        query.message, Message
+    ):
+        return
+    draft = await _draft(state)
+    if draft.kind != callback_data.value:  # another type: the answers of the first one do not fit
+        draft = Draft(kind=callback_data.value)
+        await _save(state, draft)
+    label = T.BTN_KIND_PROJECT if draft.is_project else T.BTN_KIND_JOB
+    await query.message.edit_text(f"✅ {label}")
+    await advance("kind", query.message, state, settings)
+
+
 @router.callback_query(StateFilter(PostJob.category), PostCb.filter(F.action == "cat"))
 async def category_cb(
     query: CallbackQuery, callback_data: PostCb, state: FSMContext, settings: Settings
@@ -328,7 +405,7 @@ async def days_cb(
     await advance("duration", query.message, state, settings)
 
 
-@router.message(StateFilter(PostJob.category, PostJob.region, PostJob.duration))
+@router.message(StateFilter(PostJob.kind, PostJob.category, PostJob.region, PostJob.duration))
 async def need_button(message: Message) -> None:
     await message.answer(T.POST_NEED_BUTTON)
 
@@ -338,10 +415,13 @@ async def _text_step(
     step: str, message: Message, state: FSMContext, settings: Settings, limit: int
 ) -> None:
     draft = await _draft(state)
-    if step in SKIPPABLE and message.text == T.BTN_SKIP:
+    if (
+        step in SKIPPABLE
+        and message.text == T.BTN_SKIP
+        or step in ("salary", "budget")
+        and message.text == T.BTN_NEGOTIABLE
+    ):
         setattr(draft, step, None)
-    elif step == "salary" and message.text == T.BTN_NEGOTIABLE:
-        draft.salary = None
     else:
         value = js.clean_field(message.text, limit)
         if value is None:
@@ -368,6 +448,21 @@ async def company_msg(message: Message, state: FSMContext, settings: Settings) -
 @router.message(StateFilter(PostJob.salary), F.text)
 async def salary_msg(message: Message, state: FSMContext, settings: Settings) -> None:
     await _text_step("salary", message, state, settings, settings.app.posting.max_short_field)
+
+
+@router.message(StateFilter(PostJob.description), F.text)
+async def description_msg(message: Message, state: FSMContext, settings: Settings) -> None:
+    await _text_step("description", message, state, settings, settings.app.posting.max_description)
+
+
+@router.message(StateFilter(PostJob.budget), F.text)
+async def budget_msg(message: Message, state: FSMContext, settings: Settings) -> None:
+    await _text_step("budget", message, state, settings, settings.app.posting.max_short_field)
+
+
+@router.message(StateFilter(PostJob.deadline), F.text)
+async def deadline_msg(message: Message, state: FSMContext, settings: Settings) -> None:
+    await _text_step("deadline", message, state, settings, settings.app.posting.max_short_field)
 
 
 @router.message(StateFilter(PostJob.city), F.text)
@@ -423,10 +518,10 @@ async def contact_other(message: Message) -> None:
 
 # ------------------------------------------------------------------ preview: edit / send
 @router.callback_query(StateFilter(PostJob.preview), PostCb.filter(F.action == "edit"))
-async def edit_cb(query: CallbackQuery) -> None:
+async def edit_cb(query: CallbackQuery, state: FSMContext) -> None:
     await query.answer()
     if isinstance(query.message, Message):
-        await query.message.answer(T.POST_EDIT_WHICH, reply_markup=_edit_kb())
+        await query.message.answer(T.POST_EDIT_WHICH, reply_markup=_edit_kb(await _draft(state)))
 
 
 @router.callback_query(StateFilter(PostJob.preview), PostCb.filter(F.action == "field"))
@@ -434,7 +529,8 @@ async def edit_field_cb(
     query: CallbackQuery, callback_data: PostCb, state: FSMContext, settings: Settings
 ) -> None:
     await query.answer()
-    if callback_data.value in STEPS and isinstance(query.message, Message):
+    steps = steps_of(await _draft(state))
+    if callback_data.value in steps[1:] and isinstance(query.message, Message):
         await state.update_data(editing=True)
         await ask(callback_data.value, query.message, state, settings)
 

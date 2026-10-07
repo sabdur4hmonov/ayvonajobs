@@ -17,7 +17,7 @@ from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
-from pydantic import BaseModel, Field, SecretStr, field_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # src/ayvona/config.py -> parents[2] is the repository root.
@@ -305,6 +305,7 @@ class PostingConfig(BaseModel):
     max_title: int = Field(default=100, ge=10)
     max_short_field: int = Field(default=150, ge=10)  # company, salary, city, schedule
     max_requirements: int = Field(default=600, ge=50)
+    max_description: int = Field(default=700, ge=50)  # a project's description
     # "How long should the ad stay active?" buttons (days). The clock starts at publication.
     duration_options: list[int] = Field(default_factory=lambda: [3, 7, 14, 30])
 
@@ -399,6 +400,56 @@ class WebsiteConfig(BaseModel):
     sitemap_limit: int = Field(default=5000, ge=100, le=50000)
 
 
+class PriorityPoints(BaseModel):
+    """Points of the priority rules (processing/priority.py). Positive = more important."""
+
+    high_profession: int = 3  # a profession from ``high_professions``
+    high_keyword: int = 2  # a word from ``high_keywords`` in the title
+    high_category: int = 1  # a category from ``high_categories``
+    high_salary: int = 3  # the whole pay range is at least ``high_salary_uzs`` per month
+    low_profession: int = -3  # ``low_professions``
+    low_keyword: int = -3  # ``low_keywords`` in the title
+    mild_low: int = -1  # ``mild_low_professions``
+    low_salary: int = -1  # the whole pay range is below ``low_salary_uzs`` per month
+
+
+class PriorityConfig(BaseModel):
+    """Which jobs go to the channel first and come first in search (processing/priority.py).
+
+    Tier 1 = top, 2 = normal, 3 = bottom. The word lists are matched on the folded title
+    (Latin / Cyrillic spelling does not matter)."""
+
+    enabled: bool = True
+    tier1_at: int = 2  # score >= this -> tier 1
+    tier3_at: int = -2  # score <= this -> tier 3
+    high_salary_uzs: int = Field(default=8_000_000, ge=0)  # so'm per month
+    low_salary_uzs: int = Field(default=2_500_000, ge=0)
+    points: PriorityPoints = Field(default_factory=PriorityPoints)
+    high_professions: list[str] = Field(default_factory=list)  # categories.yaml profession keys
+    high_keywords: list[str] = Field(default_factory=list)
+    high_categories: list[str] = Field(default_factory=list)
+    low_professions: list[str] = Field(default_factory=list)
+    low_keywords: list[str] = Field(default_factory=list)
+    mild_low_professions: list[str] = Field(default_factory=list)
+    # --- the queue
+    # Among jobs of the same tier: the newest first ("newest") or the longest waiting ("oldest").
+    within_tier: Literal["newest", "oldest"] = "newest"
+    # Tier 3 gets at most this many channel posts per 24 hours (0 = no cap). Better jobs are
+    # never held back by it; tier 3 simply waits (and may go stale) when the cap is used.
+    tier3_max_per_day: int = Field(default=40, ge=0)
+    # A job is dropped as too old after publisher.max_age_hours (tier 2) — but the top tier lives
+    # longer and the bottom tier shorter, so a long queue costs the cheapest jobs first.
+    # 0 = the same as tier 2.
+    tier1_max_age_hours: float = Field(default=48, ge=0)
+    tier3_max_age_hours: float = Field(default=12, ge=0)
+
+    @model_validator(mode="after")
+    def _tiers_do_not_overlap(self) -> PriorityConfig:
+        if self.tier3_at >= self.tier1_at:
+            raise ValueError("priority.tier3_at must be lower than priority.tier1_at")
+        return self
+
+
 class FormatterConfig(BaseModel):
     min_confidence: float = Field(default=0.7, ge=0, le=1)
     max_caption_length: int = Field(default=1024, ge=200)
@@ -432,6 +483,7 @@ class AppConfig(BaseModel):
     web_sources: WebSourcesConfig = Field(default_factory=WebSourcesConfig)
     website: WebsiteConfig = Field(default_factory=WebsiteConfig)
     formatter: FormatterConfig = Field(default_factory=FormatterConfig)
+    priority: PriorityConfig = Field(default_factory=PriorityConfig)
     images: ImagesConfig = Field(default_factory=ImagesConfig)
 
     @field_validator("sources", mode="before")

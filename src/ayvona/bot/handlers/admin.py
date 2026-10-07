@@ -21,8 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from ayvona.ai.helper import AIHelper
 from ayvona.bot import texts as T
 from ayvona.config import Settings
-from ayvona.db.models import JobStatus
+from ayvona.db.models import Job, JobStatus
 from ayvona.db.repositories import jobs_repo, kv_repo
+from ayvona.processing.priority import PriorityScorer
 from ayvona.publisher.outbox import skip_old_jobs, too_old_reason
 from ayvona.services.stats import (
     BotStats,
@@ -184,8 +185,11 @@ def _extra_stats(st: BotStats, settings: Settings) -> str:
 @router.message(Command("queue"))
 async def queue_cmd(message: Message, sf: SessionFactory, settings: Settings) -> None:
     now = utcnow()
+    pri = settings.app.priority
     async with sf() as s:
-        q = await queue_overview(s, now, limit=15)
+        q = await queue_overview(
+            s, now, limit=15, order_mode=pri.within_tier if pri.enabled else "fifo"
+        )
     lines = [
         T.QUEUE_HEAD.format(
             paused=T.PAUSED_MARK if q.paused else "",
@@ -200,11 +204,49 @@ async def queue_cmd(message: Message, sf: SessionFactory, settings: Settings) ->
     for job in q.upcoming:
         at = job.next_retry_at
         when = T.QUEUE_NOW if at is None or at <= now else local_time(at, settings)
-        lines.append(T.QUEUE_ITEM.format(id=job.id, title=html.escape(job.title or "—"), when=when))
+        lines.append(
+            T.QUEUE_ITEM.format(
+                id=job.id,
+                tier=job.priority_tier or jobs_repo.NORMAL_TIER,
+                title=html.escape(job.title or "—"),
+                when=when,
+            )
+        )
     if not q.upcoming:
         lines.append(T.QUEUE_EMPTY)
     for part in chunks(lines):
         await message.answer(part)
+
+
+@router.message(Command("why"))
+async def why_cmd(
+    message: Message, command: CommandObject, sf: SessionFactory, settings: Settings
+) -> None:
+    """``/why <id>``: the priority of a job and the rules behind it. Only answers the admin who
+    asked; nothing is ever pushed."""
+    arg = (command.args or "").strip().lstrip("#")
+    if not arg.isdigit():
+        await message.answer(T.WHY_USAGE)
+        return
+    async with sf() as s:
+        job = await s.get(Job, int(arg))
+    if job is None:
+        await message.answer(T.WHY_NOT_FOUND.format(id=arg))
+        return
+    fresh = PriorityScorer(settings).for_job(job)  # what today's word lists say
+    stored = job.priority_reason or T.WHY_NOT_SCORED
+    await message.answer(
+        T.WHY.format(
+            id=job.id,
+            title=html.escape(job.title or "—"),
+            status=job.status,
+            profession=html.escape(job.profession or "—"),
+            category=html.escape(job.category or "—"),
+            salary=html.escape(job.salary_text or "—"),
+            stored=html.escape(stored),
+            now=html.escape(fresh.reason),
+        )
+    )
 
 
 @router.message(Command("failed"))

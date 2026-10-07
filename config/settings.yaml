@@ -142,6 +142,156 @@ formatter:
   max_feature_tags: 2                # #masofaviy #tajribasiz ... ko'pi bilan nechta
   max_contacts: 3                    # har turdagi aloqadan (telefon, @username) ko'pi bilan nechta
 
+# --- ⭐ E'lon ustuvorligi: qaysi e'lon kanalga va qidiruvda birinchi chiqadi (processing/priority.py) ---
+# 1-daraja = tepada (ofis / mutaxassis kasblari, aniq yuqori maosh), 2 = oddiy, 3 = pastda (oddiy ishchi
+# ishlari). Ball = eng kuchli "yuqori" qoida + eng yomon "past" qoida + maosh. Sabab: botda admin /why <id>.
+# Ro'yxatlarni o'zgartirgach worker'ni qayta yoqing — navbatdagilar o'zi qayta baholanadi.
+# So'zlar sarlavhadan qidiriladi: lotin, kirill, ruscha, inglizcha yozilishi farq qilmaydi,
+# oxiriga qo'shimcha kelsa ham topiladi ("ishchi" -> "ishchilar").
+priority:
+  enabled: true
+  tier1_at: 2                        # ball shundan yuqori yoki teng -> 1-daraja
+  tier3_at: -2                       # ball shundan past yoki teng -> 3-daraja
+  high_salary_uzs: 8000000           # oyiga so'm: butun oraliq shundan yuqori bo'lsa "aniq yuqori maosh" (USD/EUR/RUB so'mga o'giriladi)
+  low_salary_uzs: 2500000            # oyiga so'm: butun oraliq shundan past bo'lsa ball biroz kamayadi
+  points:
+    high_profession: 3               # high_professions dagi kasb
+    high_keyword: 2                  # sarlavhada high_keywords dagi so'z
+    high_category: 1                 # high_categories dagi soha
+    high_salary: 3
+    low_profession: -3               # low_professions dagi kasb
+    low_keyword: -3                  # sarlavhada low_keywords dagi so'z
+    mild_low: -1                     # mild_low_professions
+    low_salary: -1
+  # --- navbat
+  within_tier: newest                # bir darajada: newest = eng yangisi birinchi, oldest = eng kutgani birinchi
+  tier3_max_per_day: 40              # 3-daraja kuniga ko'pi bilan shuncha post (0 = cheklov yo'q). Yaxshi e'lonlarga ta'sir qilmaydi
+  tier1_max_age_hours: 48            # 1-daraja e'lon manbada shuncha soatdan keyin eskirgan hisoblanadi (oddiy: publisher.max_age_hours)
+  tier3_max_age_hours: 12            # 3-daraja — shuncha soatdan keyin (navbat uzun bo'lsa eng arzonlari birinchi tushib qoladi)
+  # config/categories.yaml dagi kasb kalitlari:
+  high_professions: [buxgalter, moliyachi, auditor, dasturchi, tester, devops, data, it_menejer,
+                     dizayner, smm, marketolog, targetolog, pr, hr, menejer, sotuv_menejeri, yurist,
+                     oqituvchi, shifokor, stomatolog, tibbiy_vakil, logist]
+  high_categories: [it, moliya, marketing, dizayn_media, ofis, talim]
+  low_professions: [ishchi, yuk_tashuvchi, kuryer, idish_yuvuvchi, tozalik, operator, qadoqlovchi,
+                    sex_ishchisi, promouter, qoriqchi]
+  mild_low_professions: [sotuvchi, kassir, ofitsiant, savdo_agenti]
+  high_keywords:
+    - buxgalter
+    - бухгалтер
+    - accountant
+    - moliyachi
+    - iqtisodchi
+    - экономист
+    - auditor
+    - аудитор
+    - menejer
+    - menedjer
+    - менеджер
+    - manager
+    - direktor
+    - директор
+    - director
+    - rahbar
+    - dasturchi
+    - programmist
+    - программист
+    - разработчик
+    - developer
+    - software
+    - engineer
+    - muhandis
+    - инженер
+    - analitik
+    - tahlilchi
+    - аналитик
+    - analyst
+    - data scientist
+    - dizayner
+    - дизайнер
+    - designer
+    - marketolog
+    - маркетолог
+    - marketing
+    - smm
+    - targetolog
+    - таргетолог
+    - kopirayter
+    - copywriter
+    - yurist
+    - юрист
+    - lawyer
+    - advokat
+    - адвокат
+    - hr
+    - rekruter
+    - рекрутер
+    - recruiter
+    - o'qituvchi
+    - oqituvchi
+    - ўқитувчи
+    - учитель
+    - преподаватель
+    - teacher
+    - tarjimon
+    - переводчик
+    - translator
+    - shifokor
+    - vrach
+    - врач
+    - doctor
+    - stomatolog
+    - стоматолог
+  low_keywords:
+    - ishchi
+    - ishchilar
+    - ишчи
+    - рабочий
+    - worker
+    - kuryer
+    - kurer
+    - курьер
+    - courier
+    - delivery
+    - yetkazib berish
+    - yuk tashuvchi
+    - yukchi
+    - юк ташувчи
+    - грузчик
+    - loader
+    - call operator
+    - call center
+    - call-markaz
+    - колл-центр
+    - оператор колл
+    - operator
+    - оператор
+    - sotuvchi-kassir
+    - sotuvchi kassir
+    - продавец-кассир
+    - продавец кассир
+    - farrosh
+    - farosh
+    - фаррош
+    - tozalovchi
+    - uborshitsa
+    - уборщица
+    - уборщик
+    - cleaner
+    - клинер
+    - idish yuvuvchi
+    - посудомойщик
+    - qorovul
+    - сторож
+    - yordamchi
+    - помощник повара
+    - helper
+    - promouter
+    - promoter
+    - промоутер
+    - raznoschik
+    - разнорабочий
+
 # --- Post rasmlari (processing/images.py, docs/IMAGES.md) ----------------
 images:
   root: "assets/images"              # <kategoriya>/<kasb>/ papkalari
@@ -165,6 +315,7 @@ posting:
   max_title: 100                     # lavozim uzunligi (belgi)
   max_short_field: 150               # kompaniya, maosh, manzil, ish vaqti
   max_requirements: 600              # talablar / izoh
+  max_description: 700               # loyiha tavsifi (belgi)
   duration_options: [3, 7, 14, 30]   # "E'lon necha kun faol tursin?" tugmalari (kun); hisob kanalga chiqqan paytdan
 
 # --- 🔍 Ish qidirish (services/search.py) ---------------------------------

@@ -37,6 +37,7 @@ def harness(tmp_path: Path, session_factory: SF) -> BotHarness:
 
 async def walk_to_duration(h: BotHarness) -> None:
     await h.send(message_update(T.MENU_POST, uid=USER))
+    await h.send(callback_update("pj:kind:job", uid=USER))
     await h.send(callback_update("pj:cat:sotuv", uid=USER))
     await h.send(message_update("Sotuvchi", uid=USER))
     await h.send(message_update(T.BTN_SKIP, uid=USER))

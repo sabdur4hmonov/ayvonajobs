@@ -13,7 +13,7 @@ from aiogram.types import (
 )
 
 from ayvona.bot import texts as T
-from ayvona.bot.callbacks import FavPageCb, JobCb
+from ayvona.bot.callbacks import FavPageCb, JobCb, ProjPageCb
 from ayvona.db.models import Job
 
 
@@ -21,8 +21,9 @@ def main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=T.MENU_POST), KeyboardButton(text=T.MENU_SEARCH)],
-            [KeyboardButton(text=T.MENU_FAVORITES), KeyboardButton(text=T.MENU_ALERTS)],
-            [KeyboardButton(text=T.MENU_MY_JOBS), KeyboardButton(text=T.MENU_HELP)],
+            [KeyboardButton(text=T.MENU_PROJECTS), KeyboardButton(text=T.MENU_FAVORITES)],
+            [KeyboardButton(text=T.MENU_ALERTS), KeyboardButton(text=T.MENU_MY_JOBS)],
+            [KeyboardButton(text=T.MENU_HELP)],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -102,3 +103,7 @@ def list_keyboard(
 
 def fav_page(page: int) -> str:
     return FavPageCb(page=page).pack()
+
+
+def proj_page(page: int) -> str:
+    return ProjPageCb(page=page).pack()

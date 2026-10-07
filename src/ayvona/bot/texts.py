@@ -28,6 +28,8 @@ HELP_PUBLIC = (
     "📢 <b>E'lon joylash</b> — bosqichma-bosqich forma. "
     "Aloqa (telefon yoki @username) majburiy. E'lon tekshirilgach kanalga chiqadi.\n"
     "🔍 <b>Ish qidirish</b> — kategoriya → kasb → hudud → maosh, yoki so'z bilan qidirish.\n"
+    "🧩 <b>Loyihalar</b> — bir martalik pullik ishlar (bot, sayt, dizayn, tarjima ...). "
+    "O'zingizniki: «📢 E'lon joylash» → «🧩 Loyiha».\n"
     "⭐ <b>Saqlanganlar</b> — kanal postidagi yoki qidiruvdagi «⭐ Saqlash» tugmasi bilan.\n"
     "🔔 <b>Obunalar</b> — «dasturchi, Toshkent, 5 mln+» kabi obuna; "
     "mos e'lon chiqsa xabar keladi.\n\n"
@@ -96,6 +98,42 @@ POST_ASK_DURATION = (
 )
 BTN_DAYS = "{n} kun"
 POST_PREVIEW_DAYS = "⏳ Faol muddat: <b>{n} kun</b> (kanalga chiqqan paytdan)"
+
+# --- 🧩 Loyiha: bir martalik pullik ish (the form asks the type first)
+POST_ASK_KIND = (
+    "<b>Nimani e'lon qilmoqchisiz?</b> 👇\n"
+    "💼 <b>Ish</b> — ish o'rni (oylik maosh bilan)\n"
+    "🧩 <b>Loyiha</b> — bir martalik pullik ish (bot, sayt, dizayn, tarjima ...)"
+)
+BTN_KIND_JOB = "💼 Ish"
+BTN_KIND_PROJECT = "🧩 Loyiha"
+POST_ASK_PROJECT_TITLE = (
+    "Loyiha nomi? (masalan: <i>Telegram bot yozish</i>, <i>Logotip dizayni</i>)"
+)
+POST_ASK_DESCRIPTION = "Loyiha tavsifi: nima qilish kerak, qanday natija kutiladi? (qisqa va aniq)"
+POST_ASK_BUDGET = (
+    "Byudjet — bir martalik to'lov? (masalan: <i>3 mln so'm</i>, <i>300$</i>)\nyoki «{negotiable}»."
+)
+POST_ASK_DEADLINE = (
+    "Muddat — qachongacha tayyor bo'lishi kerak? "
+    "(masalan: <i>2 hafta</i>, <i>15-noyabr</i>; ixtiyoriy)"
+)
+PROJECT_FIELDS = {
+    "title": "Nomi",
+    "description": "Tavsif",
+    "budget": "Byudjet",
+    "deadline": "Tayyor bo'lish muddati",
+    "contact": "Aloqa",
+    "duration": "Faol muddat",
+}
+MENU_PROJECTS = "🧩 Loyihalar"
+PROJECTS_HEAD = "🧩 <b>Loyihalar</b> — bir martalik pullik ishlar ({total} ta). Yangilari birinchi:"
+PROJECTS_EMPTY = (
+    "🧩 Hozircha faol loyiha yo'q.\nO'zingiznikini qo'shing: «📢 E'lon joylash» → «🧩 Loyiha»."
+)
+PROJECT_LINE = "{n}. 🧩 <b>{title}</b>\n    💰 {budget}{deadline}"
+PROJECT_LINE_DEADLINE = " · ⏳ {deadline}"
+MY_PROJECT_MARK = "🧩 "
 POST_NEED_BUTTON = "👆 Tugmalardan birini tanlang."
 POST_TOO_LONG = "✂️ Juda uzun yoki bo'sh. Ko'pi bilan {limit} belgi yozing."
 POST_TOO_SHORT = "Lavozim nomini to'liqroq yozing (kamida 3 harf)."
@@ -116,7 +154,7 @@ POST_FIELDS = {
     "schedule": "Ish vaqti",
     "requirements": "Talablar",
     "contact": "Aloqa",
-    "duration": "Muddat",
+    "duration": "Faol muddat",
 }
 POST_EXPIRED = "Forma eskirdi. «📢 E'lon joylash» ni qayta bosing."
 POST_QUEUED = (
@@ -273,7 +311,8 @@ STATS_AI = "\n🤖 AI bugun: {calls}/{limit} so'rov · /ai"
 # ------------------------------------------------------------------ admin: moderation
 MOD_HEAD = (
     "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"
-    "Muallif: {author}\nSabab: {reasons}\n⏳ Faol muddat: <b>{days}</b>\n➖➖➖➖➖➖➖➖\n"
+    "Turi: {kind}\nMuallif: {author}\nSabab: {reasons}\n⏳ Faol muddat: <b>{days}</b>\n"
+    "➖➖➖➖➖➖➖➖\n"
 )
 MOD_OK = "✅ Tasdiqlash"
 MOD_NO = "❌ Rad etish"
@@ -293,7 +332,8 @@ REMOTE = "Masofaviy"
 ADMIN_HELP = (
     "🛠 <b>Admin buyruqlari</b>\n\n"
     "📊 /stats — bugun va hafta: keldi, chiqdi, dublikat, xato, kategoriyalar\n"
-    "📬 /queue — navbat (kanalga chiqishini kutayotganlar)\n"
+    "📬 /queue — navbat (kanalga chiqishini kutayotganlar, daraja bo'yicha)\n"
+    "🔎 /why &lt;id&gt; — e'lon nega shu darajada (ustuvorlik sababi)\n"
     "❌ /failed — chiqmay qolgan e'lonlar\n"
     "🔁 /retry &lt;id | all&gt; — chiqmay qolganini qayta navbatga\n"
     "⏸ /pause — kanalga joylashni to'xtatish · ▶️ /resume — davom ettirish\n\n"
@@ -343,7 +383,17 @@ QUEUE_HEAD = (
     "Kutmoqda: {queued} · qayta urinish: {retry} · yuborilmoqda: {sending} · chiqmagan: {failed}\n"
     "Hozir chiqishga tayyor: {due}"
 )
-QUEUE_ITEM = "#{id} {title} — {when}"
+QUEUE_ITEM = "#{id} · {tier}-daraja · {title} — {when}"
+WHY_USAGE = "Ishlatish: /why &lt;e'lon raqami&gt; — masalan /why 123"
+WHY_NOT_FOUND = "#{id} raqamli e'lon topilmadi."
+WHY_NOT_SCORED = "hali baholanmagan (2-daraja deb hisoblanadi)"
+WHY = (
+    "🔎 <b>#{id}</b> — {title}\n"
+    "Holat: {status} · soha: {category} · kasb: {profession} · maosh: {salary}\n\n"
+    "⭐ <b>Saqlangan baho:</b> {stored}\n"
+    "🔄 <b>Hozirgi qoidalar bo'yicha:</b> {now}\n\n"
+    "Qoidalar: config/settings.yaml → priority:"
+)
 QUEUE_EMPTY = "Navbat bo'sh."
 QUEUE_NOW = "hozir"
 FAILED_HEAD = "❌ <b>Chiqmay qolgan e'lonlar</b> (oxirgi {n} ta):"

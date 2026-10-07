@@ -42,6 +42,7 @@ async def fill(
 ) -> None:
     """Answer every step up to the preview."""
     await h.send(message_update(T.MENU_POST, uid=uid))
+    await h.send(callback_update("pj:kind:job", uid=uid))  # the first question: job or project
     await h.send(callback_update("pj:cat:sotuv", uid=uid))
     await h.send(message_update(title, uid=uid))
     await h.send(message_update(T.BTN_SKIP, uid=uid))  # company
@@ -169,10 +170,14 @@ async def test_back_cancel_and_text_on_button_steps(harness: BotHarness) -> None
     await harness.send(message_update(T.MENU_POST, uid=USER))
     await harness.send(message_update("Savdo", uid=USER))  # typed instead of a button
     assert harness.texts()[-1] == T.POST_NEED_BUTTON
+    assert T.POST_ASK_KIND in harness.texts()  # the type comes first
+    await harness.send(callback_update("pj:kind:job", uid=USER))
     await harness.send(callback_update("pj:cat:sotuv", uid=USER))
     assert harness.texts()[-1] == f"2/9. {T.POST_ASK_TITLE}"
     await harness.send(message_update(T.BTN_BACK, uid=USER))
     assert f"1/9. {T.POST_ASK_CATEGORY}" in harness.texts()[-2:]
+    await harness.send(message_update(T.BTN_BACK, uid=USER))  # back from the first numbered step
+    assert harness.texts()[-2] == T.POST_ASK_KIND
     await harness.send(message_update(T.BTN_CANCEL, uid=USER))
     assert harness.texts()[-1] == T.CANCELLED
     await harness.send(message_update("Sotuvchi", uid=USER))  # not in the form any more

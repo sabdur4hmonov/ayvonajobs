@@ -96,7 +96,7 @@ async def period_stats(session: AsyncSession, since: datetime) -> PeriodStats:
     cats = (
         await session.execute(
             select(Job.category, func.count())
-            .where(Job.published_at >= since)
+            .where(Job.published_at >= since, Job.kind == "job")
             .group_by(Job.category)
             .order_by(func.count().desc(), Job.category)
         )
@@ -113,7 +113,9 @@ class QueueOverview:
     upcoming: list[Job]
 
 
-async def queue_overview(session: AsyncSession, now: datetime, limit: int = 10) -> QueueOverview:
+async def queue_overview(
+    session: AsyncSession, now: datetime, limit: int = 10, order_mode: str = "fifo"
+) -> QueueOverview:
     counts = await jobs_repo.count_by_status(
         session, [JobStatus.QUEUED, JobStatus.RETRY, JobStatus.SENDING, JobStatus.FAILED]
     )
@@ -131,7 +133,7 @@ async def queue_overview(session: AsyncSession, now: datetime, limit: int = 10) 
             await session.scalars(
                 select(Job)
                 .where(Job.status.in_([*jobs_repo.SENDABLE, JobStatus.SENDING]))
-                .order_by(func.coalesce(Job.next_retry_at, Job.created_at), Job.id)
+                .order_by(*jobs_repo.publish_order(order_mode))
                 .limit(limit)
             )
         ).all()

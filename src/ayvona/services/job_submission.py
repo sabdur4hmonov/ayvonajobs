@@ -27,7 +27,16 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ayvona.config import FALLBACK_CATEGORY, Settings
-from ayvona.db.models import FilterKind, FilterWord, Job, JobOrigin, JobStatus, ParseMethod, User
+from ayvona.db.models import (
+    FilterKind,
+    FilterWord,
+    Job,
+    JobKind,
+    JobOrigin,
+    JobStatus,
+    ParseMethod,
+    User,
+)
 from ayvona.processing.categorize import Categorizer
 from ayvona.processing.contacts import find_phones, find_urls, find_usernames
 from ayvona.processing.dedup import DedupIndex, make_entry
@@ -37,6 +46,8 @@ from ayvona.processing.keywords import KeywordSet
 from ayvona.processing.language import detect_language
 from ayvona.processing.normalize import fold, normalize, search_text
 from ayvona.processing.pipeline import buttons_json
+from ayvona.processing.priority import PriorityScorer
+from ayvona.processing.project_format import Budget, ProjectPost, format_project, parse_budget
 from ayvona.processing.salary import SalaryBlock, SalaryParser
 from ayvona.services.users import TRUST_ADMIN, TRUST_NEW, TRUST_TRUSTED
 from ayvona.timeutil import ensure_utc
@@ -69,6 +80,16 @@ class Draft:
     phone: str | None = None  # +998XXXXXXXXX
     username: str | None = None  # @name
     days: int | None = None  # how long the ad stays active (posting.duration_options)
+    # Loyiha (one-time paid project): kind == "project"; uses title, description, budget,
+    # deadline, phone / username and days. A normal job leaves them empty.
+    kind: str = JobKind.JOB.value
+    description: str | None = None
+    budget: str | None = None  # as typed: "3 mln so'm", "$300"; None = "Kelishiladi"
+    deadline: str | None = None  # as typed: "2 hafta", "15-noyabrgacha"
+
+    @property
+    def is_project(self) -> bool:
+        return self.kind == JobKind.PROJECT.value
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -91,6 +112,9 @@ class Draft:
             self.city,
             self.schedule,
             self.requirements,
+            self.description,
+            self.budget,
+            self.deadline,
             self.phone,
             self.username,
         ]
@@ -130,6 +154,19 @@ def username_of(tg_username: str | None) -> str | None:
 
 # --------------------------------------------------------------------------- rendering
 _TOOLS: dict[int, tuple[Settings, Formatter, SalaryParser, Categorizer]] = {}
+
+
+_SCORERS: dict[int, tuple[Settings, PriorityScorer]] = {}
+
+
+def _scorer(settings: Settings) -> PriorityScorer:
+    cached = _SCORERS.get(id(settings))
+    if cached is None or cached[0] is not settings:
+        if len(_SCORERS) > 8:
+            _SCORERS.clear()
+        cached = (settings, PriorityScorer(settings))
+        _SCORERS[id(settings)] = cached
+    return cached[1]
 
 
 def _tools(settings: Settings) -> tuple[Formatter, SalaryParser, Categorizer]:
@@ -184,10 +221,27 @@ def extraction(draft: Draft, settings: Settings) -> Extraction:
     )
 
 
-def render(draft: Draft, settings: Settings) -> tuple[FormattedPost, Extraction]:
-    """The caption exactly as it will be in the channel (full template, Uzbek Latin)."""
+def render(
+    draft: Draft, settings: Settings
+) -> tuple[FormattedPost | ProjectPost, Extraction | None]:
+    """The caption exactly as it will be in the channel (Uzbek Latin). A job is rendered by the
+    aggregator's Formatter; a project by ``project_format`` (``Extraction`` is ``None`` then)."""
+    if draft.is_project:
+        return render_project(draft, settings), None
     ex = extraction(draft, settings)
     return _tools(settings)[0].format(ex), ex
+
+
+def render_project(draft: Draft, settings: Settings) -> ProjectPost:
+    return format_project(
+        title=draft.title,
+        description=draft.description,
+        budget=parse_budget(draft.budget, settings),
+        deadline=draft.deadline,
+        phone=draft.phone,
+        username=draft.username,
+        settings=settings,
+    )
 
 
 # --------------------------------------------------------------------------- checks
@@ -381,43 +435,76 @@ async def submit(
     )
     reasons = _review_reasons(user, check, accepted or 0, settings)
     out, ex = render(draft, settings)
-    job = Job(
+    days = draft.days if draft.days in settings.app.posting.duration_options else None
+    if isinstance(out, ProjectPost):
+        job = _project_row(draft, out, parse_budget(draft.budget, settings), days, settings)
+    else:
+        assert ex is not None
+        job = Job(
+            origin=JobOrigin.USER,
+            title=draft.title[:255],
+            company=draft.company,
+            category=ex.category,
+            profession=ex.profession,
+            salary_min=ex.salary_min,
+            salary_max=ex.salary_max,
+            currency=ex.currency,
+            salary_period=ex.salary_period,
+            salary_text=(ex.salary_text or None) and ex.salary_text[:255],
+            region=ex.region,
+            city=(draft.city or None) and draft.city[:128],
+            is_remote=ex.is_remote,
+            schedule=draft.schedule,
+            requirements=draft.requirements,
+            description=draft.text(),
+            contact_phone=draft.phone,
+            contact_username=draft.username,
+            parse_method=ParseMethod.FORM,
+            confidence=1.0,
+            active_days=days,
+            **_scorer(settings).for_extraction(ex).fields(),
+            formatted_text=out.html,
+            search_text=search_text(draft.title, draft.company, draft.city, draft.text()),
+        )
+    job.author_id = user.tg_id
+    job.status = JobStatus.PENDING_REVIEW if reasons else JobStatus.QUEUED
+    job.attempts = 0
+    job.next_retry_at = now
+    job.created_at = now
+    job.last_error = "; ".join(reasons) or None
+    session.add(job)
+    await session.flush()
+    job.buttons = out.buttons(job.id) if isinstance(out, ProjectPost) else buttons_json(out, job.id)
+    await session.flush()
+    return SubmitResult(
+        Outcome.REVIEW if reasons else Outcome.QUEUED, job.id, review_reasons=tuple(reasons)
+    )
+
+
+def _project_row(
+    draft: Draft, out: ProjectPost, budget: Budget, days: int | None, settings: Settings
+) -> Job:
+    """The ``jobs`` row of a project: not ranked (tier 2), kept out of the job search."""
+    return Job(
         origin=JobOrigin.USER,
-        author_id=user.tg_id,
+        kind=JobKind.PROJECT.value,
         title=draft.title[:255],
-        company=draft.company,
-        category=ex.category,
-        profession=ex.profession,
-        salary_min=ex.salary_min,
-        salary_max=ex.salary_max,
-        currency=ex.currency,
-        salary_period=ex.salary_period,
-        salary_text=(ex.salary_text or None) and ex.salary_text[:255],
-        region=ex.region,
-        city=(draft.city or None) and draft.city[:128],
-        is_remote=ex.is_remote,
-        schedule=draft.schedule,
-        requirements=draft.requirements,
-        description=draft.text(),
+        category=FALLBACK_CATEGORY,
+        description=draft.description,
+        salary_text=budget.text[:255],  # the budget as the post shows it
+        budget_amount=budget.amount,
+        budget_currency=budget.currency,
+        deadline_text=(draft.deadline or None) and draft.deadline[:255],
         contact_phone=draft.phone,
         contact_username=draft.username,
         parse_method=ParseMethod.FORM,
         confidence=1.0,
-        active_days=draft.days if draft.days in settings.app.posting.duration_options else None,
+        active_days=days,
+        priority_tier=2,
+        priority_score=0,
+        priority_reason="loyiha: reyting qo'llanmaydi (eng yangisi birinchi)",
         formatted_text=out.html,
-        search_text=search_text(draft.title, draft.company, draft.city, draft.text()),
-        status=JobStatus.PENDING_REVIEW if reasons else JobStatus.QUEUED,
-        attempts=0,
-        next_retry_at=now,
-        created_at=now,
-        last_error="; ".join(reasons) or None,
-    )
-    session.add(job)
-    await session.flush()
-    job.buttons = buttons_json(out, job.id)
-    await session.flush()
-    return SubmitResult(
-        Outcome.REVIEW if reasons else Outcome.QUEUED, job.id, review_reasons=tuple(reasons)
+        search_text=search_text(draft.title, draft.description, draft.text()),
     )
 
 

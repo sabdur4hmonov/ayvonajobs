@@ -234,22 +234,47 @@ async def skip_old_jobs(
     """Waiting jobs whose source post is older than ``publisher.max_age_hours`` ->
     ``skipped_old`` (one transaction). Returns their ids; logs them. Rule off (0) -> nothing."""
     cfg = settings.app.publisher
-    cutoff = cfg.too_old_before(now or utcnow())
-    if cutoff is None:
+    now = now or utcnow()
+    if cfg.too_old_before(now) is None:
         return []
-    async with sf() as s, s.begin():
-        ids = await jobs_repo.skip_old(
-            s, cutoff, too_old_reason(cfg.max_age_hours), statuses=statuses, job_ids=job_ids
-        )
-    if ids:
-        shown = ", ".join(f"#{i}" for i in ids[:20]) + (" ..." if len(ids) > 20 else "")
-        logger.info(
-            "{} ta e'lon kanalga chiqmaydi — manbada {:g} soatdan oldin chiqqan (skipped_old): {}",
-            len(ids),
-            cfg.max_age_hours,
-            shown,
-        )
-    return ids
+    out: list[int] = []
+    for tier, hours in tier_age_limits(settings).items():
+        async with sf() as s, s.begin():
+            ids = await jobs_repo.skip_old(
+                s,
+                now - timedelta(hours=hours),
+                too_old_reason(hours),
+                statuses=statuses,
+                job_ids=job_ids,
+                tier=tier,
+            )
+        if ids:
+            shown = ", ".join(f"#{i}" for i in ids[:20]) + (" ..." if len(ids) > 20 else "")
+            logger.info(
+                "{} ta e'lon kanalga chiqmaydi — manbada {:g} soatdan oldin chiqqan "
+                "({}-daraja, skipped_old): {}",
+                len(ids),
+                hours,
+                tier,
+                shown,
+            )
+        out.extend(ids)
+    return sorted(out)
+
+
+def tier_age_limits(settings: Settings) -> dict[int, float]:
+    """Hours after which a waiting job of each tier is too old: ``publisher.max_age_hours`` for
+    the normal tier, longer for the top tier and shorter for the bottom one — a long queue
+    costs the cheapest jobs first and never the best ones."""
+    base = settings.app.publisher.max_age_hours
+    pri = settings.app.priority
+    if not pri.enabled or base <= 0:
+        return {1: base, 2: base, 3: base}
+    return {
+        1: max(pri.tier1_max_age_hours or base, base),
+        2: base,
+        3: min(pri.tier3_max_age_hours or base, base),
+    }
 
 
 CONFIG_HELP = (
@@ -294,7 +319,14 @@ class Publisher:
         async with self.sf() as s, s.begin():
             if await kv_repo.get_bool(s, kv_repo.PUBLISHER_PAUSED):
                 return PublishResult(Outcome.PAUSED), None, None
-            job = await jobs_repo.next_due(s, now)
+            pri = self.settings.app.priority
+            mode, allow_tier3 = "fifo", True  # priority off: the order before the ranking
+            if pri.enabled:
+                mode = pri.within_tier
+                if pri.tier3_max_per_day:  # the bottom tier's daily cap
+                    done = await jobs_repo.count_published_tier(s, 3, now - timedelta(hours=24))
+                    allow_tier3 = done < pri.tier3_max_per_day
+            job = await jobs_repo.next_due(s, now, mode=mode, allow_tier3=allow_tier3)
             if job is None:
                 return PublishResult(Outcome.IDLE), None, None
             if not await jobs_repo.claim(s, job):

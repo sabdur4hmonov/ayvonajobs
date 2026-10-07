@@ -3,7 +3,8 @@
 Deep links (channel post buttons and shares — keep the format):
 * ``?start=save_<id>``  — save the job, show it;
 * ``?start=job_<id>``   — show the job;
-* ``?start=search``     — open the search.
+* ``?start=search``     — open the search;
+* ``?start=projects``   — open the 🧩 Loyihalar list.
 Everything else about jobs / favorites lives in ``services/`` (the website reuses it).
 """
 
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from ayvona.bot import texts as T
 from ayvona.bot.callbacks import JobCb
 from ayvona.bot.cards import full_card
+from ayvona.bot.handlers.projects import open_projects
 from ayvona.bot.handlers.search import open_search
 from ayvona.bot.keyboards import job_keyboard, main_menu
 from ayvona.config import Settings
@@ -86,6 +88,10 @@ async def start_cmd(
         return
     if arg == "search":
         await open_search(message, state, sf=sf, settings=settings, db_user=db_user)
+        return
+    if arg == "projects":
+        await message.answer(T.MENU_PROJECTS, reply_markup=main_menu())
+        await open_projects(message, sf)
         return
     name = html.escape(message.from_user.first_name if message.from_user else "")
     await message.answer(

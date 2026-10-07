@@ -13,7 +13,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ayvona.config import Settings
-from ayvona.db.models import Job, JobOrigin, JobStatus, RawPost, Source
+from ayvona.db.models import Job, JobKind, JobOrigin, JobStatus, RawPost, Source
 from ayvona.processing.normalize import to_latin
 
 VISIBLE = (JobStatus.PUBLISHED, JobStatus.CLOSED, JobStatus.EXPIRED)
@@ -53,6 +53,7 @@ async def latest_open(session: AsyncSession, now: datetime, limit: int = 20) -> 
     rows = await session.scalars(
         select(Job)
         .where(
+            Job.kind == JobKind.JOB.value,  # the website lists jobs only (projects: bot only)
             Job.status == JobStatus.PUBLISHED,
             or_(Job.expires_at.is_(None), Job.expires_at > now),
         )

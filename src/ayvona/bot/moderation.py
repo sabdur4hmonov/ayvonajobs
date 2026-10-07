@@ -16,7 +16,7 @@ from ayvona.bot import texts as T
 from ayvona.bot.callbacks import ModCb
 from ayvona.botapi import parse_chat_id
 from ayvona.config import Settings
-from ayvona.db.models import Job, JobStatus, User
+from ayvona.db.models import Job, JobKind, JobStatus, User
 from ayvona.db.repositories import kv_repo
 from ayvona.publisher.outbox import ChannelSender, Outcome, Publisher
 from ayvona.services import job_submission as js
@@ -86,6 +86,7 @@ async def notify_review(
         author=author_label(author, author.tg_id),
         reasons=html.escape("; ".join(reasons) or "—"),
         days=duration_label(job, settings),
+        kind=T.BTN_KIND_PROJECT if job.kind == JobKind.PROJECT.value else T.BTN_KIND_JOB,
     ) + (job.formatted_text or "")
     sent = 0
     for chat in review_targets(settings):

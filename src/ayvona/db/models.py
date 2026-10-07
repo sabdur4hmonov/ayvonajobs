@@ -105,6 +105,13 @@ class JobOrigin(StrEnum):
     USER = "user"
 
 
+class JobKind(StrEnum):
+    """What an ad is: a salaried job, or a one-time paid project (Loyihalar)."""
+
+    JOB = "job"
+    PROJECT = "project"
+
+
 class JobStatus(StrEnum):
     PENDING_REVIEW = "pending_review"
     QUEUED = "queued"
@@ -215,6 +222,8 @@ class Job(Base):
     __table_args__ = (
         Index("ix_jobs_status_next_retry_at", "status", "next_retry_at"),
         Index("ix_jobs_category_region_published_at", "category", "region", "published_at"),
+        Index("ix_jobs_status_priority_tier", "status", "priority_tier"),
+        Index("ix_jobs_kind_status", "kind", "status"),
         # Hard rule 7: a user-submitted job must have a contact.
         CheckConstraint(
             "origin != 'user' OR contact_phone IS NOT NULL OR contact_username IS NOT NULL",
@@ -283,6 +292,21 @@ class Job(Base):
     # user ads: how many days the poster wants the ad to stay active (asked in the form); the
     # clock starts at publication (``expires_at``). None = not asked -> expiry.*_days default.
     active_days: Mapped[int | None] = mapped_column(Integer)
+    # Ranking (processing/priority.py): 1 = top, 2 = normal, 3 = bottom; None = not scored yet
+    # (read as 2). ``priority_reason`` is the one-line "why" shown by the admin's /why.
+    priority_tier: Mapped[int | None] = mapped_column(Integer)
+    priority_score: Mapped[int | None] = mapped_column(Integer)
+    priority_reason: Mapped[str | None] = mapped_column(String(512))
+    # Loyihalar: ``kind="project"`` is a one-time paid piece of work (a bot, a site, a design, a
+    # translation ...). It uses ``title``, ``description``, the contact columns and these three;
+    # ``salary_text`` keeps the budget as the user typed it. Projects are not ranked (tier 2) and
+    # never appear in the job search / alerts / website lists.
+    kind: Mapped[str] = mapped_column(
+        String(16), default=JobKind.JOB.value, server_default=JobKind.JOB.value
+    )
+    budget_amount: Mapped[int | None] = mapped_column(BigInteger)
+    budget_currency: Mapped[str | None] = mapped_column(String(8))
+    deadline_text: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

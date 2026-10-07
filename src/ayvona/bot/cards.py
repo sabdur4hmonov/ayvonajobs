@@ -62,6 +62,22 @@ def short_line(job: Job, settings: Settings, n: int, now: datetime) -> str:
     return f"{n}. <b>{title}</b>{company}{closed}\n    " + " · ".join(details)
 
 
+def project_line(job: Job, n: int) -> str:
+    """``3. 🧩 <b>Telegram bot yozish</b>
+    💰 3 000 000 so'm · ⏳ 2 hafta``"""
+    deadline = (
+        T.PROJECT_LINE_DEADLINE.format(deadline=html.escape((job.deadline_text or "")[:40]))
+        if job.deadline_text
+        else ""
+    )
+    return T.PROJECT_LINE.format(
+        n=n,
+        title=html.escape((job.title or "—")[:MAX_TITLE]),
+        budget=html.escape((job.salary_text or T.SALARY_NEGOTIABLE)[:40]),
+        deadline=deadline,
+    )
+
+
 def profession_title(settings: Settings, category: str | None, profession: str | None) -> str:
     if not profession:
         return ""

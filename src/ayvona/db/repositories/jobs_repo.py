@@ -16,25 +16,69 @@ from typing import Any
 from sqlalchemy import ColumnElement, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ayvona.db.models import Job, JobStatus, RawPost
+from ayvona.db.models import Job, JobOrigin, JobStatus, RawPost
 
 MAX_ERROR_LEN = 2000
 SENDABLE = (JobStatus.QUEUED, JobStatus.RETRY)
+NORMAL_TIER = 2
+
+
+def tier_of_job() -> ColumnElement[int]:
+    """``jobs.priority_tier`` with "not scored yet" (NULL) read as the normal tier 2."""
+    return func.coalesce(Job.priority_tier, NORMAL_TIER)
+
+
+def publish_order(mode: str = "newest") -> list[ColumnElement[Any]]:
+    """ORDER BY of the publishing queue (and of the admin's /queue).
+
+    * ``newest`` / ``oldest`` — tier first (1 = top ... 3 = bottom), then within a tier the
+      newest job first, or the one waiting longest;
+    * ``fifo`` — the order before the ranking existed (priority disabled): by due time.
+    """
+    if mode == "fifo":
+        return [func.coalesce(Job.next_retry_at, Job.created_at), Job.id]
+    if mode == "oldest":
+        return [tier_of_job(), Job.created_at, Job.id]
+    return [tier_of_job(), Job.created_at.desc(), Job.id.desc()]
 
 
 def _due(now: datetime) -> ColumnElement[bool]:
     return Job.status.in_(SENDABLE) & or_(Job.next_retry_at.is_(None), Job.next_retry_at <= now)
 
 
-async def next_due(session: AsyncSession, now: datetime) -> Job | None:
-    """The job to publish next: due (hold window / backoff over), earliest first."""
-    stmt = (
-        select(Job)
-        .where(_due(now))
-        .order_by(func.coalesce(Job.next_retry_at, Job.created_at), Job.id)
-        .limit(1)
-    )
+async def next_due(
+    session: AsyncSession,
+    now: datetime,
+    *,
+    mode: str = "fifo",
+    allow_tier3: bool = True,
+) -> Job | None:
+    """The job to publish next: due (hold window / backoff over), best tier first (``mode``,
+    see :func:`publish_order`). ``allow_tier3=False``: the bottom tier's daily cap is used up,
+    its jobs wait."""
+    stmt = select(Job).where(_due(now))
+    if not allow_tier3:
+        stmt = stmt.where(tier_of_job() < 3)
+    stmt = stmt.order_by(*publish_order(mode)).limit(1)
     return (await session.scalars(stmt)).first()
+
+
+async def count_published_tier(session: AsyncSession, tier: int, since: datetime) -> int:
+    """Aggregator jobs of ``tier`` that reached the channel since ``since`` (the daily cap).
+    User ads are not counted: their publication is a manual decision."""
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Job)
+            .where(
+                Job.origin == JobOrigin.AGGREGATOR,
+                Job.published_at >= since,
+                Job.status.in_((JobStatus.PUBLISHED, JobStatus.EXPIRED, JobStatus.CLOSED)),
+                tier_of_job() == tier,
+            )
+        )
+        or 0
+    )
 
 
 async def last_published_at(session: AsyncSession) -> datetime | None:
@@ -141,10 +185,12 @@ async def skip_old(
     *,
     statuses: Sequence[JobStatus] = SENDABLE,
     job_ids: Sequence[int] | None = None,
+    tier: int | None = None,
 ) -> list[int]:
     """Jobs in ``statuses`` whose source post appeared before ``posted_before``
     (``raw_posts.posted_at``, else ``fetched_at``) -> ``skipped_old``: never published, kept.
-    Jobs without a raw post (user submissions) are not touched. ``job_ids=None`` = any job.
+    Jobs without a raw post (user submissions) are not touched. ``job_ids=None`` = any job;
+    ``tier`` limits it to one priority tier (each tier has its own age limit).
     Returns the ids. Does not commit."""
     posted = (
         select(func.coalesce(RawPost.posted_at, RawPost.fetched_at))
@@ -154,6 +200,8 @@ async def skip_old(
     stmt = select(Job.id).where(
         Job.status.in_(statuses), Job.raw_post_id.is_not(None), posted < posted_before
     )
+    if tier is not None:
+        stmt = stmt.where(tier_of_job() == tier)
     if job_ids is not None:
         stmt = stmt.where(Job.id.in_(list(job_ids)))
     ids = list((await session.scalars(stmt.order_by(Job.id))).all())

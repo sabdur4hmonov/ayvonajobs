@@ -1,7 +1,8 @@
 """🔍 Job search — shared by the bot and the future website.
 
 * filters: category → profession → region (or "Masofaviy") → minimum monthly salary, or a keyword;
-* only open jobs (``published`` and not past ``expires_at``), newest first;
+* only open jobs (``published`` and not past ``expires_at``), best priority tier first, then
+  newest first;
 * keyword: SQLite FTS5 over ``jobs.search_text`` — both sides folded (Cyrillic → Latin,
   lowercase, no apostrophes), each word as a prefix ("sotuv" finds "sotuvchi");
 * salary: monthly salaries only, USD compared in so'm with ``kv_store.usd_rate``; jobs without a
@@ -20,8 +21,9 @@ from typing import Any
 from sqlalchemy import and_, case, column, func, or_, select, table, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ayvona.db.models import Job, JobStatus, SearchLog
+from ayvona.db.models import Job, JobKind, JobStatus, SearchLog
 from ayvona.db.repositories import kv_repo
+from ayvona.db.repositories.jobs_repo import tier_of_job
 from ayvona.processing.normalize import search_text
 from ayvona.processing.salary import USD, UZS
 
@@ -61,7 +63,11 @@ def fts_query(keyword: str | None) -> str | None:
 
 
 def _open_jobs(now: datetime) -> list[Any]:
-    return [Job.status == JobStatus.PUBLISHED, or_(Job.expires_at.is_(None), Job.expires_at > now)]
+    return [
+        Job.kind == JobKind.JOB.value,  # one-time projects have their own list (Loyihalar)
+        Job.status == JobStatus.PUBLISHED,
+        or_(Job.expires_at.is_(None), Job.expires_at > now),
+    ]
 
 
 def conditions(f: SearchFilters, now: datetime, usd_rate: float) -> list[Any] | None:
@@ -99,6 +105,8 @@ def conditions(f: SearchFilters, now: datetime, usd_rate: float) -> list[Any] | 
 
 def job_matches(f: SearchFilters, job: Job, now: datetime, usd_rate: float) -> bool:
     """:func:`conditions` for one job in Python (alerts check each newly published job)."""
+    if job.kind != JobKind.JOB.value:
+        return False
     if job.status != JobStatus.PUBLISHED or (job.expires_at is not None and job.expires_at <= now):
         return False
     if f.category and job.category != f.category:
@@ -133,7 +141,8 @@ async def search(
     offset: int = 0,
     limit: int = 5,
 ) -> tuple[list[Job], int]:
-    """Matching open jobs (newest first) and how many there are in total."""
+    """Matching open jobs and how many there are in total: best priority tier first (see
+    processing/priority.py), newest first within a tier."""
     conds = conditions(f, now, usd_rate)
     if conds is None:
         return [], 0
@@ -143,7 +152,7 @@ async def search(
     rows = await session.scalars(
         select(Job)
         .where(*conds)
-        .order_by(Job.published_at.desc(), Job.id.desc())
+        .order_by(tier_of_job(), Job.published_at.desc(), Job.id.desc())
         .offset(offset)
         .limit(limit)
     )

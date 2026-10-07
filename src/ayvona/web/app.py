@@ -191,7 +191,7 @@ def create_app(settings: Settings, sf: async_sessionmaker[AsyncSession]) -> Fast
         now = utcnow()
         async with sf() as s:
             job = await jobs_public.get_visible_job(s, int(m.group(1)))
-            if job is None:
+            if job is None or job.kind != "job":  # projects are shown in the bot only
                 raise HTTPException(404)
             markup_ok = await jobs_public.allows_job_posting_markup(s, job)
         canonical = job_url(job)

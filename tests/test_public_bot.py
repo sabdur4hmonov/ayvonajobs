@@ -60,6 +60,7 @@ async def test_start_registers_user_and_shows_the_menu(
     assert buttons == [
         T.MENU_POST,
         T.MENU_SEARCH,
+        T.MENU_PROJECTS,
         T.MENU_FAVORITES,
         T.MENU_ALERTS,
         T.MENU_MY_JOBS,

@@ -37,7 +37,8 @@ def list_view(jobs: list[Job], settings: Settings) -> tuple[str, InlineKeyboardM
         state = T.MY_STATES.get(str(job.status), str(job.status)).format(
             until=_until(job, settings)
         )
-        lines.append(T.MY_ITEM.format(n=n, title=html.escape(job.title or "—"), state=state))
+        mark = T.MY_PROJECT_MARK if job.kind == "project" else ""
+        lines.append(T.MY_ITEM.format(n=n, title=mark + html.escape(job.title or "—"), state=state))
         row: list[InlineKeyboardButton] = []
         if job.status in my_jobs.CLOSABLE:
             row.append(

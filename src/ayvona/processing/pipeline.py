@@ -52,6 +52,7 @@ from ayvona.processing.dedup import WINDOW, DedupEntry, DedupIndex, DedupMatch, 
 from ayvona.processing.extract import Extraction, Extractor
 from ayvona.processing.formatter import FormattedPost, Formatter, telegram_post_url
 from ayvona.processing.normalize import search_text
+from ayvona.processing.priority import PriorityScorer
 from ayvona.processing.web import apply_web, web_data
 from ayvona.services.notifier import Notifier
 from ayvona.timeutil import ensure_utc, to_local, utcnow
@@ -248,6 +249,7 @@ class Pipeline:
         self.extractor = Extractor(settings)
         self.cleaner = Cleaner(settings.source_rules)
         self.formatter = Formatter(settings)
+        self.priority = PriorityScorer(settings)
         self.index = DedupIndex()
         self._index_loaded_at: datetime | None = None
         self._config_own: set[str] = set(settings.source_rules.defaults.extra_own_usernames)
@@ -461,7 +463,10 @@ class Pipeline:
             own_usernames=post.input.own_usernames,
         )
         out = self.formatter.format(ex, cleaned, source_url=post.url, source_name=post.source_name)
-        return out, job_fields(ex, cleaned.text, out)
+        # ranking columns: the same call serves new jobs, take-overs and the start-up re-render
+        # of the queue, so editing the word lists in settings.yaml re-scores the waiting jobs
+        fields = {**job_fields(ex, cleaned.text, out), **self.priority.for_extraction(ex).fields()}
+        return out, fields
 
     async def post_of_job(self, s: AsyncSession, job: Job) -> LogicalPost | None:
         """The logical post a job was made from (all album parts), or ``None`` (user job /
@@ -519,6 +524,7 @@ class Pipeline:
         s.add(job)
         await s.flush()
         job.buttons = buttons_json(out, job.id)
+        logger.info("job #{}: {}", job.id, fields.get("priority_reason"))
         await self._set_rows(s, post, RawPostStatus.DONE, job_id=job.id)
         return RawPostStatus.DONE
 

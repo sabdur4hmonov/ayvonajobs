@@ -72,6 +72,7 @@ from ayvona.services.currency import run_usd_rate
 from ayvona.services.expiry import ExpiryService
 from ayvona.services.heartbeat import Monitor
 from ayvona.services.notifier import Notifier
+from ayvona.services.priority_backfill import backfill_priority_step
 from ayvona.services.reformat import ReformatReport, reformat_queued
 from ayvona.services.search import fill_search_text
 from ayvona.timeutil import utcnow
@@ -234,6 +235,7 @@ async def run_worker(
     await skip_old_queue(settings, sf)
     await reformat_queue(settings, sf, ai)
     await backfill_search_text(sf)
+    await backfill_priority_step(settings, sf)
 
     cfg = settings.app.worker
     if once:
