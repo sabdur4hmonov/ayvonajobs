@@ -165,6 +165,7 @@ posting:
   max_title: 100                     # lavozim uzunligi (belgi)
   max_short_field: 150               # kompaniya, maosh, manzil, ish vaqti
   max_requirements: 600              # talablar / izoh
+  duration_options: [3, 7, 14, 30]   # "E'lon necha kun faol tursin?" tugmalari (kun); hisob kanalga chiqqan paytdan
 
 # --- 🔍 Ish qidirish (services/search.py) ---------------------------------
 search:

@@ -17,6 +17,7 @@ from ayvona.config import Settings
 from ayvona.db.models import Job, JobStatus
 from ayvona.services import my_jobs
 from ayvona.services.channel import mark_closed
+from ayvona.services.lifetime import active_days
 from ayvona.timeutil import to_local, utcnow
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -64,7 +65,7 @@ def reminder_view(settings: Settings, job: Job) -> tuple[str, InlineKeyboardMark
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=T.BTN_REMIND_EXTEND.format(days=settings.app.expiry.user_days),
+                    text=T.BTN_REMIND_EXTEND.format(days=active_days(job, settings)),
                     callback_data=MyJobCb(action="extend", id=job.id).pack(),
                 ),
                 InlineKeyboardButton(

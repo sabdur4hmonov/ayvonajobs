@@ -68,6 +68,7 @@ class Draft:
     requirements: str | None = None
     phone: str | None = None  # +998XXXXXXXXX
     username: str | None = None  # @name
+    days: int | None = None  # how long the ad stays active (posting.duration_options)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -402,6 +403,7 @@ async def submit(
         contact_username=draft.username,
         parse_method=ParseMethod.FORM,
         confidence=1.0,
+        active_days=draft.days if draft.days in settings.app.posting.duration_options else None,
         formatted_text=out.html,
         search_text=search_text(draft.title, draft.company, draft.city, draft.text()),
         status=JobStatus.PENDING_REVIEW if reasons else JobStatus.QUEUED,

@@ -3,9 +3,9 @@ services/job_submission.py; this module only asks, stores the answers and shows 
 
 Steps: 1 soha (buttons) → 2 lavozim → 3 kompaniya (skip) → 4 maosh ("Kelishiladi" / text) →
 5 hudud (buttons, "Masofaviy") + manzil (skip) → 6 ish vaqti (skip) → 7 talablar (skip) →
-8 ALOQA (required: "📱 Raqamni yuborish", own @username or typed) → preview (the channel caption)
-→ ✅ Yuborish / ✏️ Tahrirlash. "⬅️ Orqaga" and "❌ Bekor qilish" work on every step; a menu
-button leaves the form.
+8 ALOQA (required: "📱 Raqamni yuborish", own @username or typed) → 9 MUDDAT (how many days the
+ad stays active: buttons) → preview (the channel caption) → ✅ Yuborish / ✏️ Tahrirlash.
+"⬅️ Orqaga" and "❌ Bekor qilish" work on every step; a menu button leaves the form.
 """
 
 from __future__ import annotations
@@ -50,6 +50,7 @@ class PostJob(StatesGroup):
     schedule = State()
     requirements = State()
     contact = State()
+    duration = State()
     preview = State()
 
 
@@ -63,9 +64,11 @@ STEPS = [
     "schedule",
     "requirements",
     "contact",
+    "duration",
 ]
 STATE_OF = {name: getattr(PostJob, name) for name in STEPS}
 SKIPPABLE = {"company", "city", "schedule", "requirements"}
+NO_NUMBER = {"city"}  # a follow-up of "region", not a question of its own
 FORM_STATES = StateFilter(*STATE_OF.values(), PostJob.preview)
 
 
@@ -97,6 +100,18 @@ def _region_kb(settings: Settings) -> InlineKeyboardMarkup:
     )
     return InlineKeyboardMarkup(
         inline_keyboard=[buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+    )
+
+
+def _duration_kb(settings: Settings) -> InlineKeyboardMarkup:
+    buttons = [
+        InlineKeyboardButton(
+            text=T.BTN_DAYS.format(n=d), callback_data=PostCb(action="days", value=str(d)).pack()
+        )
+        for d in settings.app.posting.duration_options
+    ]
+    return InlineKeyboardMarkup(
+        inline_keyboard=[buttons[i : i + 4] for i in range(0, len(buttons), 4)]
     )
 
 
@@ -140,31 +155,42 @@ def limit_text(hit: LimitHit, settings: Settings) -> str:
     return T.POST_LIMIT_WAITING
 
 
+def numbered(step: str, text: str) -> str:
+    """``"3/9. <question>"`` — the number of the step among the numbered ones."""
+    steps = [s for s in STEPS if s not in NO_NUMBER]
+    if step in NO_NUMBER:
+        return text
+    return f"{steps.index(step) + 1}/{len(steps)}. {text}"
+
+
 async def ask(step: str, message: Message, state: FSMContext, settings: Settings) -> None:
     """Show the question of ``step`` and wait for its answer."""
     await state.set_state(STATE_OF[step])
     skip = [KeyboardButton(text=T.BTN_SKIP)] if step in SKIPPABLE else None
     if step == "category":
-        await message.answer(T.POST_ASK_CATEGORY, reply_markup=_nav())
+        await message.answer(numbered(step, T.POST_ASK_CATEGORY), reply_markup=_nav())
         await message.answer(T.POST_NEED_BUTTON, reply_markup=_category_kb(settings))
     elif step == "title":
-        await message.answer(T.POST_ASK_TITLE, reply_markup=_nav())
+        await message.answer(numbered(step, T.POST_ASK_TITLE), reply_markup=_nav())
     elif step == "company":
-        await message.answer(T.POST_ASK_COMPANY, reply_markup=_nav(skip or []))
+        await message.answer(numbered(step, T.POST_ASK_COMPANY), reply_markup=_nav(skip or []))
     elif step == "salary":
         await message.answer(
-            T.POST_ASK_SALARY.format(negotiable=T.BTN_NEGOTIABLE),
+            numbered(step, T.POST_ASK_SALARY.format(negotiable=T.BTN_NEGOTIABLE)),
             reply_markup=_nav([KeyboardButton(text=T.BTN_NEGOTIABLE)]),
         )
     elif step == "region":
-        await message.answer(T.POST_ASK_REGION, reply_markup=_nav())
+        await message.answer(numbered(step, T.POST_ASK_REGION), reply_markup=_nav())
         await message.answer(T.POST_NEED_BUTTON, reply_markup=_region_kb(settings))
     elif step == "city":
         await message.answer(T.POST_ASK_CITY, reply_markup=_nav(skip or []))
     elif step == "schedule":
-        await message.answer(T.POST_ASK_SCHEDULE, reply_markup=_nav(skip or []))
+        await message.answer(numbered(step, T.POST_ASK_SCHEDULE), reply_markup=_nav(skip or []))
     elif step == "requirements":
-        await message.answer(T.POST_ASK_REQUIREMENTS, reply_markup=_nav(skip or []))
+        await message.answer(numbered(step, T.POST_ASK_REQUIREMENTS), reply_markup=_nav(skip or []))
+    elif step == "duration":
+        await message.answer(numbered(step, T.POST_ASK_DURATION), reply_markup=_nav())
+        await message.answer(T.POST_NEED_BUTTON, reply_markup=_duration_kb(settings))
     elif step == "contact":
         row = [KeyboardButton(text=T.BTN_SEND_PHONE, request_contact=True)]
         user = message.chat  # private chat: the chat is the user
@@ -172,7 +198,8 @@ async def ask(step: str, message: Message, state: FSMContext, settings: Settings
         if own:
             row.append(KeyboardButton(text=T.BTN_MY_USERNAME.format(username=own)))
         await message.answer(
-            T.POST_ASK_CONTACT.format(phone=T.BTN_SEND_PHONE), reply_markup=_nav(row)
+            numbered(step, T.POST_ASK_CONTACT.format(phone=T.BTN_SEND_PHONE)),
+            reply_markup=_nav(row),
         )
 
 
@@ -192,9 +219,12 @@ async def advance(step: str, message: Message, state: FSMContext, settings: Sett
 async def show_preview(message: Message, state: FSMContext, settings: Settings) -> None:
     await state.update_data(editing=False)
     await state.set_state(PostJob.preview)
-    out, _ = js.render(await _draft(state), settings)
+    draft = await _draft(state)
+    out, _ = js.render(draft, settings)
     await message.answer(T.POST_PREVIEW_HEAD, reply_markup=main_menu())
     await message.answer(out.html)
+    if draft.days:
+        await message.answer(T.POST_PREVIEW_DAYS.format(n=draft.days))
     await message.answer(T.POST_PREVIEW_ASK, reply_markup=_preview_kb())
 
 
@@ -280,7 +310,25 @@ async def region_cb(
     await advance("region", query.message, state, settings)
 
 
-@router.message(StateFilter(PostJob.category, PostJob.region))
+@router.callback_query(StateFilter(PostJob.duration), PostCb.filter(F.action == "days"))
+async def days_cb(
+    query: CallbackQuery, callback_data: PostCb, state: FSMContext, settings: Settings
+) -> None:
+    await query.answer()
+    try:
+        days = int(callback_data.value)
+    except ValueError:
+        return
+    if days not in settings.app.posting.duration_options or not isinstance(query.message, Message):
+        return
+    draft = await _draft(state)
+    draft.days = days
+    await _save(state, draft)
+    await query.message.edit_text(f"✅ {T.BTN_DAYS.format(n=days)}")
+    await advance("duration", query.message, state, settings)
+
+
+@router.message(StateFilter(PostJob.category, PostJob.region, PostJob.duration))
 async def need_button(message: Message) -> None:
     await message.answer(T.POST_NEED_BUTTON)
 

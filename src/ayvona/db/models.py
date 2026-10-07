@@ -280,6 +280,9 @@ class Job(Base):
     closed_at: Mapped[datetime | None]
     # user jobs: when the "Uzaytirasizmi?" reminder was sent (Bosqich 14)
     reminded_at: Mapped[datetime | None]
+    # user ads: how many days the poster wants the ad to stay active (asked in the form); the
+    # clock starts at publication (``expires_at``). None = not asked -> expiry.*_days default.
+    active_days: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

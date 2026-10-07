@@ -34,7 +34,11 @@ def contact_update(uid: int, phone: str = "998901234567"):  # noqa: ANN201
 
 
 async def fill(
-    h: BotHarness, uid: int = USER, title: str = "Sotuvchi", contact: bool = True
+    h: BotHarness,
+    uid: int = USER,
+    title: str = "Sotuvchi",
+    contact: bool = True,
+    days: int | None = 7,
 ) -> None:
     """Answer every step up to the preview."""
     await h.send(message_update(T.MENU_POST, uid=uid))
@@ -48,6 +52,8 @@ async def fill(
     await h.send(message_update("Mas'uliyatli, xushmuomala", uid=uid))
     if contact:
         await h.send(contact_update(uid))
+        if days:  # "how long should the ad stay active?"
+            await h.send(callback_update(f"pj:days:{days}", uid=uid))
 
 
 async def all_jobs(sf: SF) -> list[Job]:
@@ -141,6 +147,8 @@ async def test_contact_is_required(harness: BotHarness, session_factory: SF) -> 
     assert await all_jobs(session_factory) == []
 
     await harness.send(message_update("@hr_manager", uid=USER))
+    assert T.POST_ASK_DURATION in harness.texts()[-2]  # the contact is accepted: next question
+    await harness.send(callback_update("pj:days:14", uid=USER))
     assert T.POST_PREVIEW_HEAD in harness.texts()
     await harness.send(callback_update("pj:send:", uid=USER))
     [job] = await all_jobs(session_factory)
@@ -150,6 +158,7 @@ async def test_contact_is_required(harness: BotHarness, session_factory: SF) -> 
 async def test_own_username_button(harness: BotHarness, session_factory: SF) -> None:
     await fill(harness, contact=False)
     await harness.send(message_update(T.BTN_MY_USERNAME.format(username=f"@u{USER}"), uid=USER))
+    await harness.send(callback_update("pj:days:7", uid=USER))
     await harness.send(callback_update("pj:send:", uid=USER))
     [job] = await all_jobs(session_factory)
     assert job.contact_username == f"@u{USER}"
@@ -161,9 +170,9 @@ async def test_back_cancel_and_text_on_button_steps(harness: BotHarness) -> None
     await harness.send(message_update("Savdo", uid=USER))  # typed instead of a button
     assert harness.texts()[-1] == T.POST_NEED_BUTTON
     await harness.send(callback_update("pj:cat:sotuv", uid=USER))
-    assert harness.texts()[-1] == T.POST_ASK_TITLE
+    assert harness.texts()[-1] == f"2/9. {T.POST_ASK_TITLE}"
     await harness.send(message_update(T.BTN_BACK, uid=USER))
-    assert T.POST_ASK_CATEGORY in harness.texts()[-2:]
+    assert f"1/9. {T.POST_ASK_CATEGORY}" in harness.texts()[-2:]
     await harness.send(message_update(T.BTN_CANCEL, uid=USER))
     assert harness.texts()[-1] == T.CANCELLED
     await harness.send(message_update("Sotuvchi", uid=USER))  # not in the form any more
@@ -175,7 +184,7 @@ async def test_edit_from_the_preview(harness: BotHarness, session_factory: SF) -
     await harness.send(callback_update("pj:edit:", uid=USER))
     assert harness.texts()[-1] == T.POST_EDIT_WHICH
     await harness.send(callback_update("pj:field:title", uid=USER))
-    assert harness.texts()[-1] == T.POST_ASK_TITLE
+    assert harness.texts()[-1] == f"2/9. {T.POST_ASK_TITLE}"
     await harness.send(message_update("Katta sotuvchi", uid=USER))
     assert any(t.startswith("💼 <b>Katta sotuvchi</b>") for t in harness.texts()[-3:])
     await harness.send(callback_update("pj:send:", uid=USER))

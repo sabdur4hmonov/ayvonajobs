@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ayvona.config import Settings
 from ayvona.db.models import Job, JobOrigin, JobStatus
+from ayvona.services.lifetime import active_days
 
 CLOSABLE = (JobStatus.PENDING_REVIEW, JobStatus.QUEUED, JobStatus.RETRY, JobStatus.PUBLISHED)
 SHOWN = (*CLOSABLE, JobStatus.SENDING, JobStatus.CLOSED, JobStatus.EXPIRED)
@@ -56,15 +57,15 @@ async def close_job(
 async def extend_job(
     session: AsyncSession, user_id: int, job_id: int, now: datetime, settings: Settings
 ) -> Job | None:
-    """ "🔄 Uzaytirish": a published (or just expired) user job gets ``user_days`` more from now
-    and is back in search. Does not commit."""
+    """ "🔄 Uzaytirish": a published (or just expired) user job gets its ``active_days`` more
+    from now and is back in search. Does not commit."""
     job = await session.get(Job, job_id)
     if job is None or job.author_id != user_id or job.origin != JobOrigin.USER:
         return None
     if job.status not in (JobStatus.PUBLISHED, JobStatus.EXPIRED):
         return None
     job.status = JobStatus.PUBLISHED
-    job.expires_at = now + timedelta(days=settings.app.expiry.user_days)
+    job.expires_at = now + timedelta(days=active_days(job, settings))
     job.reminded_at = None
     await session.flush()
     return job

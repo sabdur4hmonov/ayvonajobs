@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ayvona.config import Settings
 from ayvona.db.models import Job, JobOrigin, JobStatus
+from ayvona.services.lifetime import active_days, remind_lead
 from ayvona.timeutil import ensure_utc, utcnow
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -37,25 +38,28 @@ class ExpiryReport:
 
 async def backfill_expires_at(session: AsyncSession, settings: Settings) -> int:
     """Does not commit."""
-    exp = settings.app.expiry
-    rows = (
-        await session.execute(
-            select(Job.id, Job.origin, Job.published_at).where(
-                Job.status == JobStatus.PUBLISHED,
-                Job.expires_at.is_(None),
-                Job.published_at.is_not(None),
+    jobs = list(
+        (
+            await session.scalars(
+                select(Job).where(
+                    Job.status == JobStatus.PUBLISHED,
+                    Job.expires_at.is_(None),
+                    Job.published_at.is_not(None),
+                )
             )
-        )
-    ).all()
-    for job_id, origin, published_at in rows:
-        days = exp.user_days if origin == JobOrigin.USER else exp.aggregator_days
+        ).all()
+    )
+    for job in jobs:
+        assert job.published_at is not None
         await session.execute(
             update(Job)
-            .where(Job.id == job_id)
-            .values(expires_at=ensure_utc(published_at) + timedelta(days=days))
+            .where(Job.id == job.id)
+            .values(
+                expires_at=ensure_utc(job.published_at) + timedelta(days=active_days(job, settings))
+            )
             .execution_options(synchronize_session=False)
         )
-    return len(rows)
+    return len(jobs)
 
 
 async def expire(session: AsyncSession, now: datetime) -> list[int]:
@@ -82,7 +86,8 @@ async def expire(session: AsyncSession, now: datetime) -> list[int]:
 
 
 async def due_reminders(session: AsyncSession, now: datetime, settings: Settings) -> list[Job]:
-    """User jobs that expire soon and were not reminded yet."""
+    """User jobs that expire soon (within their own reminder lead, see :func:`remind_lead`) and
+    were not reminded yet."""
     soon = now + timedelta(days=settings.app.expiry.remind_days_before)
     rows = await session.scalars(
         select(Job).where(
@@ -95,7 +100,11 @@ async def due_reminders(session: AsyncSession, now: datetime, settings: Settings
             Job.expires_at <= soon,
         )
     )
-    return list(rows.all())
+    return [
+        j
+        for j in rows.all()
+        if j.expires_at is not None and ensure_utc(j.expires_at) - now <= remind_lead(j, settings)
+    ]
 
 
 class ExpiryService:

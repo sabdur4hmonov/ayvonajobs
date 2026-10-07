@@ -71,6 +71,7 @@ from ayvona.config import Settings
 from ayvona.db.models import Job, JobOrigin, JobStatus
 from ayvona.db.repositories import images_repo, jobs_repo, kv_repo
 from ayvona.processing.images import PickedImage, pick_image
+from ayvona.services.lifetime import active_days
 from ayvona.services.notifier import Notifier
 from ayvona.timeutil import ensure_utc, to_local, utcnow
 
@@ -383,8 +384,7 @@ class Publisher:
 
         async with self.sf() as s, s.begin():
             published = utcnow()
-            exp = self.settings.app.expiry
-            days = exp.user_days if job.origin == JobOrigin.USER else exp.aggregator_days
+            days = active_days(job, self.settings)  # the poster's choice, else the default
             await jobs_repo.mark_published(
                 s, job.id, result.message_id, published, published + timedelta(days=days)
             )

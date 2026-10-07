@@ -21,6 +21,7 @@ from ayvona.db.repositories import kv_repo
 from ayvona.publisher.outbox import ChannelSender, Outcome, Publisher
 from ayvona.services import job_submission as js
 from ayvona.services import users as users_svc
+from ayvona.services.lifetime import active_days
 from ayvona.timeutil import utcnow
 
 SessionFactory = async_sessionmaker[AsyncSession]
@@ -53,6 +54,13 @@ def review_keyboard(job_id: int) -> InlineKeyboardMarkup:
     )
 
 
+def duration_label(job: Job, settings: Settings) -> str:
+    """ "7 kun" (the poster's choice) or the default when the ad was not asked about it."""
+    if job.active_days:
+        return f"{job.active_days} kun"
+    return f"standart: {active_days(job, settings)} kun"
+
+
 def review_targets(settings: Settings) -> list[int | str]:
     """The admin group if set, else every admin in private."""
     if settings.env.admin_chat_id is not None:
@@ -77,6 +85,7 @@ async def notify_review(
         id=job.id,
         author=author_label(author, author.tg_id),
         reasons=html.escape("; ".join(reasons) or "—"),
+        days=duration_label(job, settings),
     ) + (job.formatted_text or "")
     sent = 0
     for chat in review_targets(settings):

@@ -305,6 +305,16 @@ class PostingConfig(BaseModel):
     max_title: int = Field(default=100, ge=10)
     max_short_field: int = Field(default=150, ge=10)  # company, salary, city, schedule
     max_requirements: int = Field(default=600, ge=50)
+    # "How long should the ad stay active?" buttons (days). The clock starts at publication.
+    duration_options: list[int] = Field(default_factory=lambda: [3, 7, 14, 30])
+
+    @field_validator("duration_options")
+    @classmethod
+    def _valid_durations(cls, v: list[int]) -> list[int]:
+        out = sorted({d for d in v if 1 <= d <= 365})
+        if not out:
+            raise ValueError("posting.duration_options needs at least one number of days (1-365)")
+        return out
 
 
 class SearchConfig(BaseModel):

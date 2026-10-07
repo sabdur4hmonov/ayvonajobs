@@ -73,21 +73,29 @@ POST_INTRO = (
     "Bir necha savolga javob bering — e'lon kanalga chiroyli shaklda chiqadi.\n"
     "Istalgan paytda: «{back}» yoki «{cancel}»."
 )
-POST_ASK_CATEGORY = "1/8. Qaysi soha? 👇"
-POST_ASK_TITLE = "2/8. Lavozim nomi? (masalan: <i>Sotuvchi</i>, <i>Buxgalter</i>)"
-POST_ASK_COMPANY = "3/8. Kompaniya yoki do'kon nomi? (ixtiyoriy)"
+# The "n/total." prefix of every question is added by the form (bot/handlers/post_job.py).
+POST_ASK_CATEGORY = "Qaysi soha? 👇"
+POST_ASK_TITLE = "Lavozim nomi? (masalan: <i>Sotuvchi</i>, <i>Buxgalter</i>)"
+POST_ASK_COMPANY = "Kompaniya yoki do'kon nomi? (ixtiyoriy)"
 POST_ASK_SALARY = (
-    "4/8. Maosh? (masalan: <i>4-6 mln so'm</i>, <i>5 000 000 so'mdan</i>, <i>500$</i>)\n"
+    "Maosh? (masalan: <i>4-6 mln so'm</i>, <i>5 000 000 so'mdan</i>, <i>500$</i>)\n"
     "yoki «{negotiable}»."
 )
-POST_ASK_REGION = "5/8. Hudud? 👇"
+POST_ASK_REGION = "Hudud? 👇"
 POST_ASK_CITY = "Shahar / tuman / mo'ljal? (masalan: <i>Chilonzor tumani</i>; ixtiyoriy)"
-POST_ASK_SCHEDULE = "6/8. Ish vaqti? (masalan: <i>9:00-18:00, 5/2</i>; ixtiyoriy)"
-POST_ASK_REQUIREMENTS = "7/8. Talablar va qo'shimcha ma'lumot? (ixtiyoriy)"
+POST_ASK_SCHEDULE = "Ish vaqti? (masalan: <i>9:00-18:00, 5/2</i>; ixtiyoriy)"
+POST_ASK_REQUIREMENTS = "Talablar va qo'shimcha ma'lumot? (ixtiyoriy)"
 POST_ASK_CONTACT = (
-    "8/8. <b>Aloqa — majburiy.</b>\n"
+    "<b>Aloqa — majburiy.</b>\n"
     "«{phone}» tugmasini bosing yoki yozing: <i>+998 90 123 45 67</i> yoki <i>@username</i>."
 )
+POST_ASK_DURATION = (
+    "<b>E'lon necha kun faol tursin?</b> 👇\n"
+    "Muddat kanalga chiqqan paytdan hisoblanadi. Tugashiga yaqin eslatma yuboraman — "
+    "xohlasangiz uzaytirasiz."
+)
+BTN_DAYS = "{n} kun"
+POST_PREVIEW_DAYS = "⏳ Faol muddat: <b>{n} kun</b> (kanalga chiqqan paytdan)"
 POST_NEED_BUTTON = "👆 Tugmalardan birini tanlang."
 POST_TOO_LONG = "✂️ Juda uzun yoki bo'sh. Ko'pi bilan {limit} belgi yozing."
 POST_TOO_SHORT = "Lavozim nomini to'liqroq yozing (kamida 3 harf)."
@@ -108,6 +116,7 @@ POST_FIELDS = {
     "schedule": "Ish vaqti",
     "requirements": "Talablar",
     "contact": "Aloqa",
+    "duration": "Muddat",
 }
 POST_EXPIRED = "Forma eskirdi. «📢 E'lon joylash» ni qayta bosing."
 POST_QUEUED = (
@@ -264,7 +273,7 @@ STATS_AI = "\n🤖 AI bugun: {calls}/{limit} so'rov · /ai"
 # ------------------------------------------------------------------ admin: moderation
 MOD_HEAD = (
     "🆕 <b>Yangi e'lon — tekshiring</b> (#{id})\n"
-    "Muallif: {author}\nSabab: {reasons}\n➖➖➖➖➖➖➖➖\n"
+    "Muallif: {author}\nSabab: {reasons}\n⏳ Faol muddat: <b>{days}</b>\n➖➖➖➖➖➖➖➖\n"
 )
 MOD_OK = "✅ Tasdiqlash"
 MOD_NO = "❌ Rad etish"
