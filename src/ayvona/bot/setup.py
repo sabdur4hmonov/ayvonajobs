@@ -53,7 +53,7 @@ ADMIN_COMMANDS = [
     BotCommand(command="resume", description="Davom ettirish"),
     BotCommand(command="sources", description="Manbalar"),
     BotCommand(command="addsource", description="Manba qo'shish"),
-    BotCommand(command="images", description="Rasmlar"),
+    BotCommand(command="images", description="Rasmlar (/images review - yangilash)"),
     BotCommand(command="addimage", description="Rasm qo'shish"),
     BotCommand(command="addword", description="Filtr so'zi qo'shish"),
     BotCommand(command="delword", description="Filtr so'zini o'chirish"),

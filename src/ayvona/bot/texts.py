@@ -344,6 +344,7 @@ ADMIN_HELP = (
     "📡 /sources — manbalar (kanallar, saytlar): pauza, yoqish, o'chirish, statistika\n"
     "➕ /addsource &lt;@kanal | t.me/kanal | t.me/+taklif | web:nom | rss:URL&gt;\n\n"
     "🖼 /images — rasm bo'shliqlari · /images &lt;kasb&gt; — rasmlar ro'yxati\n"
+    "🆕 /images review — rasmlarni birma-bir yangilash (har birini o'zingiz tasdiqlaysiz)\n"
     "➕ /addimage &lt;kasb | kategoriya&gt; — rasm qo'shish\n"
     "✖️ /cancel — boshlangan amalni bekor qilish"
 )
@@ -519,3 +520,40 @@ ADDIMAGE_SAVED = (
 )
 ADDIMAGE_NOT_IMAGE = "❌ Bu rasm emas. JPG/PNG rasm yuboring yoki /cancel."
 ADDIMAGE_TOO_BIG = "❌ Fayl juda katta ({mb:.0f} MB). 10 MB gacha rasm yuboring."
+
+# --- /images review: post rasmlarini birma-bir yangilash (faqat admin boshlaydi)
+IMGREV_INTRO = (
+    "🖼 <b>Rasmlarni yangilash</b> — {pending} ta rasm o'rni ko'riladi "
+    "({done} tasi allaqachon ko'rilgan).\n"
+    "Har biri uchun hozirgi rasm va yangi taklif ko'rsatiladi. Siz «✅ Tasdiqlash» "
+    "demaguningizcha hech narsa almashmaydi; eski rasm nusxasi saqlanadi.\n"
+    "Manba: {sources}.\n"
+    "To'xtash: «⏹ To'xtatish» — keyin /images review bilan davom etasiz."
+)
+IMGREV_SOURCES_STOCK = (
+    "{names} (bepul litsenziyali stok-rasmlar), tugasa — o'zimiz chizgan original rasmlar"
+)
+IMGREV_SOURCES_OWN = "o'zimiz chizgan original rasmlar (stok API kaliti .env da yo'q)"
+IMGREV_NOTHING = "✅ Hamma rasm o'rni ko'rib chiqilgan. Qaytadan boshlash: /images review reset"
+IMGREV_RESET = "🔄 Ko'rib chiqish boshidan boshlandi (rasm fayllari o'zgarmadi)."
+IMGREV_CURRENT = "📍 <b>{title}</b> · {n}/{total}\n<code>{slot}</code>\nHOZIRGI rasm: {current}"
+IMGREV_CURRENT_NONE = "yo'q (shu o'rin bo'sh)"
+IMGREV_CURRENT_PLACEHOLDER = "vaqtinchalik rasm"
+IMGREV_CURRENT_REAL = "haqiqiy rasm (almashtirilsa, nusxasi saqlanadi)"
+IMGREV_PROPOSAL = "🆕 <b>Taklif</b> — {label}\n<i>{license}</i>"
+BTN_IMGREV_OK = "✅ Tasdiqlash"
+BTN_IMGREV_MORE = "🔄 Boshqasi"
+BTN_IMGREV_SKIP = "⏭ O'tkazish"
+BTN_IMGREV_STOP = "⏹ To'xtatish"
+IMGREV_APPLIED = (
+    "✅ Saqlandi: <code>{path}</code>{backup}\nManba va litsenziya: <code>{sidecar}</code>"
+)
+IMGREV_BACKUP = "\nEski rasm nusxasi: <code>{backup}</code>"
+IMGREV_SKIPPED = "⏭ O'tkazildi — hech narsa o'zgarmadi."
+IMGREV_STOPPED = (
+    "⏹ To'xtatildi. Tasdiqlangan: {approved}, o'tkazilgan: {skipped}. "
+    "Davom ettirish: /images review"
+)
+IMGREV_FINISHED = "🎉 Hamma rasm o'rni ko'rildi. Tasdiqlangan: {approved}, o'tkazilgan: {skipped}."
+IMGREV_NO_SESSION = "Bu ko'rib chiqish tugagan yoki bot qayta yongan. Qaytadan: /images review"
+IMGREV_WRITE_FAILED = "❌ Rasm saqlanmadi (diskka yozib bo'lmadi). Hech narsa o'zgarmadi."

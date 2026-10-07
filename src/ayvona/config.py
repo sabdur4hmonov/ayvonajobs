@@ -68,6 +68,11 @@ class EnvSettings(BaseSettings):
     # Public address of the website; overrides website.base_url of settings.yaml. The server setup
     # sets it through a systemd drop-in, so the tracked YAML never has to be edited on the server.
     website_base_url: str | None = None
+    # Free-licence stock photos for the admin's /images review (all optional; with none of them
+    # the review proposes pictures we draw ourselves). Used only when the admin starts the review.
+    pexels_api_key: SecretStr | None = None
+    unsplash_access_key: SecretStr | None = None
+    pixabay_api_key: SecretStr | None = None
     # False (default): the admin gets ONLY the approval request of a new user ad; errors,
     # monitoring, backups, stats ... are written to the log. True = the old behaviour.
     admin_extra_notifications: bool = False
@@ -84,6 +89,9 @@ class EnvSettings(BaseSettings):
         "gemini_min_interval_seconds",
         "hh_access_token",
         "website_base_url",
+        "pexels_api_key",
+        "unsplash_access_key",
+        "pixabay_api_key",
         mode="before",
     )
     @classmethod
@@ -584,6 +592,21 @@ class FiltersConfig(BaseModel):
     opportunity_strong_exceptions: list[str] = Field(default_factory=list)
 
 
+class ImageQuery(BaseModel):
+    """One entry of ``config/image_queries.yaml`` (the admin's /images review)."""
+
+    query: str = ""  # English words for the stock photo search
+    icon: str | None = None  # the symbol of the pictures we draw ourselves
+
+
+class ImageQueriesConfig(BaseModel):
+    """Content of ``config/image_queries.yaml``."""
+
+    categories: dict[str, ImageQuery] = Field(default_factory=dict)
+    professions: dict[str, ImageQuery] = Field(default_factory=dict)
+    first: list[str] = Field(default_factory=list)  # professions reviewed right after categories
+
+
 class SourceRule(BaseModel):
     """Per-channel cleaning / classification hints from ``config/source_rules.yaml``."""
 
@@ -650,6 +673,7 @@ class Settings(BaseModel):
     title_translations: TitleTranslations = Field(default_factory=TitleTranslations)
     filters: FiltersConfig
     source_rules: SourceRulesConfig = Field(default_factory=SourceRulesConfig)
+    image_queries: ImageQueriesConfig = Field(default_factory=ImageQueriesConfig)
     config_dir: Path
 
     @property
@@ -728,6 +752,9 @@ def load_settings(
         ),
         filters=filters,
         source_rules=source_rules,
+        image_queries=ImageQueriesConfig.model_validate(
+            _read_yaml(config_dir / "image_queries.yaml")
+        ),
         config_dir=config_dir,
     )
 

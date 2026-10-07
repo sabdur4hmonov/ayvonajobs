@@ -1,0 +1,102 @@
+# =====================================================================
+#  Post rasmlarini yangilash (admin: /images review) uchun sozlamalar.
+#  Maxfiy emas, git'ga qo'shiladi.
+#
+#  query  — bepul stok-rasm saytlarida (Pexels / Unsplash / Pixabay) qidiriladigan INGLIZCHA so'z.
+#           API kaliti bo'lmasa ishlatilmaydi: rasm o'zimiz (Pillow) chizgan original rasm bo'ladi.
+#  icon   — o'zimiz chizadigan rasmdagi belgi: briefcase, cart, headset, chef, truck, pin, box,
+#           gear, wrench, cross, cap, calculator, laptop, camera, megaphone, scissors, globe, star.
+#  first  — qaysi kasblar rasmlari birinchi ko'rib chiqiladi (docs/IMAGES.md dagi "2-navbat").
+#  Kasb uchun icon yozilmasa — kategoriyaniki olinadi; query yozilmasa — kasb nomi (kalit) ishlatiladi.
+# =====================================================================
+
+categories:
+  sotuv: {query: "retail store shop assistant", icon: cart}
+  operator: {query: "call center operator headset", icon: headset}
+  oshxona: {query: "restaurant kitchen chef", icon: chef}
+  transport: {query: "delivery driver courier", icon: truck}
+  logistika: {query: "logistics warehouse trucks", icon: pin}
+  ombor: {query: "warehouse worker boxes", icon: box}
+  ishlab_chiqarish: {query: "factory production worker", icon: gear}
+  qurilish: {query: "construction worker builder", icon: wrench}
+  tibbiyot: {query: "doctor hospital medical", icon: cross}
+  talim: {query: "teacher classroom school", icon: cap}
+  moliya: {query: "accountant finance calculator", icon: calculator}
+  it: {query: "software developer programmer laptop", icon: laptop}
+  dizayn_media: {query: "graphic designer photographer creative", icon: camera}
+  marketing: {query: "marketing social media team", icon: megaphone}
+  ofis: {query: "office manager business meeting", icon: briefcase}
+  gozallik: {query: "hair salon beauty", icon: scissors}
+  xizmat: {query: "cleaning service hotel staff", icon: star}
+  chet_el: {query: "work abroad travel airport", icon: globe}
+  boshqa: {query: "job interview career", icon: briefcase}
+
+professions:
+  sotuvchi: {query: "shop assistant selling"}
+  kassir: {query: "cashier supermarket checkout"}
+  sotuv_menejeri: {query: "sales manager client meeting"}
+  savdo_agenti: {query: "sales representative business"}
+  promouter: {query: "promoter flyers street"}
+  operator: {query: "call center operator"}
+  oshpaz: {query: "chef cooking kitchen"}
+  ofitsiant: {query: "waiter restaurant serving"}
+  barista: {query: "barista coffee"}
+  nonvoy: {query: "baker bread bakery"}
+  idish_yuvuvchi: {query: "dishwasher restaurant kitchen"}
+  haydovchi: {query: "driver car steering wheel"}
+  kuryer: {query: "courier delivery bicycle"}
+  dispetcher: {query: "dispatcher logistics office"}
+  logist: {query: "logistics manager"}
+  trucking: {query: "truck driver highway"}
+  omborchi: {query: "warehouse storekeeper"}
+  yuk_tashuvchi: {query: "loader moving boxes"}
+  ishchi: {query: "worker labor"}
+  tikuvchi: {query: "seamstress sewing machine"}
+  sex_ishchisi: {query: "factory worker assembly line"}
+  qadoqlovchi: {query: "packing packaging workers"}
+  texnolog: {query: "laboratory technologist"}
+  quruvchi: {query: "builder bricklayer"}
+  elektrik: {query: "electrician wires"}
+  santexnik: {query: "plumber pipes"}
+  payvandchi: {query: "welder welding"}
+  mebel_ustasi: {query: "furniture carpenter"}
+  avto_usta: {query: "car mechanic garage"}
+  shifokor: {query: "doctor stethoscope"}
+  stomatolog: {query: "dentist dental clinic"}
+  hamshira: {query: "nurse hospital"}
+  farmatsevt: {query: "pharmacist pharmacy"}
+  tibbiy_vakil: {query: "medical representative pharma"}
+  oqituvchi: {query: "teacher blackboard"}
+  tarbiyachi: {query: "kindergarten teacher children"}
+  kurator: {query: "tutor mentor student"}
+  buxgalter: {query: "accountant documents calculator"}
+  moliyachi: {query: "financial analyst charts"}
+  auditor: {query: "auditor reviewing documents"}
+  dasturchi: {query: "programmer coding"}
+  tester: {query: "software tester qa"}
+  devops: {query: "server room devops"}
+  data: {query: "data analyst dashboard"}
+  it_menejer: {query: "it project manager"}
+  dizayner: {query: "graphic designer tablet"}
+  mobilograf: {query: "mobile video content creator smartphone"}
+  fotograf: {query: "photographer camera"}
+  smm: {query: "social media manager smartphone"}
+  marketolog: {query: "marketing strategy"}
+  targetolog: {query: "online advertising analytics"}
+  pr: {query: "public relations press"}
+  administrator: {query: "receptionist administrator desk"}
+  hr: {query: "human resources interview"}
+  menejer: {query: "manager office team"}
+  kotiba: {query: "secretary office assistant"}
+  yurist: {query: "lawyer law books"}
+  sartarosh: {query: "barber haircut"}
+  kosmetolog: {query: "cosmetologist skin care"}
+  manikyur: {query: "manicure nails"}
+  tozalik: {query: "cleaner cleaning service"}
+  qoriqchi: {query: "security guard"}
+  enaga: {query: "nanny child care"}
+  mehmonxona: {query: "hotel reception staff"}
+
+# docs/IMAGES.md "2-navbat": ko'p uchraydigan kasblar — kategoriyalardan keyin shular ko'riladi
+first: [sotuvchi, sotuv_menejeri, operator, oshpaz, ofitsiant, haydovchi, kuryer, tikuvchi,
+        oqituvchi, administrator, buxgalter, dasturchi, dispetcher, mobilograf, smm, tozalik]
