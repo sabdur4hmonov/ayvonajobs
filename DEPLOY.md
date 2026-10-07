@@ -187,6 +187,60 @@ sudo -iu ayvona git -C /home/ayvona/ayvona pull --ff-only
 sudo systemctl restart ayvona-collector ayvona-worker ayvona-bot
 ```
 
+### 6a. Yangilanish: tasdiqlash, ustuvorlik, Loyihalar, rasmlar (2026-10-07)
+
+Nima o'zgardi (qisqa): tasdiqlangan foydalanuvchi e'loni **darhol** kanalga chiqadi; admin faqat "yangi e'lon
+tasdiqlash" so'rovini oladi; e'lon uchun **muddat** (3/7/14/30 kun) so'raladi; e'lonlarga **ustuvorlik** (1/2/3-daraja);
+yangi bo'lim **🧩 Loyihalar**; admin uchun `/images review`, `/why <id>`.
+
+```bash
+# 🐧 server (ubuntu) — bitta buyruq: git pull, baza zaxirasi, kutubxonalar, MIGRATSIYA, restart
+sudo bash /home/ayvona/ayvona/scripts/deploy.sh
+sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh          # 1–2 daqiqadan keyin
+```
+
+- **Migratsiya avtomatik:** `deploy.sh` 5-qadamda `alembic upgrade head` ni o'zi ishga tushiradi: 3 ta additiv
+  migratsiya (`c9e1a4b7d2f5` muddat, `d1f5b8c3a7e2` ustuvorlik, `e2a6c9d4b8f1` loyihalar). Mavjud e'lonlar o'zgarmaydi
+  (faqat yangi bo'sh ustunlar; `kind` hammasida `job`). Qo'lda: `sudo -iu ayvona` → `cd ~/ayvona` →
+  `.venv/bin/alembic upgrade head` → `.venv/bin/alembic current` (`e2a6c9d4b8f1 (head)` chiqsin).
+- **`.env` ga hech narsa qo'shish shart emas.** Ixtiyoriy: `ADMIN_EXTRA_NOTIFICATIONS=true` (eski xabarlarni qaytaradi),
+  `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY` / `PIXABAY_API_KEY` (stok rasmlar; yo'q bo'lsa rasmlarni o'zimiz chizamiz).
+- **Worker birinchi yonishda** mavjud e'lonlarga ustuvorlik beradi (logda: `Ustuvorlik hisoblandi: N ta e'lon ...`).
+  Qo'lda: `sudo -iu ayvona` → `cd ~/ayvona && .venv/bin/python scripts/backfill_priority.py --dry-run` (keyin `--all` —
+  `config/settings.yaml` dagi `priority:` ro'yxatlarini o'zgartirgach qayta baholash).
+- Sozlamalar `config/settings.yaml` da: `priority:` (so'z ro'yxatlari, maosh chegarasi, 3-daraja kunlik chegarasi),
+  `posting.duration_options`, `posting.max_description`, `posting.moderation` (`all` = hamma e'lon adminga; hozir
+  `suspicious_only`). O'zgartirgach servislarni qayta yoqing.
+- **Birinchi tekshiruv** (telefonda): ikkinchi akkaunt bilan «📢 E'lon joylash» → Ish → ... → muddat → yuborish; admin
+  «✅ Tasdiqlash» bossa e'lon **o'sha zahoti** kanalda; «🧩 Loyiha» ham shunday; «🧩 Loyihalar» tugmasi; admin: `/why <id>`,
+  `/queue` (daraja ko'rinadi). `/images review` faqat siz boshlasangiz ishlaydi.
+
+**Orqaga qaytish (migratsiya bilan):** eski kod yangi bazada **ishga tushmaydi** ("Baza tayyor emas...", u eski
+migratsiyani kutadi), shuning uchun avval bazani ham qaytaring:
+
+```bash
+# 🐧 server (ubuntu)
+sudo systemctl stop ayvona-collector ayvona-worker ayvona-bot ayvona-web
+sudo -iu ayvona
+```
+```bash
+# 🐧 ayvona
+cd ~/ayvona
+.venv/bin/python - <<'EOF'      # loyihalar eski kodda oddiy ish bo'lib ko'rinib qoladi: oldin yopamiz
+import sqlite3; c = sqlite3.connect("data/ayvona.db"); c.execute("update jobs set status='closed' where kind='project' and status in ('published','queued','retry','pending_review')"); c.commit()
+EOF
+.venv/bin/alembic downgrade b8d4f0a2c6e9      # yangi ustunlarni olib tashlaydi (muddat/ustuvorlik/loyiha ma'lumoti yo'qoladi)
+git reset --hard 5e15946                      # shu yangilanishdan oldingi main
+uv sync --locked --no-dev --compile-bytecode
+exit
+```
+```bash
+# 🐧 server
+sudo systemctl start ayvona-collector ayvona-worker ayvona-bot
+```
+Yoki (ishonchliroq): kodni `git reset --hard 5e15946` qiling va bazani `data/backups/deploy/` dagi deploy oldidagi
+nusxadan tiklang (8-bo'lim) — migratsiya ham, ma'lumot ham deploy oldingi holatga qaytadi.
+
 ## 7. Loglar
 
 ```bash
@@ -204,17 +258,29 @@ Tekshirish: `journalctl --disk-usage`, `df -h /`.
 
 ## 8. Zaxira va orqaga qaytish
 
-**Zaxiralar** (hammasi bepul, serverda; yaxshisi — Telegram chatdagi nusxa ham):
+**Zaxiralar** (hammasi bepul). Admin chatga zaxira fayli **endi yuborilmaydi** (admin faqat yangi e'lon tasdiqlash so'rovini oladi) — `ADMIN_EXTRA_NOTIFICATIONS=true` bo'lsagina yuboriladi. Shuning uchun serverdan tashqaridagi nusxani o'zingiz oling (pastda):
 
 | Qayerda | Nima | Kim |
 |---|---|---|
 | `data/backups/daily/ayvona-YYYY-MM-DD.db.gz` | har kuni 03:30, oxirgi **7** ta (`sqlite3 .backup` + butunlik tekshiruvi) | `ayvona-backup.timer` |
-| `data/backups/ayvona_YYYY-MM-DD.db` + admin chat (Telegram) | har kuni 03:00, oxirgi 7 ta | worker |
+| `data/backups/ayvona_YYYY-MM-DD.db` | har kuni 03:00, oxirgi 7 ta (admin chatga faqat `ADMIN_EXTRA_NOTIFICATIONS=true` bilan) | worker |
 | `data/backups/deploy/` | har deploy'dan oldin, oxirgi 5 ta | `deploy.sh` |
 | `data/backups/pre-push/` | `-Force` bilan almashtirilgan eski baza | push skripti |
 
 Qo'lda hozir: `sudo systemctl start ayvona-backup` (natija: `journalctl -u ayvona-backup -n 5 --no-pager`).
 Taymer: `systemctl list-timers ayvona-backup.timer`.
+
+**Serverdan tashqaridagi nusxa** (haftada bir marta, kompyuteringizga):
+
+```bash
+# 🐧 server (ubuntu)
+sudo cp "$(ls -1t /home/ayvona/ayvona/data/backups/daily/ayvona-*.db.gz | head -n 1)" ~/ayvona-backup.db.gz
+sudo chown ubuntu: ~/ayvona-backup.db.gz
+```
+```powershell
+# 💻 PowerShell
+scp -i "$HOME\.ssh\<kalit>" ubuntu@<IP>:ayvona-backup.db.gz "$HOME\Documents\ayvona-backup-$(Get-Date -Format yyyy-MM-dd).db.gz"
+```
 
 **Yomon deploy'dan orqaga qaytish (kod):**
 
@@ -248,8 +314,8 @@ gunzip -c data/backups/daily/ayvona-<YYYY-MM-DD>.db.gz > data/ayvona.db   # kunl
 .venv/bin/alembic upgrade head
 ```
 Keyin servislarni yoqing. Eski (buzuq) baza o'chirilmaydi — `data/broken/` da qoladi. Server butunlay yo'qolsa:
-1–3 qadamlarni takrorlang, bazani Telegram admin chatdagi eng oxirgi backup fayldan oling (`.env` va
-`ayvona.session` kompyuteringizda saqlansin).
+1–3 qadamlarni takrorlang, bazani kompyuteringizdagi eng oxirgi zaxira nusxadan oling (`gunzip`, so'ng
+`push-secrets-from-windows.ps1`; `.env` va `ayvona.session` ham kompyuteringizda saqlansin).
 
 ## 9. Oracle "idle" xavfi (server qaytarib olinishi mumkin)
 
@@ -266,7 +332,7 @@ Soxta yuk yaratmaymiz. To'g'ri yo'llar:
    birinchi 2 haftada haftada bir qarang. Serverda: `healthcheck.sh`, `uptime`, `free -m`.
 3. **Ogohlantirish (ixtiyoriy):** OCI Monitoring alarm + Notifications (email) — Free Tier ichida (⚠️ chegaralarni
    konsolda tekshiring).
-4. **Yo'qotishga tayyor bo'ling:** `.env` va `ayvona.session` nusxasi kompyuterda; kunlik zaxira Telegram admin chatda.
+4. **Yo'qotishga tayyor bo'ling:** `.env` va `ayvona.session` nusxasi kompyuterda; zaxira nusxasi kompyuteringizda (8-bo'lim).
    Server yo'qolsa 1–3 qadamlar bilan 20–30 daqiqada qayta tiklanadi.
 5. Pay-As-You-Go'ga o'tish ba'zan "idle" xavfini kamaytiradi deb yoziladi, lekin karta ulanadi va noto'g'ri tanlov
    pul yechilishiga olib keladi — loyiha qoidasi "100% bepul", shuning uchun bu **sizning qaroringiz** (STATUS.md).

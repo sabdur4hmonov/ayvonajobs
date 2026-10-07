@@ -39,6 +39,19 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
 9. **Admin manages sources from the bot, never by editing code/YAML**: add/remove/pause Telegram channels
    and websites (`/addsource`, `/sources`). DB is the source of truth. Every new source type must be manageable this way.
 - The public bot and the future website (Phase 17) share ONE business logic: search, posting rules, filters and favorites live in `services/` (no logic inside handlers), so the website reuses it.
+10. **The admin gets ONE kind of push: a new user ad waiting for approval.** Errors, monitoring, backups, stats,
+    suspicious posts go to the log only (`services/notifier.py` gate; `ADMIN_EXTRA_NOTIFICATIONS=true` restores the old
+    messages). Commands the admin types (`/stats`, `/why`, ...) answer as usual. Never add a new unprompted admin message.
+11. **An approved user ad is published at once** (`js.approve(publish_now=True)` claims it as `sending`, then
+    `Publisher.publish_claimed`) — never through the queue; on a Telegram error it goes back to the queue, never lost.
+12. **Jobs are ranked** (`processing/priority.py`, `config/settings.yaml → priority:`): tier 1 office / high pay, 2 normal,
+    3 low-skill. Queue order = tier, then newest; tier 3 is capped per day; each tier has its own age limit.
+    **Projects** (`jobs.kind = 'project'`, bot menu "🧩 Loyihalar") are not ranked and never appear in job search,
+    alerts, the website or the priority backfill — every query over published jobs must filter `kind = 'job'`.
+13. **Migrations are additive and data preserving** (nullable / server-default columns); test each on a copy of the real DB.
+    The three `jobs` columns families added so far: `active_days`, `priority_*`, `kind` + project columns.
+14. **Pictures change only with the admin's explicit OK** (`/images review`, `services/image_review.py`): old file backed
+    up to `data/images_backup/`, source + licence in `<name>.json`; stock APIs only with a key in `.env`; never scrape.
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)

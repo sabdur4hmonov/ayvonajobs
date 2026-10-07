@@ -103,6 +103,20 @@ Botda admin: `/ai` (holat, bugungi so'rovlar, yoqish/o'chirish).
 > akkaunt/kalit ochish Google shartlariga zid bo'lishi va akkauntlar bloklanishiga olib kelishi mumkin. Shuning uchun
 > `GEMINI_ALLOW_KEY_ROTATION=false` (standart) — faqat bitta kalit ishlatiladi. Bizning hajmga bitta kalit + kesh yetadi.
 
+## 5b. Tasdiqlash, ustuvorlik, Loyihalar, rasmlar (2026-10-07)
+
+- **Tasdiqlash:** foydalanuvchi e'loni adminga «✅ Tasdiqlash / ❌ Rad etish» bilan keladi; tasdiqlansa e'lon **o'sha
+  zahoti** kanalga chiqadi (navbatsiz, ikki marta chiqmaydi). Admin **faqat** shu so'rovni oladi — xatolar, monitoring,
+  backup logda (`journalctl`); eskisini qaytarish: `.env` da `ADMIN_EXTRA_NOTIFICATIONS=true`.
+- **Muddat:** forma «E'lon necha kun faol tursin?» (3 / 7 / 14 / 30) deb so'raydi; tugashiga yaqin «Uzaytirasizmi?» keladi.
+- **Ustuvorlik:** ofis / mutaxassis kasblari va yuqori maosh — 1-daraja (birinchi chiqadi), oddiy ishchi ishlari — 3-daraja
+  (oxirida, kuniga chegarali). Qoidalar `config/settings.yaml → priority:`; admin: `/why <id>`, `/queue`;
+  eskilarini baholash: `uv run python scripts/backfill_priority.py [--dry-run | --all]`.
+- **🧩 Loyihalar:** bir martalik pullik ishlar (bot, sayt, dizayn, tarjima). Forma avval turini so'raydi (Ish / Loyiha);
+  kanalda `#loyiha` bilan, botda «🧩 Loyihalar» menyusida.
+- **Rasmlar:** admin `/images review` — rasm o'rinlarini birma-bir ko'rib, taklifni tasdiqlaydi (eski rasm nusxasi
+  saqlanadi). Manba: Pexels / Unsplash / Pixabay (kaliti `.env` da bo'lsa) yoki o'zimiz chizgan original rasm.
+
 ## 6. Dasturchi uchun
 
 ```powershell

@@ -1365,3 +1365,29 @@ Hammasi qolgan (server hali yo'q): **1** akkaunt → **2** SSH kalit → **3** s
 - Sozlamani o'zgartirish: `settings.yaml` dagi qiymatni o'zgartirib, **worker'ni qayta yoqing**.
 - Eslatma: 5 daqiqada 1 ta va tunda tanaffus = kuniga ~192 ta post. Navbatga bundan ko'p kelsa,
   eng eskilari 24 soatdan oshib `skipped_old` bo'ladi — `/stats` dagi "Eskirgan" sonini kuzating.
+
+
+---
+
+## Tasdiqlash, muddat, ustuvorlik, Loyihalar, rasmlar (2026-10-07, serverda ishlayotgan loyiha ustida)
+
+Branch `feature/moderation-ranking-projects`. Batafsil hisobot: `STATUS.md`; serverga qo'yish va orqaga qaytarish:
+`DEPLOY.md` 6a-bo'lim.
+
+1. **Tasdiqlash = darhol joylash.** `js.approve(publish_now=True)` e'lonni bitta shartli UPDATE bilan `sending` ga o'tkazadi
+   (kim bossa, o'sha egallaydi), keyin `Publisher.publish_claimed()` kanalga yuboradi. Navbatga tushmaydi; ikki marta bosish,
+   ikkinchi admin, restart — ikki marta chiqmaydi. Telegram xatosi bo'lsa e'lon navbatga qaytadi (yo'qolmaydi). `/pause`
+   ushlab turadi. 10 daqiqadan oshgan `sending` publisher tomonidan qayta navbatga qo'yiladi.
+2. **Admin xabarlari.** `Notifier` o'zi yubormoqchi bo'lgan hamma narsa (xatolar, monitoring, backup fayli, shubhali postlar)
+   endi faqat logga yoziladi; `ADMIN_EXTRA_NOTIFICATIONS=true` — eskicha. Admin buyrug'iga javoblar o'zgarmadi.
+3. **Muddat.** Formaning oxirida «necha kun faol tursin» (3/7/14/30); `jobs.active_days`; `expires_at` = chiqqan payt + shu kun;
+   eslatma qisqa e'lonlarda umrining 1/3 qismida; «Uzaytirish» xuddi shuncha kun qo'shadi (`services/lifetime.py`).
+4. **Ustuvorlik.** `processing/priority.py` + `settings.yaml → priority:`; navbat tartibi daraja → eng yangisi; 3-daraja
+   kuniga ≤ 40, 12 soatdan keyin eskiradi, 1-daraja 48 soat yashaydi; qidiruvda ham daraja birinchi; `/why <id>`;
+   worker ishga tushganda eski e'lonlar baholanadi (`scripts/backfill_priority.py`).
+5. **🧩 Loyihalar.** `jobs.kind`, `budget_*`, `deadline_text`; forma avval turini so'raydi; `processing/project_format.py`;
+   bot menyusida «Loyihalar» (`services/projects.py`); qidiruv, obuna, sayt va ustuvorlikdan chetda.
+6. **Rasmlar.** `/images review` (`services/image_review.py`, `processing/image_gen.py`, `config/image_queries.yaml`):
+   birma-bir, faqat admin tasdiqlasa almashadi, eski nusxa `data/images_backup/`, manba/litsenziya `<rasm>.json` da.
+
+Migratsiyalar (additiv): `c9e1a4b7d2f5`, `d1f5b8c3a7e2`, `e2a6c9d4b8f1` — haqiqiy bazaning nusxasida yuqoriga va pastga sinaldi.
