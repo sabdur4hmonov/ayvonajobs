@@ -1,6 +1,6 @@
-# STATUS — Ayvona Jobs (2026-10-07): tasdiqlash, ustuvorlik, Loyihalar, rasmlar
+# STATUS — Ayvona Jobs (2026-10-08): tasdiqlash, ustuvorlik, Loyihalar, rasmlar, filtrsiz obuna
 
-Branch `feature/moderation-ranking-projects` → `main`. Serverda ishlayotgan loyiha ustida 6 ta imkoniyat qo'shildi;
+Branch `feature/moderation-ranking-projects` → `main`. Serverda ishlayotgan loyiha ustida 7 ta imkoniyat qo'shildi;
 **haqiqiy Telegram, haqiqiy sessiya, token va Gemini ishlatilmadi** — hammasi soxta Bot API, soxta stok-API va bazaning
 nusxasida sinaldi. To'liq buyruqlar: [DEPLOY.md](DEPLOY.md) 6a-bo'lim.
 
@@ -15,6 +15,9 @@ nusxasida sinaldi. To'liq buyruqlar: [DEPLOY.md](DEPLOY.md) 6a-bo'lim.
 | 5 | 🧩 Loyihalar | `30e50ce` | `processing/project_format.py`, `services/projects.py`, `bot/handlers/projects.py`, `bot/handlers/post_job.py`, migratsiya `e2a6c9d4b8f1` |
 | 6 | `/images review` — rasmlarni birma-bir yangilash | `f1262a1` | `services/image_review.py`, `processing/image_gen.py`, `bot/handlers/admin_images.py`, `config/image_queries.yaml` |
 | – | Hujjatlar | `432dbbd` | `DEPLOY.md`, `README.md`, `CLAUDE.md`, `docs/PROGRESS.md`, `.env.example` |
+| 7 | 🔓 Admin uchun **filtrsiz obuna** (hamma kanallardagi mos postlar, chiqmaganlari ham — sababi bilan) | `6e9174e` | `services/admin_alerts.py`, `bot/handlers/admin_alerts.py` (`/alerts`, 🔄), `bot/alerts_render.py`, `bot/handlers/alerts.py`, `services/alerts.py`, `apps/worker.py`, `config/settings.yaml → admin_alerts:`, `ADMIN_UNFILTERED_ALERTS`, migratsiya `f3c8a1d6e9b4` |
+| – | Tuzatish: worker yuboradigan obuna xabari va "Uzaytirasizmi?" `<b>` teglari bilan xom ko'rinardi | `4486cc2` | `services/alerts.py`, `services/expiry.py` |
+| – | Hujjatlar (7) | `8522d36` | `DEPLOY.md` 6a, `README.md`, `CLAUDE.md` (15-qoida), `docs/PROGRESS.md`, `.env.example` |
 
 (4 va 5 bitta commit: ikkalasi `models.py`, `config.py`, `texts.py`, `job_submission.py` va migratsiya zanjirini bo'lishadi.)
 
@@ -54,6 +57,18 @@ yo'q yoki natija tugasa — o'zimiz Pillow bilan chizgan original rasm (18 ta be
 hech narsa o'zgarmaydi; haqiqiy rasm almashtirilsa eskisi `data/images_backup/` ga ko'chiriladi; manba/litsenziya/muallif
 rasm yonidagi `<nom>.json` ga yoziladi. Jarayon `kv_store` da saqlanadi (to'xtatib, keyin davom ettirsa bo'ladi).
 
+**7. Filtrsiz obuna (faqat admin).** Admin botda odatdagidek obuna bo'ladi («🔔 Obunalar» → «➕» → soha → kasb, masalan Menejer);
+admin bo'lgani uchun obuna avtomatik **🔓 filtrsiz**. Worker har 15 soniyada collector yig'gan **hamma** postlarni (`raw_posts`,
+hamma kanal va saytlardan) ko'radi va matnida kasb so'zi bormi deb tekshiradi — sifat filtri, dublikat, 24 soat qoidasi,
+daraja, AI xatosi va kanal qaroridan **oldin**. So'zlar: `categories.yaml` dagi kasb so'zlari + `settings.yaml → admin_alerts.keywords`
+(menejer, manager, менеджер, rahbar, руководитель, direktor ...); Gemini yo'q. Xabar: post matni, manba va vaqt, "✅ Kanalga
+chiqdi" yoki "🚫 Kanalga chiqmadi: dublikat / eskirgan / ish e'loni emas / navbatda (daraja 3) / aloqa yo'q ...",
+«🔗 Asl post», kanalga chiqqan bo'lsa «📢 Kanaldagi post», «🔄 Holat» (hozirgi holatni qayta ko'rsatadi). Bir post bir adminga
+**hech qachon ikki marta** kelmaydi (yangi jadval, yuborishdan oldin yoziladi; restart, qayta yig'ish, ikki obuna — bitta xabar).
+Soatiga 30 tadan ortig'i bitta ro'yxat (dayjest) bo'lib keladi; Telegram "kuting" desa kutadi; tarmoq xatosi bo'lsa dayjestda
+qayta yuboriladi. Ko'rish/o'chirish: `/alerts` (⏸ / 🗑). Butunlay o'chirish: `.env` da `ADMIN_UNFILTERED_ALERTS=false`. Oddiy
+foydalanuvchilarning obunalari o'zgarmadi.
+
 ## 2. Qabul qilgan qarorlarim
 
 - **Tasdiqlangan e'lon tungi tanaffusda ham darhol chiqadi** (siz aytganingizdek) va 5 daqiqalik oraliqqa qaramaydi; `/pause`
@@ -77,13 +92,30 @@ rasm yonidagi `<nom>.json` ga yoziladi. Jarayon `kv_store` da saqlanadi (to'xtat
   rasm o'rni almashtirilganda uning yoniga **haqiqiy fayl** qo'shiladi (vaqtinchalisi qoladi, haqiqiy rasm o'zi ustun turadi);
   stok-rasm boshqa o'ringa qayta taklif qilinmaydi; tugma bosilishi aynan o'sha taklifga bog'langan.
 - Yangi kutubxona qo'shilmadi; xotira: import hajmi o'zgarmadi (bot 196, worker 188, collector 86, web 61 MB).
+- **Filtrsiz obuna (7):**
+  - alohida buyruq emas: adminning **hamma** obunalari avtomatik filtrsiz (kasb/soha/so'z bo'lsa). Faqat hudud yoki maosh
+    tanlangan obuna oddiyligicha qoladi. Filtrsiz obunada hudud va maosh hisobga olinmaydi.
+  - adminning filtrsiz obunasi oddiy obuna xabarlaridan chiqarildi (bir e'lon ikki xil xabar bo'lib kelmasin).
+  - **`alert_deliveries` emas, yangi jadval `admin_alert_deliveries`:** eski jadval `jobs.id` ga bog'langan (bo'sh bo'lolmaydi),
+    filtrsiz obuna esa hech qachon e'longa aylanmagan postni ham yuboradi. Kalit: admin + post (`raw_posts.id`).
+  - "darhol" = worker qarorini **ko'pi bilan 2 daqiqa** kutib (`decision_wait_seconds`; worker albom uchun baribir 60 soniya
+    kutadi), shunda xabarda "nega chiqmadi" yozilgan bo'ladi. Navbatni kutmaydi; worker ishlamasa ham 2 daqiqadan keyin
+    "hali ko'rib chiqilmagan" deb keladi.
+  - obunadan **oldin** yig'ilgan postlar yuborilmaydi; birinchi ishga tushishda faqat yangi postlardan boshlanadi.
+  - "hech qachon ikki marta" muhimroq: yozuv yuborishdan **oldin** qilinadi — worker aynan yuborish paytida o'chsa, o'sha
+    bitta xabar yo'qolishi mumkin (takrorlanmaydi).
+  - kanal tarixidan olingan eski postlar (yangi manba qo'shilganda) ham keladi ("kanal tarixidan olingan eski post") — ko'p
+    bo'lsa dayjestga tushadi.
+  - limit: soatiga 30, dayjest 60 daqiqadan keyin, xabarlar orasida 1 soniya; matn 2500 belgigacha (`admin_alerts:`).
+  - `ADMIN_UNFILTERED_ALERTS` standart **yoqilgan** (siz so'ragan rejim); `.env` ga yozish shart emas.
 
 ## 3. Migratsiya haqida
 
 Uchta **additiv** migratsiya (hammasi `ADD COLUMN`; mavjud ma'lumotga tegilmaydi): `c9e1a4b7d2f5` (`jobs.active_days`),
 `d1f5b8c3a7e2` (`priority_tier/score/reason` + indeks), `e2a6c9d4b8f1` (`kind` — `server_default 'job'`, `budget_amount`,
 `budget_currency`, `deadline_text` + indeks). Eski e'lonlarda yangi ustunlar bo'sh (`kind='job'`); ustuvorlikni worker birinchi
-yonishda to'ldiradi.
+yonishda to'ldiradi. To'rtinchisi — `f3c8a1d6e9b4` (filtrsiz obuna): faqat **yangi bo'sh jadval** `admin_alert_deliveries`
+qo'shiladi, hech bir mavjud jadval yoki qatorga tegilmaydi; downgrade faqat shu jadvalni o'chiradi.
 
 **Sinov — haqiqiy bazaning nusxasida** (`D:\Coding projects\ayvona\data\ayvona.db` dan faqat o'qib olingan nusxa; ⚠️ bu
 **kompyuterdagi eski nusxa**, serverdagi jonli baza emas — unga kira olmayman): yuqoriga, pastga (`b8d4f0a2c6e9` gacha) va yana
@@ -100,6 +132,11 @@ Kompyuterdagi nusxada foydalanuvchilar yo'q, shuning uchun **jonli ishlatishga o
 **har bir mavjud qator bayt-bayt bir xil** (jadvallar bo'yicha qatorlar soni va xesh teng), `kind` hammasida `job`.
 Ustuvorlikni shu nusxada `backfill_priority.py` bilan sinadim: 340 e'londan 126 ta 1-daraja, 131 ta 2-daraja, 83 ta 3-daraja.
 
+`f3c8a1d6e9b4` alohida sinaldi: nusxa `e2a6c9d4b8f1` gacha olib kelindi, keyin `head` → `e2a6c9d4b8f1` ga pastga → yana `head`.
+Hamma 12 jadvalning **har bir qatori** oldin/keyin bir xil (to'liq taqqoslash), `admin_alert_deliveries` = 0, `integrity_check`
+ok, `alembic check` — model va migratsiya mos. Obuna/foydalanuvchi/sevimli/xabarnoma yozilgan nusxada ham xuddi shunday.
+Filtrsiz obuna hajmi (o'sha nusxa, offline): 1306 postdan **273 tasi** «Menejer» so'zlariga mos — kuniga ~80–100 ta.
+
 ## 4. Serverga qo'yish
 
 ```bash
@@ -107,16 +144,26 @@ Ustuvorlikni shu nusxada `backfill_priority.py` bilan sinadim: 340 e'londan 126 
 sudo bash /home/ayvona/ayvona/scripts/deploy.sh
 sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh                 # 1–2 daqiqadan keyin
 journalctl -u ayvona-worker -n 60 --no-pager | grep -iE "ustuvorlik|xato|error"
-sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # e2a6c9d4b8f1 (head)
+sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # f3c8a1d6e9b4 (head)
+journalctl -u ayvona-worker -n 200 --no-pager | grep -i "filtrsiz"    # "Admin filtrsiz obunalari: yoqilgan ..."
 ```
 
-`.env` ga hech narsa qo'shish shart emas (ixtiyoriy: `ADMIN_EXTRA_NOTIFICATIONS`, `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`,
-`PIXABAY_API_KEY`). Orqaga qaytish (kod + baza) — DEPLOY.md 6a: eski kod yangi bazada ishga **tushmaydi**, shuning uchun
-`alembic downgrade b8d4f0a2c6e9` + `git reset --hard 5e15946` yoki deploy oldidagi zaxirani tiklash.
+`.env` ga hech narsa qo'shish shart emas (ixtiyoriy: `ADMIN_EXTRA_NOTIFICATIONS`, `ADMIN_UNFILTERED_ALERTS=false`,
+`PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY`). Orqaga qaytish (kod + baza) — DEPLOY.md 6a: eski kod yangi bazada
+ishga **tushmaydi**, shuning uchun `alembic downgrade b8d4f0a2c6e9` + `git reset --hard 5e15946` yoki deploy oldidagi zaxirani
+tiklash. Faqat 7-qismni qaytarish: `alembic downgrade e2a6c9d4b8f1` + `git reset --hard 1cc90a0` (yoki kodga tegmasdan
+`ADMIN_UNFILTERED_ALERTS=false` + `sudo systemctl restart ayvona-worker ayvona-bot`).
 
 ## 5. Test natijalari va qo'lda tekshirish
 
-- `pytest`: **1027 ta test o'tdi** (oldin 874); `ruff check` toza; butun repo `ruff format` bilan formatlangan.
+- `pytest`: **1041 ta test o'tdi** (oldin 874; 7-qism uchun +14); `ruff check` toza; butun repo `ruff format` bilan formatlangan.
+- 7-qism testlari: oddiy pipeline tashlab yuboradigan postlar adminga baribir keladi (ish e'loni emas, dublikat + navbatda
+  3-daraja, eskirgan, ishlanmagan, chiqqan — har birida to'g'ri holat qatori), worker qarorini kutish, restart / kursor
+  yo'qolishi / ikki obunada ham bitta xabar, obunadan oldingi postlar kelmasligi, oddiy foydalanuvchi o'zgarmagani va admin
+  ikki marta olmasligi, rejim o'chirilganda hech narsa yo'q, soatlik limit + dayjest (bir marta), flood-wait kutilishi,
+  tarmoq xatosida dayjestda qayta yuborish, dayjest bo'laklari, kirill/ruscha/inglizcha moslash, `/alerts`, obuna yaratishda
+  "filtrsiz" eslatmasi, «🔄 Holat». `parse_mode` tuzatishi va admin ikki marta olmasligi testlari eski kodda **yiqilishi**
+  ham tekshirildi.
 - Yangi testlar: darhol joylash (ikki marta bosish, bir vaqtdagi bosishlar, Telegram xatosi, flood, `/pause`, tungi tanaffus, yopishib
   qolgan `sending`), admin xabarlari, muddat/eslatma/uzaytirish, ustuvorlik (60+ holat), navbat tartibi va "to'da" holati,
   3-daraja chegarasi, darajali eskirish, qidiruv tartibi, backfill, `/why`, loyiha formasi, byudjet, post matni, ro'yxat,
@@ -128,6 +175,10 @@ sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # e2a6c9d4b
   3. Admin: `/queue` (daraja ko'rinadi), `/why <id>`; birinchi soatda `journalctl -u ayvona-worker` da "Ustuvorlik hisoblandi".
   4. `/images review` — birinchi taklif rasm sifatini ko'ring (haqiqiy Telegram'da `edit_media` bilan "Boshqasi" ishlashini ham).
   5. Xatolar endi Telegram'ga **kelmaydi**: kunda bir `healthcheck.sh` ni ishga tushiring yoki `journalctl` ni qarang.
+  6. Filtrsiz obuna: «🔔 Obunalar» → «➕ Yangi obuna» → Ofis va boshqaruv → Menejer → hudud «Hammasi» → maosh «Farqi yo'q» → «O'tkazib
+     yuborish». Javobda "🔓 ... filtrsiz" yozuvi bo'lsin. `/alerts` — ro'yxatda "🔓 filtrsiz". Bir necha soat ichida
+     "🔓 Filtrsiz obuna: ..." xabarlari kelishi kerak; «🔗 Asl post» manba postini ochsin, «🔄 Holat» holatni yangilasin.
+  7. Oddiy obuna xabari (ikkinchi akkauntda) endi **qalin harf bilan** chiqishini ko'ring (`<b>` xom ko'rinmasin).
 
 ## 6. Qolgan risklar
 
@@ -147,3 +198,10 @@ sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # e2a6c9d4b
 - Stok-rasmlar litsenziyasi bepul, lekin muallifni ko'rsatish tavsiya etiladi (post matniga qo'yilmaydi, faqat `<nom>.json`
   da); rasmlarni nashr etishdan oldin o'zingiz ko'rib chiqasiz (har biri sizning tasdig'ingiz bilan).
 - Loyihalar bo'limida narx/to'lov kafolati yo'q (faqat e'lon); spam/firibgarlik filtrlari ishlar bilan bir xil.
+- **Filtrsiz obuna ko'p xabar beradi:** «Menejer» kuniga ~80–100 ta (nusxa bo'yicha), chunki "sotuv/SMM/HR menejeri" va
+  matndagi "rahbar", "manager" ham mos keladi. Kamaytirish: `admin_alerts.keywords` dan so'z olib tashlang yoki
+  `max_per_hour` ni kamaytiring. Haqiqiy Telegram'da sinalmagan (soxta Bot API bilan sinaldi).
+- **Kamdan-kam yo'qolish:** worker aynan filtrsiz xabarni yuborish paytida o'chsa, o'sha bitta xabar kelmaydi (takror
+  bo'lmasligi uchun shunday tanlandi).
+- Admin bir post haqida ikki xil xabar olmaydi, lekin **boshqa kanaldagi nusxasi** (dublikat) alohida post — u ham keladi
+  ("dublikat" holati bilan): siz "dublikat filtrisiz" deb so'ragansiz.
