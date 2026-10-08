@@ -390,6 +390,15 @@ class ToneConfig(BaseModel):
     keep_upper: list[str] = Field(default_factory=list)  # acronyms kept upper case
 
 
+class DedupConfig(BaseModel):
+    """Duplicate detection (processing/dedup.py) on top of the text / fingerprint layers."""
+
+    window_days: int = Field(default=14, ge=1, le=60)
+    # same contact (phone / @username) + similar requirements text + similar title, any channel
+    contact_text_threshold: float = Field(default=75, ge=50, le=100)
+    contact_title_threshold: float = Field(default=85, ge=40, le=100)
+
+
 class ExpiryConfig(BaseModel):
     """Job life time in search (services/expiry.py, a worker task). The channel post stays."""
 
@@ -525,6 +534,7 @@ class AppConfig(BaseModel):
     alerts: AlertsConfig = Field(default_factory=AlertsConfig)
     admin_alerts: AdminAlertsConfig = Field(default_factory=AdminAlertsConfig)
     tone: ToneConfig = Field(default_factory=ToneConfig)
+    dedup: DedupConfig = Field(default_factory=DedupConfig)
     expiry: ExpiryConfig = Field(default_factory=ExpiryConfig)
     broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
     ai: AIConfig = Field(default_factory=AIConfig)

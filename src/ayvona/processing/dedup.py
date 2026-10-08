@@ -13,6 +13,16 @@ of an earlier one when:
                      Between 85 and 90 (the same ad re-typed in another channel's template)
                      BOTH signals are required: similar titles AND a shared contact.
 
+4. ``contact``     — the same vacancy re-typed in another channel's template (2026-10-07: "Sotuv
+                     menejer" and '"HUNTER" sotuv menejeri', 45 minutes apart): a shared phone /
+                     @username AND the same position (the titles without generic role words —
+                     "specialist", "o'qituvchi", "menejer" ... — and quoted names, token set >=
+                     ``contact_title_threshold``: "Safety Specialist" is not "Update Specialist")
+                     AND a similar text (token set >= ``contact_text_threshold``). Spelling
+                     variants of names count as equal (Begimqulov = Begimkulov: q/k, x/h,
+                     apostrophes, doubled letters). Two different known companies are never one
+                     vacancy.
+
 The second signal in (3) matters: template channels (@huntmejob, @NextHireX, @kasbdoruz) post
 short ads that are 90%+ alike but are different vacancies. When in doubt we say "not a duplicate":
 a rare double post is better than a lost job (hard rule 2).
@@ -43,6 +53,46 @@ TITLE_CONFLICT = 50.0
 FINGERPRINT_MIN_TEXT = 70.0
 # Very short texts ("Results speak in @x") are too weak for fuzzy matching.
 MIN_FUZZY_LEN = 40
+CONTACT_TEXT_THRESHOLD = 75.0
+CONTACT_TITLE_THRESHOLD = 85.0
+# role words every second title has: compared without them, "Fizika ustozi" != "Biologiya ustozi"
+_ROLE_WORDS = (
+    "mutaxassis", "specialist", "spesialist", "menejer", "manager", "menedjer", "o'qituvchi",
+    "ustoz", "teacher", "ishchi", "xodim", "operator", "lavozim", "vakansiya", "kerak",
+)  # fmt: skip
+_TITLE_FILLER = frozenset(("va", "and", "ham", "uchun", "for", "the", "of", "bo'yicha", "boyicha"))
+_QUOTED_RE = re.compile(r"[«\"“„][^»\"”“]{1,40}[»\"”]")
+COMPANY_CONFLICT = 80.0  # two companies less alike than this are different employers
+_VARIANT_RES = (
+    (re.compile(r"[ʻʼ’'`]"), ""),
+    (re.compile(r"x"), "h"),
+    (re.compile(r"q"), "k"),
+    (re.compile(r"(\w)\1+"), r"\1"),
+)
+
+
+def variants(text: str) -> str:
+    """Spelling variants folded together: "Ilxom Begimqulov" == "Ilhom Begimkulov"."""
+    out = text.lower()
+    for rx, repl in _VARIANT_RES:
+        out = rx.sub(repl, out)
+    return out
+
+
+_ROLE_STEMS = tuple(variants(w) for w in _ROLE_WORDS)
+
+
+def title_core(title: str) -> str:
+    """The distinctive words of a title: no quoted names, role words or fillers
+    ('"HUNTER" sotuv menejeri' -> "sotuv"); ``""`` if only role words are left ("O'qituvchi" —
+    then two titles cannot tell two positions apart)."""
+    words = [
+        w
+        for w in variants(_QUOTED_RE.sub(" ", title)).replace("/", " ").split()
+        if w not in _TITLE_FILLER and not w.startswith(_ROLE_STEMS)
+    ]
+    return " ".join(words)
+
 
 _TITLE_KEY_RE = re.compile(
     r"^(?:lavozim(?: nomi)?|position|job title|vakansiya|vacancy|вакансия|должность|kasb)"
@@ -98,6 +148,7 @@ class DedupEntry:
     title: str
     contacts: frozenset[str]
     fingerprint: str | None
+    company: str = ""  # known only for entries of this process run (not stored in raw_posts)
 
 
 def make_entry(
@@ -108,6 +159,7 @@ def make_entry(
     *,
     title: str | None = None,
     ignore_usernames: Iterable[str] = (),
+    company: str | None = None,
 ) -> DedupEntry:
     """Build a comparable entry. ``contacts`` = phones/usernames in order (first one counts)."""
     text = dedup_text(norm_text, ignore_usernames)
@@ -122,6 +174,7 @@ def make_entry(
         title=title,
         contacts=frozenset(contact_list),
         fingerprint=fingerprint,
+        company=_squash(company.lower()) if company else "",
     )
 
 
@@ -144,8 +197,12 @@ class DedupIndex:
         text_threshold: float = TEXT_THRESHOLD,
         title_threshold: float = TITLE_THRESHOLD,
         strict_text_threshold: float = STRICT_TEXT_THRESHOLD,
+        contact_text_threshold: float = CONTACT_TEXT_THRESHOLD,
+        contact_title_threshold: float = CONTACT_TITLE_THRESHOLD,
     ) -> None:
         self.window = window
+        self.contact_text_threshold = contact_text_threshold
+        self.contact_title_threshold = contact_title_threshold
         self.text_threshold = text_threshold
         self.strict_text_threshold = strict_text_threshold
         self.title_threshold = title_threshold
@@ -207,7 +264,33 @@ class DedupIndex:
                 continue
             if title_ok or (shared and not (both_titles and title_score < TITLE_CONFLICT)):
                 return self._match(entry, c, "fuzzy", score)
-        return None
+        return self._contact_match(entry, cands)
+
+    def _contact_match(self, entry: DedupEntry, cands: list[DedupEntry]) -> DedupMatch | None:
+        """Layer 4: the same contact + a similar title + a similar text (any channel)."""
+        if not entry.contacts or not entry.title:
+            return None
+        title = title_core(entry.title)
+        if not title:
+            return None
+        text = variants(entry.text)
+        company = variants(entry.company)
+        best: tuple[float, DedupEntry] | None = None
+        for c in cands:
+            if not (entry.contacts & c.contacts) or not (c_title := title_core(c.title)):
+                continue
+            if (
+                company
+                and c.company
+                and fuzz.ratio(company, variants(c.company)) < COMPANY_CONFLICT
+            ):
+                continue  # two different employers behind one recruiter
+            if fuzz.token_set_ratio(title, c_title) < self.contact_title_threshold:
+                continue
+            score = fuzz.token_set_ratio(text, variants(c.text))
+            if score >= self.contact_text_threshold and (best is None or score > best[0]):
+                best = (score, c)
+        return self._match(entry, best[1], "contact", best[0]) if best else None
 
     def add(self, entry: DedupEntry, duplicate_of: Hashable | None = None) -> None:
         self._entries.append(entry)

@@ -48,7 +48,7 @@ from ayvona.db.models import (
 from ayvona.db.repositories import kv_repo, raw_posts_repo
 from ayvona.processing.classify import Classification, Classifier, PostInput, PostKind, merge_album
 from ayvona.processing.clean import Cleaner
-from ayvona.processing.dedup import WINDOW, DedupEntry, DedupIndex, DedupMatch, make_entry
+from ayvona.processing.dedup import DedupEntry, DedupIndex, DedupMatch, make_entry
 from ayvona.processing.extract import Extraction, Extractor
 from ayvona.processing.formatter import FormattedPost, Formatter, telegram_post_url
 from ayvona.processing.normalize import search_text
@@ -251,7 +251,7 @@ class Pipeline:
         self.cleaner = Cleaner(settings.source_rules)
         self.formatter = Formatter(settings)
         self.priority = PriorityScorer(settings)
-        self.index = DedupIndex()
+        self.index = self._new_index()
         self._index_loaded_at: datetime | None = None
         self._config_own: set[str] = set(settings.source_rules.defaults.extra_own_usernames)
         for s in settings.app.sources:
@@ -263,17 +263,28 @@ class Pipeline:
         self._own: set[str] = set(self._config_own)
 
     # ------------------------------------------------------------------ dedup index
+    def _new_index(self) -> DedupIndex:
+        cfg = self.settings.app.dedup
+        return DedupIndex(
+            window=timedelta(days=cfg.window_days),
+            contact_text_threshold=cfg.contact_text_threshold,
+            contact_title_threshold=cfg.contact_title_threshold,
+        )
+
     async def load_index(self, now: datetime | None = None) -> int:
-        """(Re)build the in-memory dedup index from ``raw_posts`` of the last 14 days."""
+        """(Re)build the in-memory dedup index from ``raw_posts`` of the window
+        (``dedup.window_days``, 14 by default)."""
         now = now or utcnow()
-        index = DedupIndex()
+        index = self._new_index()
         async with self.sf() as s:
-            rows = await raw_posts_repo.dedup_entries_since(s, now - WINDOW)
+            rows = await raw_posts_repo.dedup_entries_since(s, now - index.window)
         for row in rows:
             index.add(entry_from_row(row), row.duplicate_of)
         self.index = index
         self._index_loaded_at = now
-        logger.info("Dublikat indeksi yuklandi: {} ta e'lon (oxirgi 14 kun)", len(rows))
+        logger.info(
+            "Dublikat indeksi yuklandi: {} ta e'lon (oxirgi {} kun)", len(rows), index.window.days
+        )
         return len(rows)
 
     async def _refresh_own_usernames(self, session: AsyncSession) -> None:
@@ -394,6 +405,7 @@ class Pipeline:
             [*cls.contacts.phones, *cls.contacts.usernames],
             title=ex.title,
             ignore_usernames=self._own,
+            company=ex.company,
         )
         match = self.index.find(entry)
         out, fields = self.render(post, ex)

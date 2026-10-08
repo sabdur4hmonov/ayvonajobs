@@ -99,6 +99,15 @@ worker:
   dedup_reload_hours: 6              # dublikat indeksi bazadan qayta yuklanadi (14 kundan eskilar tushadi)
   reformat_queued_on_start: true     # start'da navbatdagi (queued/retry) e'lonlar hozirgi formatter/branding bilan qayta yasaladi
 
+# --- Dublikatlar (processing/dedup.py) -------------------------------------------------------
+# Matn bir xil / juda o'xshash bo'lsa — avvalgidek. Qo'shimcha: BIR XIL aloqa (telefon yoki @username)
+# + o'xshash lavozim + o'xshash talablar matni -> boshqa kanaldagi o'sha vakansiya (shablon boshqa bo'lsa ham).
+# Ism yozilishi farqi hisobga olinmaydi (Begimqulov = Begimkulov). Ikki xil kompaniya — hech qachon dublikat emas.
+dedup:
+  window_days: 14                    # shuncha kun ichidagi postlar bilan solishtiriladi
+  contact_text_threshold: 75         # bir xil aloqa bo'lsa: matn o'xshashligi (0-100) shundan kam bo'lmasin
+  contact_title_threshold: 85        # ... va lavozim o'xshashligi ("mutaxassis/menejer/o'qituvchi" kabi umumiy so'zlarsiz)
+
 # --- Publisher (kanalga joylash) ---------------------------------------
 publisher:
   publish_interval_seconds: 300      # kanalga postlar orasidagi minimal vaqt (300 = 5 daqiqa)
