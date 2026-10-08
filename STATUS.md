@@ -1,207 +1,179 @@
-# STATUS — Ayvona Jobs (2026-10-08): tasdiqlash, ustuvorlik, Loyihalar, rasmlar, filtrsiz obuna
+# STATUS — Ayvona Jobs (2026-10-08): post sifati va «📖 To'liq ma'lumot»
 
-Branch `feature/moderation-ranking-projects` → `main`. Serverda ishlayotgan loyiha ustida 7 ta imkoniyat qo'shildi;
-**haqiqiy Telegram, haqiqiy sessiya, token va Gemini ishlatilmadi** — hammasi soxta Bot API, soxta stok-API va bazaning
-nusxasida sinaldi. To'liq buyruqlar: [DEPLOY.md](DEPLOY.md) 6a-bo'lim.
+Branch `fix/post-quality` → `main`. **Haqiqiy Telegram, sessiya, token va Gemini ishlatilmadi.** Hammasi soxta Bot API,
+offline formatter va bazaning nusxasida sinaldi. Namuna fayli (`data/channel_sample_2026-10-07.txt`) git'ga kirmadi.
+Testlarda faqat undan tiklangan **anonim** postlar bor (soxta telefon va username). Oldingi hisobot (tasdiqlash,
+ustuvorlik, Loyihalar, rasmlar, filtrsiz obuna) git tarixida: `git show ff68d0f:STATUS.md`.
 
 ## 1. Nima o'zgardi
 
-| # | Imkoniyat | Commit | Asosiy fayllar |
-|---|---|---|---|
-| 1 | Tasdiqlansa e'lon **darhol** kanalga chiqadi (navbatsiz, ikki marta emas) | `5afefc0` | `services/job_submission.py` (`approve(publish_now)`), `publisher/outbox.py` (`publish_claimed`), `bot/moderation.py`, `db/repositories/jobs_repo.py` |
-| 2 | Admin faqat "yangi e'lon tasdiqlash" so'rovini oladi | `84d040e` | `services/notifier.py`, `config.py` (`ADMIN_EXTRA_NOTIFICATIONS`), `apps/{bot,collector,worker}.py` |
-| 3 | "E'lon necha kun faol tursin?" (3/7/14/30) | `0df52fe` | `bot/handlers/post_job.py`, `services/lifetime.py`, `services/expiry.py`, `services/my_jobs.py`, migratsiya `c9e1a4b7d2f5` |
-| 4 | Ustuvorlik (1/2/3-daraja) | `30e50ce` | `processing/priority.py`, `services/priority_backfill.py`, `scripts/backfill_priority.py`, `publisher/outbox.py`, `services/search.py`, `bot/handlers/admin.py` (`/why`), `config/settings.yaml → priority:`, migratsiya `d1f5b8c3a7e2` |
-| 5 | 🧩 Loyihalar | `30e50ce` | `processing/project_format.py`, `services/projects.py`, `bot/handlers/projects.py`, `bot/handlers/post_job.py`, migratsiya `e2a6c9d4b8f1` |
-| 6 | `/images review` — rasmlarni birma-bir yangilash | `f1262a1` | `services/image_review.py`, `processing/image_gen.py`, `bot/handlers/admin_images.py`, `config/image_queries.yaml` |
-| – | Hujjatlar | `432dbbd` | `DEPLOY.md`, `README.md`, `CLAUDE.md`, `docs/PROGRESS.md`, `.env.example` |
-| 7 | 🔓 Admin uchun **filtrsiz obuna** (hamma kanallardagi mos postlar, chiqmaganlari ham — sababi bilan) | `6e9174e` | `services/admin_alerts.py`, `bot/handlers/admin_alerts.py` (`/alerts`, 🔄), `bot/alerts_render.py`, `bot/handlers/alerts.py`, `services/alerts.py`, `apps/worker.py`, `config/settings.yaml → admin_alerts:`, `ADMIN_UNFILTERED_ALERTS`, migratsiya `f3c8a1d6e9b4` |
-| – | Tuzatish: worker yuboradigan obuna xabari va "Uzaytirasizmi?" `<b>` teglari bilan xom ko'rinardi | `4486cc2` | `services/alerts.py`, `services/expiry.py` |
-| – | Hujjatlar (7) | `8522d36` | `DEPLOY.md` 6a, `README.md`, `CLAUDE.md` (15-qoida), `docs/PROGRESS.md`, `.env.example` |
+| Qism | Commit | Fayllar |
+|---|---|---|
+| A. «📖 To'liq ma'lumot» botda, kesish faqat gap/band oxirida | `66408c4`, `4d2f3f5` | `processing/formatter.py`, `processing/project_format.py`, `processing/pipeline.py`, `services/job_submission.py`, `bot/cards.py`, `bot/moderation.py`, `web/app.py`, `db/models.py`, migratsiya `a4d2e7f1c3b9` |
+| B.5 Dublikatlar | `fefdb28` | `processing/dedup.py`, `processing/pipeline.py`, `config.py`, `settings.yaml → dedup:` |
+| B.1–4, 6–8 Kategoriya, hudud, sarlavha, maosh, kompaniya, ma'nosiz maydon, ohang | `66408c4`, `017a9b1` | `processing/categorize.py`, `processing/extract.py`, `processing/salary.py`, `processing/tone.py` (yangi), `processing/formatter.py`, `config/categories.yaml`, `config/extract.yaml`, `config/title_translations.yaml`, `config/settings.yaml → tone:` |
+| Testlar | — | `tests/test_full_info.py`, `tests/test_post_quality.py`, `tests/sample_posts.py` (anonim), `tests/test_formatter.py`, snapshotlar |
+| Hujjatlar | `297c0ed` | `README.md` 5c, `DEPLOY.md` 6b, `CLAUDE.md` 16-qoida, `docs/PROGRESS.md` |
 
-(4 va 5 bitta commit: ikkalasi `models.py`, `config.py`, `texts.py`, `job_submission.py` va migratsiya zanjirini bo'lishadi.)
+**A qismi.** Kanal postida endi "📝 To'liq ma'lumot: asl e'londa" (raqobatchi kanalga havola) **yo'q**. Uning o'rniga
+«📖 To'liq ma'lumot» tugmasi bor: u **bizning botda** `/start job_<id>` bilan to'liq kartochkani ochadi. Bu mavjud
+`?start=job_` oqimi, kartochka ham o'sha. Kartochka o'sha shablon, lekin hech narsa qisqartirilmagan:
+- to'liq talablar va ish vaqti;
+- maosh shartlari;
+- uzun postning butun matni (lotin yozuvida, tinch ohangda);
+- ruscha/inglizcha postda asl matn va AI bergan o'zbekcha tarjima.
 
-**1. Tasdiqlash = darhol joylash.** Admin "✅" bossa e'lon bitta shartli UPDATE bilan `pending_review → sending` ga o'tadi
-(shu paytda uni bitta jarayon "egallaydi"), keyin bot o'sha zahoti kanalga yuboradi → `published`. Navbatga tushmaydi. Ikki
-marta bosish, ikkinchi admin yoki bir vaqtda to'rt marta bosish — kanalda bitta post (testlarda tekshirilgan). Rad etilgan
-e'lon hech qachon chiqmaydi. Telegram xato bersa e'lon navbatga qaytadi (yo'qolmaydi), admin xabarida "navbatga qo'yildi"
-yoziladi. 10 daqiqadan beri `sending` turgan e'lonni (bot o'sha paytda o'chgan) worker qayta navbatga qo'yadi.
+Bu foydalanuvchi e'loni va loyihada ham ishlaydi. Pastdagi kichik «manba» yozuvi va boshqa tugmalar o'zgarmadi.
 
-**2. Admin xabarlari.** `Notifier` o'zi yubormoqchi bo'lgan hamma narsani (xatolar, jim qolgan jarayon, backup fayli,
-shubhali postlar, "kanalga chiqmadi") faqat logga yozadi (`journalctl`, `data/logs/`). `ADMIN_EXTRA_NOTIFICATIONS=true`
-bo'lsa — eskicha. Admin o'zi yozgan buyruqlar (`/stats`, `/queue`, `/why` ...) odatdagidek javob beradi.
+Kesish faqat to'liq qator, gap yoki ro'yxat bandidan keyin bo'ladi, "…" ham faqat shundan keyin qo'yiladi. Egasiz qolgan
+sarlavha ("🔎 TALABLAR") ham olib tashlanadi. Lavozim, maosh, manzil va aloqa hech qachon kesilmaydi. Manzil butun
+qismlar bilan qoladi, kompaniya esa kesilmaydi, butunlay tushiriladi.
 
-**3. Muddat.** Forma oxirida (aloqadan keyin) inline tugmalar: 3 / 7 / 14 / 30 kun (`posting.duration_options`).
-Admin so'rovida "Faol muddat: 7 kun" ko'rinadi. Hisob kanalga chiqqan paytdan: `expires_at = chiqqan payt + kun`. Mavjud
-"Uzaytirasizmi?" mexanizmi ishlatiladi (`reminded_at` o'sha; yangi mexanizm yo'q). Muddati o'tgan e'lon qidiruvdan chiqadi.
-
-**4. Ustuvorlik.** Qoidaga asoslangan (AI yo'q): eng kuchli "yuqori" qoida (kasb +3 / sarlavhadagi so'z +2 / soha +1) +
-eng yomon "past" qoida (oddiy kasb/so'z −3, yumshoq −1) + maosh (butun oraliq ≥ 8 mln so'm/oy: +3; < 2,5 mln: −1).
-Ball ≥ 2 → 1-daraja, ≤ −2 → 3-daraja. Hamma ro'yxat va raqamlar `config/settings.yaml → priority:` da (lotin, kirill, ruscha,
-inglizcha). Navbat: daraja → eng yangisi; yaxshi e'lonni arzon e'lonlar to'dasi siqib chiqara olmaydi (testlangan: 60 ta
-3-daraja + 1 ta 1-daraja → birinchi 1-daraja). 3-daraja kuniga ≤ 40, 12 soatdan keyin eskiradi; 1-daraja 48 soat yashaydi
-(oddiy: avvalgidek 24). Qidiruvda ham daraja birinchi. Sabab: `/why <id>` (faqat so'ralganda) va logda `job #N: daraja ...`.
-
-**5. 🧩 Loyihalar.** «📢 E'lon joylash» avval "💼 Ish / 🧩 Loyiha" deb so'raydi. Loyiha: nomi → tavsif → byudjet (bir martalik,
-summa + valyuta, "Kelishiladi" mumkin) → muddat (o'tkazib yuborsa bo'ladi) → aloqa (majburiy) → faol muddat → ko'rik. Tasdiqlash,
-darhol joylash va muddat savoli — ishlar bilan bir xil. Kanalda `🧩 LOYIHA`, "💰 Byudjet: … (bir martalik)", `#loyiha`; ish
-postidan farq qiladi. Botda «🧩 Loyihalar» (5 tadan, yangisi birinchi) va kanal postidagi "🧩 Boshqa loyihalar" tugmasi
-(`?start=projects`). Loyiha ustuvorlikka kirmaydi (2-daraja, eng yangisi birinchi), ish qidiruvi, obuna, sayt va kategoriya statistikasida
-ko'rinmaydi (`/stats` dagi umumiy "kanalga chiqdi" soniga esa kiradi). Alohida kanal ochilmadi.
-
-**6. Rasmlar.** Hozir postlar ishlatadigan rasmlar: `assets/images/` da **249 fayl, hammasi vaqtinchalik (placeholder), haqiqiy
-rasm 0 ta** (19 kategoriya + 64 kasb papkasi × 3). `/images review` (eski `/images` o'zgarmadi) shu 249 o'rinni birma-bir
-ko'rsatadi: hozirgi rasm + taklif, [✅ Tasdiqlash] [🔄 Boshqasi] [⏭ O'tkazish] [⏹ To'xtatish]. Manba: kalit bor bo'lsa Pexels →
-Unsplash → Pixabay (faqat rasmiy API, faqat o'z CDN manzillaridan, 1280×720 ga qirqiladi, "Ayvona" chizig'i qo'yiladi); kalit
-yo'q yoki natija tugasa — o'zimiz Pillow bilan chizgan original rasm (18 ta belgi, har variant boshqacha). Tasdiqlanmaguncha
-hech narsa o'zgarmaydi; haqiqiy rasm almashtirilsa eskisi `data/images_backup/` ga ko'chiriladi; manba/litsenziya/muallif
-rasm yonidagi `<nom>.json` ga yoziladi. Jarayon `kv_store` da saqlanadi (to'xtatib, keyin davom ettirsa bo'ladi).
-
-**7. Filtrsiz obuna (faqat admin).** Admin botda odatdagidek obuna bo'ladi («🔔 Obunalar» → «➕» → soha → kasb, masalan Menejer);
-admin bo'lgani uchun obuna avtomatik **🔓 filtrsiz**. Worker har 15 soniyada collector yig'gan **hamma** postlarni (`raw_posts`,
-hamma kanal va saytlardan) ko'radi va matnida kasb so'zi bormi deb tekshiradi — sifat filtri, dublikat, 24 soat qoidasi,
-daraja, AI xatosi va kanal qaroridan **oldin**. So'zlar: `categories.yaml` dagi kasb so'zlari + `settings.yaml → admin_alerts.keywords`
-(menejer, manager, менеджер, rahbar, руководитель, direktor ...); Gemini yo'q. Xabar: post matni, manba va vaqt, "✅ Kanalga
-chiqdi" yoki "🚫 Kanalga chiqmadi: dublikat / eskirgan / ish e'loni emas / navbatda (daraja 3) / aloqa yo'q ...",
-«🔗 Asl post», kanalga chiqqan bo'lsa «📢 Kanaldagi post», «🔄 Holat» (hozirgi holatni qayta ko'rsatadi). Bir post bir adminga
-**hech qachon ikki marta** kelmaydi (yangi jadval, yuborishdan oldin yoziladi; restart, qayta yig'ish, ikki obuna — bitta xabar).
-Soatiga 30 tadan ortig'i bitta ro'yxat (dayjest) bo'lib keladi; Telegram "kuting" desa kutadi; tarmoq xatosi bo'lsa dayjestda
-qayta yuboriladi. Ko'rish/o'chirish: `/alerts` (⏸ / 🗑). Butunlay o'chirish: `.env` da `ADMIN_UNFILTERED_ALERTS=false`. Oddiy
-foydalanuvchilarning obunalari o'zgarmadi.
+**B qismi.**
+1. **Kategoriya va teglar:**
+   - `ignore_words` qo'shildi: "temir **banka**" bank emas, "texnologiyalar" texnolog emas.
+   - Sarlavhadagi qo'shtirnoqli nom kasb hisoblanmaydi: `"HUNTER"` endi #hr emas.
+   - Sarlavhasiz postda kasb nomi bor bosh qator hisobga olinadi.
+   - Yangi kasb: kiberxavfsizlik (IT). Marketing, SMM va kontent so'zlari kengaytirildi.
+   - Hudud tegi **faqat manzil maydonidan** olinadi (manzil bo'lsa).
+2. **Sarlavha:**
+   - "Talablar: ..." qatori endi sarlavha bo'lmaydi.
+   - "Mutaxassis bo'yicha marketing" → "Marketing mutaxassisi".
+   - "Erkak va ayollarini" kabi lavozimsiz parcha → kasb yoki kategoriya nomi.
+   - Yalang'och "Ishchi" → "Ombor ishchisi".
+   - "Kassir VA" → "va", "Sotuv Menejeri" → "Sotuv menejeri".
+   - "X at Company" → sarlavha va kompaniyaga ajratiladi.
+   - Trucking "Update" → "Yuk kuzatuvi mutaxassisi (Update)".
+3. **Maosh:**
+   - "3 –7 000 000" → "3 000 000 – 7 000 000 so'm".
+   - Postda "$" bo'lsa summalar dollar deb olinadi.
+   - So'm bo'la olmaydigan son ("1 000 – 5 000 so'm") → "Kelishiladi".
+   - Uzun maosh gapi → "3 000 000 so'm (administrator)", shartlar to'liq kartochkada.
+4. **Kompaniya:** shior, tavsif va gap kompaniya deb olinmaydi. Tiredan keyingi izoh olib tashlanadi, qo'shtirnoq juftlanadi.
+5. **Dublikat:** yangi qatlam bor. Bir xil telefon/@username, bir xil lavozim (umumiy so'zlarsiz) va o'xshash matn bo'lsa,
+   boshqa kanalda bo'lsa ham dublikat. "Begimqulov" va "Begimkulov" teng hisoblanadi. Filtrsiz admin obunasida bunday post
+   «kanalga chiqmadi: dublikat» bo'lib keladi (testlangan).
+6. **Ma'nosiz maydon:** "Talablar: Administrator uchun" kabi, 3 tadan kam ma'noli so'zli maydon tashlanadi.
+7. **Ohang:** "FAQAT ERKAKLAR UCHUN ISH. AYOLLAR BEZOVTA QILMANG!" → "Faqat erkaklar uchun ish.". Iboralar
+   `settings.yaml → tone:` da.
+8. **Boshqa topilganlar:**
+   - fallback sarlavhasi "Yangi ish e'loni — X" o'rniga topilgan lavozim;
+   - "Grafik Dizayner" → "Grafik dizayner";
+   - `RAINBOWSYSTEM” kompaniya` dagi ortiqcha qo'shtirnoq;
+   - ombor postida talablar qatori sarlavha bo'lib qolgani;
+   - "Kofe lady" → #barista.
 
 ## 2. Qabul qilgan qarorlarim
 
-- **Tasdiqlangan e'lon tungi tanaffusda ham darhol chiqadi** (siz aytganingizdek) va 5 daqiqalik oraliqqa qaramaydi; `/pause`
-  esa ushlab turadi (e'lon navbatda kutadi). Admin o'zi yozgan e'lon tasdiqlashsiz navbatga tushadi (avvalgidek).
-- **`posting.moderation: suspicious_only` o'zgarmadi** → tasdiqlashga faqat yangi foydalanuvchining 1-e'loni va shubhali e'lonlar
-  keladi, qolganlari navbat orqali (endi ustuvorlik bilan) chiqadi. Hammasi tasdiqlansin desangiz: `all` (bitta qator).
-- **`/addsource` natijasi adminga baribir keladi** (u adminning o'z buyrug'iga javob). Backup fayli esa endi **yuborilmaydi** —
-  serverdan tashqaridagi nusxani qo'lda olasiz (DEPLOY.md 8-bo'lim). `scripts/backup_now.py --send` (siz yozgan buyruq) yuboradi.
-- Muddat: 3/7/14/30 (o'zgartirsa bo'ladi), hisob kanalga chiqqan paytdan. Qisqa e'londa eslatma umrining 1/3 qismida
-  (3 kun → 1 kun oldin, 7+ kun → 2 kun oldin).
-- Ustuvorlik: **Gemini ishlatilmadi** (qoidalar yetarli, bepul limit saqlanadi); maosh chegarasi 8 mln / 2,5 mln; USD kursi
-  zaxira qiymati (12 800) bilan; faqat sarlavha/kasb/soha ko'riladi (tavsif emas). "Sotuvchi" va "Kassir" — yumshoq (−1, oddiy
-  daraja), "sotuvchi-kassir" — 3-daraja; "Operator" — 3-daraja. Bir darajada **eng yangisi birinchi** (avval — kelgan tartib):
-  `priority.within_tier: oldest` qaytaradi, `priority.enabled: false` — butunlay eski tartib.
-- 3-daraja kunlik chegarasiga faqat kanal manbalari sanaladi (foydalanuvchi e'lonlari emas). Foydalanuvchi e'lonlari yoshi
-  bo'yicha hech qachon "eskirgan" bo'lmaydi (avvalgidek).
-- Loyiha: alohida jadval emas, `jobs.kind` ustuni; byudjet matni `salary_text` da, summa/valyuta alohida; muddat ixtiyoriy;
-  kategoriya "boshqa" (rasm shu papkadan); tavsif ≤ 700 belgi; limitlar ishlar bilan umumiy (kuniga 2, bir vaqtda 1);
-  tur o'zgartirilsa javoblar boshidan boshlanadi.
-- Rasmlar: har papkada 3 ta o'rin; tartib — kategoriyalar, keyin ko'p uchraydigan kasblar, keyin qolganlari; vaqtinchalik
-  rasm o'rni almashtirilganda uning yoniga **haqiqiy fayl** qo'shiladi (vaqtinchalisi qoladi, haqiqiy rasm o'zi ustun turadi);
-  stok-rasm boshqa o'ringa qayta taklif qilinmaydi; tugma bosilishi aynan o'sha taklifga bog'langan.
-- Yangi kutubxona qo'shilmadi; xotira: import hajmi o'zgarmadi (bot 196, worker 188, collector 86, web 61 MB).
-- **Filtrsiz obuna (7):**
-  - alohida buyruq emas: adminning **hamma** obunalari avtomatik filtrsiz (kasb/soha/so'z bo'lsa). Faqat hudud yoki maosh
-    tanlangan obuna oddiyligicha qoladi. Filtrsiz obunada hudud va maosh hisobga olinmaydi.
-  - adminning filtrsiz obunasi oddiy obuna xabarlaridan chiqarildi (bir e'lon ikki xil xabar bo'lib kelmasin).
-  - **`alert_deliveries` emas, yangi jadval `admin_alert_deliveries`:** eski jadval `jobs.id` ga bog'langan (bo'sh bo'lolmaydi),
-    filtrsiz obuna esa hech qachon e'longa aylanmagan postni ham yuboradi. Kalit: admin + post (`raw_posts.id`).
-  - "darhol" = worker qarorini **ko'pi bilan 2 daqiqa** kutib (`decision_wait_seconds`; worker albom uchun baribir 60 soniya
-    kutadi), shunda xabarda "nega chiqmadi" yozilgan bo'ladi. Navbatni kutmaydi; worker ishlamasa ham 2 daqiqadan keyin
-    "hali ko'rib chiqilmagan" deb keladi.
-  - obunadan **oldin** yig'ilgan postlar yuborilmaydi; birinchi ishga tushishda faqat yangi postlardan boshlanadi.
-  - "hech qachon ikki marta" muhimroq: yozuv yuborishdan **oldin** qilinadi — worker aynan yuborish paytida o'chsa, o'sha
-    bitta xabar yo'qolishi mumkin (takrorlanmaydi).
-  - kanal tarixidan olingan eski postlar (yangi manba qo'shilganda) ham keladi ("kanal tarixidan olingan eski post") — ko'p
-    bo'lsa dayjestga tushadi.
-  - limit: soatiga 30, dayjest 60 daqiqadan keyin, xabarlar orasida 1 soniya; matn 2500 belgigacha (`admin_alerts:`).
-  - `ADMIN_UNFILTERED_ALERTS` standart **yoqilgan** (siz so'ragan rejim); `.env` ga yozish shart emas.
+- **Yangi ustun `jobs.full_html`.** To'liq matn `description` da allaqachon bor edi. Lekin to'liq kartochka uchun maydonlar
+  ham kerak, ularni bot ichida qayta hisoblamaslik uchun shablon bir marta yasalib saqlanadi.
+- **Tugma qachon chiqadi:**
+  - caption nimanidir yo'qotganda;
+  - post ruscha yoki inglizcha bo'lganda;
+  - matn 500 belgidan uzun va captiondan 1,5 marta uzun bo'lganda.
 
-## 3. Migratsiya haqida
+  Bazadagi 683 e'londan 403 tasida tugma bor, chunki kanallardagi postlar odatda uzun.
+- Tugma alohida qatorda, «Murojaat/Ariza» va «Saqlash/Boshqa ishlar» orasida. Admin tekshiruvi xabari va sayt ham to'liq
+  kartochkani ko'rsatadi.
+- **Tarjima uchun yangi Gemini so'rovi yo'q.** AI baribir chaqirilgan bo'lsa (limit ichida, keshda), uning o'zbekcha
+  maydonlari ko'rsatiladi. Bo'lmasa faqat asl matn. Joylash hech qachon tarjimani kutmaydi.
+- **Maosh:**
+  - parser qabul qilmagan raqam faqat hammasi ≥ 100 000 bo'lsa ko'rsatiladi ("250 000" kunlik); qolgani "Kelishiladi";
+  - USD faqat postda $/USD/dollar belgisi bo'lsa, rol bo'yicha taxmin qilinmaydi.
+- **Hudud tegi:** manzil maydonida hudud topilsa, faqat shu. Tuman esa matndan olinadi, agar o'sha hudud bo'lsa.
+- **Dublikat:**
+  - oyna 14 kun (`dedup.window_days`);
+  - lavozim o'xshashligi ≥ 85, umumiy so'zlarsiz ("mutaxassis", "o'qituvchi"...);
+  - matn ≥ 75;
+  - ikki xil kompaniya hech qachon dublikat emas;
+  - faqat umumiy so'zdan iborat sarlavha ("O'qituvchi") bu qatlamda solishtirilmaydi.
 
-Uchta **additiv** migratsiya (hammasi `ADD COLUMN`; mavjud ma'lumotga tegilmaydi): `c9e1a4b7d2f5` (`jobs.active_days`),
-`d1f5b8c3a7e2` (`priority_tier/score/reason` + indeks), `e2a6c9d4b8f1` (`kind` — `server_default 'job'`, `budget_amount`,
-`budget_currency`, `deadline_text` + indeks). Eski e'lonlarda yangi ustunlar bo'sh (`kind='job'`); ustuvorlikni worker birinchi
-yonishda to'ldiradi. To'rtinchisi — `f3c8a1d6e9b4` (filtrsiz obuna): faqat **yangi bo'sh jadval** `admin_alert_deliveries`
-qo'shiladi, hech bir mavjud jadval yoki qatorga tegilmaydi; downgrade faqat shu jadvalni o'chiradi.
+  Birinchi variantda 17 ta mos kelishdan 6 tasi xato chiqqan edi, shuning uchun qattiqlashtirdim.
+- Ingliz sarlavhalari harf o'lchamini saqlaydi ("Digital Content Specialist"). Brend nomlari ("Uzum Tezkor") ham.
+- Kanalga chiqqan postlarga tegilmadi. Navbatdagilar worker yonganda o'zi qayta yasaladi.
 
-**Sinov — haqiqiy bazaning nusxasida** (`D:\Coding projects\ayvona\data\ayvona.db` dan faqat o'qib olingan nusxa; ⚠️ bu
-**kompyuterdagi eski nusxa**, serverdagi jonli baza emas — unga kira olmayman): yuqoriga, pastga (`b8d4f0a2c6e9` gacha) va yana
-yuqoriga — hammasi muvaffaqiyatli, `integrity_check` ok.
+## 3. Namunadagi xatolar: oldin / keyin
+
+**a) Namunadagi 21 ta muammoli post** (anonim tiklangan; eski kod → yangi kod):
+
+| Xato | Oldin | Keyin |
+|---|---|---|
+| Captionda manba kanalga havola | 4 | 0 |
+| So'z/gap o'rtasida kesish | 2 | 0 |
+| Noto'g'ri kategoriya (moliya, ishlab_chiqarish, boshqa) | 9 | 0 |
+| Noto'g'ri hudud tegi (#qashqadaryo) | 1 | 0 |
+| Buzuq sarlavha | 7 | 0 |
+| Maosh xatosi | 3 | 0 |
+| Shior kompaniya / ortiqcha qo'shtirnoq | 3 / 1 | 0 / 0 |
+| Topilmagan dublikat (Begimqulov/Begimkulov) | 1 | 0 |
+| Ma'nosiz maydon | 1 | 0 |
+| Baqiriq / qo'pol ibora | 1 | 0 |
+| Sotuv menejeriga #hr | 1 | 0 |
+
+**b) Kompyuterdagi baza nusxasining hamma 1306 posti** (offline, chiqqan e'lonlar):
+
+| Xato | Oldin | Keyin |
+|---|---|---|
+| Captionda manba havolasi | 186 | 0 |
+| So'z/gap o'rtasida kesish | 25 | 0 |
+| To'liq gap/banddan keyin bo'lmagan kesish | 26 | 1 (vergulli bo'lak) |
+| Buzuq sarlavha | 19 | 0 |
+| Shubhali kompaniya | 32 | 0 |
+| Baqiriq qatori | 11 | 0 |
+| Ma'nosiz talablar | 4 | 1 |
+| Bir nechta hudud tegi | 19 | 13 |
+| "Yangi ish e'loni" sarlavhasi | 44 | 31 |
+| Dublikat (yangi qatlam) | — | +11 (barchasi qo'lda tekshirildi) |
+| `#boshqa` | 27 | 27 |
+
+## 4. Migratsiya
+
+`a4d2e7f1c3b9`: `jobs.full_html` — bitta bo'sh `TEXT` ustun. Faqat qo'shiladi, mavjud qatorlarga tegmaydi. Eski e'lonlarda
+bo'sh qoladi, ularning bot kartochkasi avvalgidek kanal posti bo'ladi. Kompyuterdagi baza nusxasida sinaldi: yuqoriga,
+pastga va yana yuqoriga. Hamma jadvallarning har bir qatori bir xil qoldi, `integrity_check` ok, `alembic check` toza.
+Obuna, foydalanuvchi va sevimli qatorlari yozilgan nusxada ham sinaldi.
 
 | jadval | oldin | keyin |
 |---|---|---|
 | sources / raw_posts / jobs | 20 / 1306 / 340 | 20 / 1306 / 340 |
 | images / kv_store / jobs_fts | 69 / 57 / 340 | 69 / 57 / 340 |
-| users / subscriptions / favorites | 0 / 0 / 0 | 0 / 0 / 0 |
 
-Kompyuterdagi nusxada foydalanuvchilar yo'q, shuning uchun **jonli ishlatishga o'xshash** nusxa ham yasab sinadim (3 foydalanuvchi,
-2 obuna, 1 sevimli, 1 xabarnoma, 3 ta foydalanuvchi e'loni: chiqqan / tekshiruvda / yopilgan): yangilangandan keyin
-**har bir mavjud qator bayt-bayt bir xil** (jadvallar bo'yicha qatorlar soni va xesh teng), `kind` hammasida `job`.
-Ustuvorlikni shu nusxada `backfill_priority.py` bilan sinadim: 340 e'londan 126 ta 1-daraja, 131 ta 2-daraja, 83 ta 3-daraja.
+⚠️ Bu kompyuterdagi **eski** nusxa, serverdagi jonli bazaga kira olmayman.
 
-`f3c8a1d6e9b4` alohida sinaldi: nusxa `e2a6c9d4b8f1` gacha olib kelindi, keyin `head` → `e2a6c9d4b8f1` ga pastga → yana `head`.
-Hamma 12 jadvalning **har bir qatori** oldin/keyin bir xil (to'liq taqqoslash), `admin_alert_deliveries` = 0, `integrity_check`
-ok, `alembic check` — model va migratsiya mos. Obuna/foydalanuvchi/sevimli/xabarnoma yozilgan nusxada ham xuddi shunday.
-Filtrsiz obuna hajmi (o'sha nusxa, offline): 1306 postdan **273 tasi** «Menejer» so'zlariga mos — kuniga ~80–100 ta.
-
-## 4. Serverga qo'yish
+## 5. Serverga qo'yish
 
 ```bash
-# 🐧 server (ubuntu) — git pull, baza zaxirasi, kutubxonalar, MIGRATSIYA, restart: hammasini deploy.sh qiladi
 sudo bash /home/ayvona/ayvona/scripts/deploy.sh
-sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh                 # 1–2 daqiqadan keyin
-journalctl -u ayvona-worker -n 60 --no-pager | grep -iE "ustuvorlik|xato|error"
-sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # f3c8a1d6e9b4 (head)
-journalctl -u ayvona-worker -n 200 --no-pager | grep -i "filtrsiz"    # "Admin filtrsiz obunalari: yoqilgan ..."
 ```
+```bash
+sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh
+```
+```bash
+sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'
+```
+Oxirgi buyruq `a4d2e7f1c3b9 (head)` ko'rsatishi kerak. `deploy.sh` migratsiyani o'zi qiladi. `.env` ga hech narsa qo'shish
+shart emas. Orqaga qaytish DEPLOY.md 6b-bo'limda: `alembic downgrade f3c8a1d6e9b4` + `git reset --hard ff68d0f`.
 
-`.env` ga hech narsa qo'shish shart emas (ixtiyoriy: `ADMIN_EXTRA_NOTIFICATIONS`, `ADMIN_UNFILTERED_ALERTS=false`,
-`PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY`). Orqaga qaytish (kod + baza) — DEPLOY.md 6a: eski kod yangi bazada
-ishga **tushmaydi**, shuning uchun `alembic downgrade b8d4f0a2c6e9` + `git reset --hard 5e15946` yoki deploy oldidagi zaxirani
-tiklash. Faqat 7-qismni qaytarish: `alembic downgrade e2a6c9d4b8f1` + `git reset --hard 1cc90a0` (yoki kodga tegmasdan
-`ADMIN_UNFILTERED_ALERTS=false` + `sudo systemctl restart ayvona-worker ayvona-bot`).
+## 6. Qo'lda tekshiring
 
-## 5. Test natijalari va qo'lda tekshirish
+1. Kanalda yangi uzun post chiqqach, «📖 To'liq ma'lumot» tugmasini bosing. Bot ochilishi va to'liq matnni ko'rsatishi
+   kerak (telefon va kompyuterda). Telegram'da `start=job_<id>` ishlashini haqiqiy akkauntda sinab ko'ring.
+2. Ruscha yoki inglizcha postdagi tugma: botda "📄 Asl matn" va o'zbekcha maydonlar chiqishi kerak.
+3. Uzun foydalanuvchi e'loni va uzun loyiha: tugma bo'lsin, botda yozilgan hamma narsa ko'rinsin.
+4. Admin tekshiruv xabari to'liq kartochka bilan keladi. Juda uzun e'londa xabar sig'ishini ko'ring (4096 belgi).
+5. Bir necha kun postlarni ko'zdan kechiring: kategoriya, sarlavha, "Kelishiladi" bo'lib qolgan maosh, tushib qolgan
+   kompaniya, dublikat.
 
-- `pytest`: **1041 ta test o'tdi** (oldin 874; 7-qism uchun +14); `ruff check` toza; butun repo `ruff format` bilan formatlangan.
-- 7-qism testlari: oddiy pipeline tashlab yuboradigan postlar adminga baribir keladi (ish e'loni emas, dublikat + navbatda
-  3-daraja, eskirgan, ishlanmagan, chiqqan — har birida to'g'ri holat qatori), worker qarorini kutish, restart / kursor
-  yo'qolishi / ikki obunada ham bitta xabar, obunadan oldingi postlar kelmasligi, oddiy foydalanuvchi o'zgarmagani va admin
-  ikki marta olmasligi, rejim o'chirilganda hech narsa yo'q, soatlik limit + dayjest (bir marta), flood-wait kutilishi,
-  tarmoq xatosida dayjestda qayta yuborish, dayjest bo'laklari, kirill/ruscha/inglizcha moslash, `/alerts`, obuna yaratishda
-  "filtrsiz" eslatmasi, «🔄 Holat». `parse_mode` tuzatishi va admin ikki marta olmasligi testlari eski kodda **yiqilishi**
-  ham tekshirildi.
-- Yangi testlar: darhol joylash (ikki marta bosish, bir vaqtdagi bosishlar, Telegram xatosi, flood, `/pause`, tungi tanaffus, yopishib
-  qolgan `sending`), admin xabarlari, muddat/eslatma/uzaytirish, ustuvorlik (60+ holat), navbat tartibi va "to'da" holati,
-  3-daraja chegarasi, darajali eskirish, qidiruv tartibi, backfill, `/why`, loyiha formasi, byudjet, post matni, ro'yxat,
-  qidiruv/sayt/obunadan chetda ekani, rasm generatori, stok-API'lar (soxta), tasdiqlash/zaxira/litsenziya fayli, tugmalar.
-- **Siz qo'lda tekshiring** (haqiqiy Telegram'da, ikkinchi akkaunt bilan — birinchi e'loni tekshiruvga tushadi):
-  1. «📢 E'lon joylash» → 💼 Ish → … → muddat → yuborish; sizga "Yangi e'lon — tekshiring" kelishi (muddat va tur ko'rinsin);
-     «✅» bossangiz e'lon **zahoti** kanalda va muallifga havola.
-  2. Xuddi shu «🧩 Loyiha» bilan: kanaldagi post `🧩 LOYIHA … #loyiha`; botda «🧩 Loyihalar» ro'yxatida; "🧩 Boshqa loyihalar" tugmasi.
-  3. Admin: `/queue` (daraja ko'rinadi), `/why <id>`; birinchi soatda `journalctl -u ayvona-worker` da "Ustuvorlik hisoblandi".
-  4. `/images review` — birinchi taklif rasm sifatini ko'ring (haqiqiy Telegram'da `edit_media` bilan "Boshqasi" ishlashini ham).
-  5. Xatolar endi Telegram'ga **kelmaydi**: kunda bir `healthcheck.sh` ni ishga tushiring yoki `journalctl` ni qarang.
-  6. Filtrsiz obuna: «🔔 Obunalar» → «➕ Yangi obuna» → Ofis va boshqaruv → Menejer → hudud «Hammasi» → maosh «Farqi yo'q» → «O'tkazib
-     yuborish». Javobda "🔓 ... filtrsiz" yozuvi bo'lsin. `/alerts` — ro'yxatda "🔓 filtrsiz". Bir necha soat ichida
-     "🔓 Filtrsiz obuna: ..." xabarlari kelishi kerak; «🔗 Asl post» manba postini ochsin, «🔄 Holat» holatni yangilasin.
-  7. Oddiy obuna xabari (ikkinchi akkauntda) endi **qalin harf bilan** chiqishini ko'ring (`<b>` xom ko'rinmasin).
+## 7. Qolgan risklar
 
-## 6. Qolgan risklar
-
-- **Sinalmaganlar:** haqiqiy Telegram (rasm yuklash, `edit_media`, darhol joylash tezligi) va haqiqiy Pexels/Unsplash/Pixabay
-  (javob shakllari rasmiy hujjatdan olingan, kalitsiz sinalmagan; Unsplash demo-kalit soatiga ~50 so'rov bilan cheklangan).
-- **Jim xatolar:** admin chatga xato kelmagani uchun (masalan bot kanaldan chiqarilsa) buni faqat log/`healthcheck.sh` ko'rsatadi.
-  Xohlasangiz `ADMIN_EXTRA_NOTIFICATIONS=true`.
-- **Serverdan tashqaridagi zaxira endi qo'lda** (Telegram'ga yuborilmaydi) — haftada bir nusxa oling, aks holda server yo'qolsa
-  faqat kompyuterdagi eski baza qoladi.
-- **Ustuvorlik sozlamasi taxminiy:** kompyuterdagi nusxada e'lonlarning 37% i 1-daraja chiqdi — ko'p. Kerak bo'lsa
-  `tier1_at: 3` yoki ro'yxatni qisqartiring (`/why` bilan tekshirib), so'ng `scripts/backfill_priority.py --all`. 3-daraja
-  kuniga 40 ta va 12 soat — navbat uzun bo'lsa arzon e'lonlarning ko'pi kanalga chiqmaydi (bazada qoladi, `skipped_old`).
-- **Birinchi deploy'da navbat:** worker yonganda eski navbat qayta baholanadi va 3-daraja uchun yangi 12 soatlik chegara
-  darhol qo'llanadi — 12 soatdan eski arzon e'lonlar `skipped_old` bo'ladi (kutilgan).
-- **Ikki marta chiqish ehtimoli (juda kam):** tasdiqlashdan so'ng bot aynan joylash paytida o'chsa, e'lon 10 daqiqadan keyin
-  qayta navbatga tushadi; Telegram qabul qilgan bo'lsa — bitta takror (avvalgi "kamida bir marta" qoidasi).
-- Stok-rasmlar litsenziyasi bepul, lekin muallifni ko'rsatish tavsiya etiladi (post matniga qo'yilmaydi, faqat `<nom>.json`
-  da); rasmlarni nashr etishdan oldin o'zingiz ko'rib chiqasiz (har biri sizning tasdig'ingiz bilan).
-- Loyihalar bo'limida narx/to'lov kafolati yo'q (faqat e'lon); spam/firibgarlik filtrlari ishlar bilan bir xil.
-- **Filtrsiz obuna ko'p xabar beradi:** «Menejer» kuniga ~80–100 ta (nusxa bo'yicha), chunki "sotuv/SMM/HR menejeri" va
-  matndagi "rahbar", "manager" ham mos keladi. Kamaytirish: `admin_alerts.keywords` dan so'z olib tashlang yoki
-  `max_per_hour` ni kamaytiring. Haqiqiy Telegram'da sinalmagan (soxta Bot API bilan sinaldi).
-- **Kamdan-kam yo'qolish:** worker aynan filtrsiz xabarni yuborish paytida o'chsa, o'sha bitta xabar kelmaydi (takror
-  bo'lmasligi uchun shunday tanlandi).
-- Admin bir post haqida ikki xil xabar olmaydi, lekin **boshqa kanaldagi nusxasi** (dublikat) alohida post — u ham keladi
-  ("dublikat" holati bilan): siz "dublikat filtrisiz" deb so'ragansiz.
+- **Haqiqiy Telegram'da sinalmagan:** tugma va deep link (soxta Bot API bilan sinaldi).
+- **Tugma ko'p postda** (~59%). Kerak bo'lsa `RICH_TEXT_MIN` / `RICH_TEXT_RATIO` (`processing/formatter.py`) ni oshiring.
+- **Dublikat qatlami:** bitta recruiter bir xil lavozimni ikki xil joyga, kompaniya nomini yozmasdan bersa, ular bitta e'lon
+  deb hisoblanishi mumkin. 11 ta topilgan holatning hammasini qo'lda tekshirdim, xato topmadim.
+- **Ehtiyotkor qoidalar ba'zan foydali ma'lumotni yashiradi:** "Kelishiladi" bo'lgan maosh, tushib qolgan kompaniya,
+  tashlangan qisqa talablar. Ular to'liq kartochkada qoladi.
+- **Faqat manzildan olingan hudud:** manzilida bitta shahar yozilgan, matnida bir nechta viloyat sanalgan e'lon endi
+  bitta hudud tegini oladi.
+- **Baqiriq tuzatish:** butunlay katta harfli qatordagi atoqli otlar ham kichik harfga o'tishi mumkin ("koreyada"); ro'yxatdagi
+  qisqartmalar (HR, KPI, IT...) qoladi.
+- **`#boshqa` 27 ta qoldi:** bularning asosiy sababi lavozimi umuman topilmagan e'lonlar.
