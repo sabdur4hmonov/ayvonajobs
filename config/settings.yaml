@@ -335,6 +335,25 @@ alerts:
   per_second: 25                     # Bot API chegarasi (~30/s) — sekundiga shundan ko'p yubormaydi
   poll_seconds: 30                   # kanalga yangi chiqqan e'lonlar shuncha soniyada bir tekshiriladi
 
+# --- 🔓 Admin uchun FILTRSIZ obuna (services/admin_alerts.py, worker ichida) ----------
+# ADMIN_IDS dagi admin obuna bo'lsa (masalan kasb "Menejer"), HAMMA manbalardan yig'ilgan, matnida
+# shu kasb so'zi bor HAR BIR post keladi: kanalga chiqqan-chiqmagani, dublikat, eski, past daraja,
+# AI xatosi — farqi yo'q. Xabarda holat qatori: "kanalga chiqdi" / "kanalga chiqmadi: <sabab>".
+# Moslash faqat so'z bilan (Gemini YO'Q — limit sarflanmaydi). So'zlar: categories.yaml dagi kasb
+# so'zlari + pastdagi qo'shimcha ro'yxat (kalit = kasb yoki soha kaliti). Hudud/maosh filtri hisobga
+# olinmaydi. Butunlay o'chirish: .env da ADMIN_UNFILTERED_ALERTS=false. Ko'rish/o'chirish: botda /alerts.
+admin_alerts:
+  poll_seconds: 15                   # yangi postlar shuncha soniyada bir tekshiriladi
+  decision_wait_seconds: 120         # worker qarorini (chiqdi / nega chiqmadi) ko'pi bilan shuncha kutadi
+  max_per_hour: 30                   # bitta adminga soatiga ko'pi bilan; qolganlari bitta ro'yxat (dayjest) bo'lib keladi
+  digest_minutes: 60                 # dayjest birinchi ortiqcha postdan shuncha daqiqa keyin yuboriladi
+  send_delay_seconds: 1.0            # har xabardan keyin pauza (Telegram limiti)
+  text_max_chars: 2500               # xabardagi post matni shundan uzun bo'lsa qisqartiriladi
+  keywords:
+    menejer: [menejer, manager, менеджер, менежер, rahbar, раҳбар, руководитель, boshqaruvchi, управляющий, direktor, директор, director, head of, team lead, тимлид, supervisor, супервайзер, boshliq, бошлиқ, начальник]
+    hr: [hr, kadrlar, кадры, рекрутер, recruiter, hr menejer, hr manager, hr-менеджер, отдел кадров]
+    marketolog: [marketing, marketolog, маркетинг, маркетолог, marketer]
+
 # --- E'lon muddati (services/expiry.py, worker ichida) ------------------------
 expiry:
   aggregator_days: 21                # kanallardan olingan e'lon shuncha kundan keyin qidiruvdan chiqadi

@@ -71,3 +71,10 @@ class ModCb(CallbackData, prefix="mod"):
 
     action: str
     id: int
+
+
+class AdmAlertCb(CallbackData, prefix="aa"):
+    """🔄 under an admin's unfiltered alert: show the post's current state again."""
+
+    raw: int
+    sub: int = 0

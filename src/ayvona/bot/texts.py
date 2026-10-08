@@ -227,6 +227,39 @@ DIGEST_HEAD = (
     "📬 <b>Obunalaringiz bo'yicha yana {n} ta e'lon</b> (bugungi limitdan keyin chiqqanlar):"
 )
 
+# --- 🔓 admin: filtrsiz obuna (services/admin_alerts.py) -----------------------------
+SUBS_UNFILTERED = "🔓 filtrsiz"
+SUBS_UNFILTERED_NOTE = (
+    "\n🔓 <b>Filtrsiz</b> obunalarga HAMMA kanallardan yig'ilgan, matnida kasb so'zi bor har bir "
+    "post keladi: kanalga chiqqan-chiqmaganidan qat'i nazar (hudud/maosh hisobga olinmaydi). "
+    "Soatiga {max} tadan ortig'i bitta ro'yxat bo'lib keladi. To'xtatish: ⏸ yoki 🗑."
+)
+SUBS_UNFILTERED_OFF = (
+    "\n(Filtrsiz rejim o'chirilgan: .env da ADMIN_UNFILTERED_ALERTS=false — "
+    "obunalar oddiy ishlaydi.)"
+)
+SUBS_CREATED_UNFILTERED = (
+    "\n🔓 Siz adminsiz: bu obuna <b>filtrsiz</b> — hamma kanallardagi mos postlar keladi "
+    "(kanalga chiqmaganlari ham, sababi bilan). Ro'yxat: /alerts"
+)
+ADM_ALERT_HEAD = "🔓 <b>Filtrsiz obuna</b>: {summary}"
+ADM_ALERT_PUBLISHED = "✅ <b>Kanalga chiqdi</b>"
+ADM_ALERT_PUBLISHED_COPY = "✅ <b>Kanalga chiqdi</b> (boshqa manbadagi nusxasi)"
+ADM_ALERT_NOT_PUBLISHED = "🚫 <b>Kanalga chiqmadi:</b> {reason}"
+ADM_ALERT_META = "📡 {source} · 🕒 {when}"
+ADM_ALERT_WORDS = "🔎 Topilgan so'z: {words}"
+ADM_ALERT_NO_TEXT = "(matn yo'q)"
+BTN_ADM_SOURCE = "🔗 Asl post"
+BTN_ADM_CHANNEL = "📢 Kanaldagi post"
+BTN_ADM_REFRESH = "🔄 Holat"
+ADM_ALERT_GONE = "Bu post bazada topilmadi."
+ADM_ALERT_REFRESHED = "🔄 Holat yangilandi"
+ADM_DIGEST_HEAD = (
+    "📬 <b>Filtrsiz obuna: yana {n} ta post</b> (soatlik limitdan oshgani uchun ro'yxat bo'lib):"
+)
+ADM_DIGEST_ITEM = "{n}. {title}\n   {state} · {link}"
+ADM_DIGEST_LINK = '<a href="{url}">asl post</a>'
+
 # ------------------------------------------------------------------ public: 📋 Mening e'lonlarim
 MY_EMPTY = "📋 Sizda hali e'lon yo'q. «📢 E'lon joylash» bilan qo'shing."
 MY_HEAD = "📋 <b>Mening e'lonlarim</b> (oxirgi {n} ta):"
@@ -345,7 +378,8 @@ ADMIN_HELP = (
     "➕ /addsource &lt;@kanal | t.me/kanal | t.me/+taklif | web:nom | rss:URL&gt;\n\n"
     "🖼 /images — rasm bo'shliqlari · /images &lt;kasb&gt; — rasmlar ro'yxati\n"
     "🆕 /images review — rasmlarni birma-bir yangilash (har birini o'zingiz tasdiqlaysiz)\n"
-    "➕ /addimage &lt;kasb | kategoriya&gt; — rasm qo'shish\n"
+    "➕ /addimage &lt;kasb | kategoriya&gt; — rasm qo'shish\n\n"
+    "🔓 /alerts — filtrsiz obunalaringiz (hamma kanallardagi mos postlar): ko'rish, o'chirish\n"
     "✖️ /cancel — boshlangan amalni bekor qilish"
 )
 CANCELLED = "✖️ Bekor qilindi."

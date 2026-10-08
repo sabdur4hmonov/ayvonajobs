@@ -379,6 +379,39 @@ class AlertDelivery(Base):
     )
 
 
+class AdminAlertStatus(StrEnum):
+    SENT = "sent"
+    DIGEST = "digest"  # over the admin's hourly cap: waits for the digest message
+    DIGEST_SENT = "digest_sent"
+    FAILED = "failed"  # Telegram refused it for good (not retried)
+
+
+class AdminAlertDelivery(Base):
+    """One unfiltered admin alert (services/admin_alerts.py) about one COLLECTED post.
+
+    Keyed by the raw post, not by a job: the post may never become a job (not a job ad,
+    duplicate, too old, AI failure ...). The PK (admin, post) means a post is never sent twice to
+    one admin — after a restart, after re-collection, and even if two of their subscriptions match.
+    """
+
+    __tablename__ = "admin_alert_deliveries"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    raw_post_id: Mapped[int] = mapped_column(
+        ForeignKey("raw_posts.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    # the subscription that matched first (kept when the subscription is deleted: no re-send)
+    subscription_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subscriptions.id", ondelete="SET NULL")
+    )
+    status: Mapped[AdminAlertStatus] = mapped_column(
+        str_enum(AdminAlertStatus, 16),
+        default=AdminAlertStatus.SENT,
+        server_default=AdminAlertStatus.SENT.value,
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+
+
 class SearchLog(Base):
     __tablename__ = "search_logs"
 

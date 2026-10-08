@@ -11,6 +11,8 @@ Tasks running side by side:
 * backup — daily 03:00 Asia/Tashkent copy of the DB, sent to the admin chat (services/backup.py);
 * USD rate — once a day from cbu.uz for the salary search filter (services/currency.py);
 * alerts — newly published jobs -> subscribers, evening digest (services/alerts.py);
+* admin alerts — every collected post that names an admin's subscribed profession, published or
+  not, with the reason (services/admin_alerts.py; ``ADMIN_UNFILTERED_ALERTS``);
 * expiry — ``expires_at`` passed -> out of search, "Uzaytirasizmi?" to authors (services/expiry.py).
 
 Step 0 (first start only): every post already in the DB becomes ``skipped_backfill`` — the test
@@ -50,7 +52,12 @@ from ayvona.apps.runtime import (
     stop_aware_sleep,
     write_heartbeat,
 )
-from ayvona.bot.alerts_render import render_alert, render_digest
+from ayvona.bot.alerts_render import (
+    render_admin_alert,
+    render_admin_digest,
+    render_alert,
+    render_digest,
+)
 from ayvona.bot.handlers.my_jobs import reminder_view
 from ayvona.botapi import (
     BAD_TOKEN,
@@ -66,6 +73,8 @@ from ayvona.db.session import create_engine, create_session_factory, schema_is_r
 from ayvona.logging_setup import setup_logging
 from ayvona.processing.pipeline import Pipeline
 from ayvona.publisher.outbox import ChannelSender, Publisher, skip_old_jobs
+from ayvona.services import admin_alerts
+from ayvona.services.admin_alerts import AdminAlertService
 from ayvona.services.alerts import AlertService
 from ayvona.services.backup import BackupService
 from ayvona.services.currency import run_usd_rate
@@ -260,6 +269,9 @@ async def run_worker(
     if bot is not None and publish:
         alerts = AlertService(settings, sf, bot, render_alert, render_digest)
         jobs.append(alerts.run(stop_aware_sleep(stop)))
+    if bot is not None and admin_alerts.enabled(settings):
+        admin = AdminAlertService(settings, sf, bot, render_admin_alert, render_admin_digest)
+        jobs.append(admin.run(stop_aware_sleep(stop)))
     if monitor:  # search life time: works without a token too (reminders need the bot)
         expiry = ExpiryService(settings, sf, bot if publish else None, reminder_view)
         jobs.append(expiry.run(stop_aware_sleep(stop)))

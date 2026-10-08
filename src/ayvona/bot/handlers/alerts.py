@@ -26,6 +26,7 @@ from ayvona.bot.handlers.search import ALL, category_kb, profession_kb, region_k
 from ayvona.bot.keyboards import main_menu
 from ayvona.config import Settings
 from ayvona.db.models import Subscription
+from ayvona.services import admin_alerts
 from ayvona.services import alerts as alerts_svc
 from ayvona.services.alerts import CreateResult
 from ayvona.services.search import SearchFilters, fts_query
@@ -44,15 +45,23 @@ def _cb(step: str, value: str = "") -> str:
 
 
 # ------------------------------------------------------------------ list
-def list_view(subs: list[Subscription], settings: Settings) -> tuple[str, InlineKeyboardMarkup]:
+def list_view(
+    subs: list[Subscription], settings: Settings, user_id: int | None = None
+) -> tuple[str, InlineKeyboardMarkup]:
+    """The user's subscriptions. An admin's ones are marked 🔓 when they are unfiltered
+    (services/admin_alerts.py) — the same list is the admin's /alerts."""
     limit = settings.app.alerts.max_per_user
     rows: list[list[InlineKeyboardButton]] = []
+    is_admin = user_id is not None and user_id in settings.env.admin_ids
+    unfiltered = {s.id for s in subs if admin_alerts.is_unfiltered(s, settings)}
     if not subs:
         text = T.SUBS_EMPTY
     else:
         lines = [T.SUBS_HEAD.format(n=len(subs), max=limit), ""]
         for n, sub in enumerate(subs, start=1):
             state = T.SUBS_ACTIVE if sub.is_active else T.SUBS_PAUSED
+            if sub.id in unfiltered:
+                state += f" · {T.SUBS_UNFILTERED}"
             summary = filters_summary(alerts_svc.filters_of(sub), settings)
             lines.append(T.SUBS_ITEM.format(n=n, summary=summary, state=state))
             toggle = (
@@ -71,6 +80,10 @@ def list_view(subs: list[Subscription], settings: Settings) -> tuple[str, Inline
             )
             rows.append([toggle, delete])
         text = "\n".join(lines)
+    if unfiltered or (is_admin and admin_alerts.enabled(settings)):
+        text += T.SUBS_UNFILTERED_NOTE.format(max=settings.app.admin_alerts.max_per_hour)
+    elif is_admin:
+        text += T.SUBS_UNFILTERED_OFF
     if len(subs) < limit:
         rows.append(
             [InlineKeyboardButton(text=T.SUBS_NEW, callback_data=SubCb(action="new").pack())]
@@ -83,7 +96,15 @@ async def _render_list(
 ) -> tuple[str, InlineKeyboardMarkup]:
     async with sf() as s:
         subs = await alerts_svc.list_subscriptions(s, user_id)
-    return list_view(subs, settings)
+    return list_view(subs, settings, user_id)
+
+
+async def show_list(message: Message, sf: SessionFactory, settings: Settings) -> None:
+    """The subscription list as a new message (also the admin's /alerts)."""
+    if message.from_user is None:
+        return
+    text, kb = await _render_list(sf, settings, message.from_user.id)
+    await message.answer(text, reply_markup=kb)
 
 
 @router.message(F.text == T.MENU_ALERTS)
@@ -91,10 +112,7 @@ async def alerts_menu(
     message: Message, state: FSMContext, sf: SessionFactory, settings: Settings
 ) -> None:
     await state.set_state(None)
-    if message.from_user is None:
-        return
-    text, kb = await _render_list(sf, settings, message.from_user.id)
-    await message.answer(text, reply_markup=kb)
+    await show_list(message, sf, settings)
 
 
 @router.callback_query(SubCb.filter(F.action.in_({"pause", "resume", "del"})))
@@ -130,7 +148,7 @@ async def _create(
     f: SearchFilters,
 ) -> None:
     async with sf() as s, s.begin():
-        result, _ = await alerts_svc.create_subscription(s, user_id, f, utcnow(), settings)
+        result, sub = await alerts_svc.create_subscription(s, user_id, f, utcnow(), settings)
     await state.set_state(None)
     text = {
         CreateResult.CREATED: T.SUBS_CREATED.format(summary=filters_summary(f, settings)),
@@ -138,6 +156,8 @@ async def _create(
         CreateResult.DUPLICATE: T.SUBS_DUPLICATE,
         CreateResult.EMPTY: T.SUBS_EMPTY_FILTERS,
     }[result]
+    if sub is not None and admin_alerts.is_unfiltered(sub, settings):
+        text += T.SUBS_CREATED_UNFILTERED
     await message.answer(text, reply_markup=main_menu())
 
 

@@ -11,6 +11,8 @@ Delivery (:class:`AlertService`, a worker task):
   and one message per user is sent even if several of their subscriptions match;
 * at most ``alerts.daily_limit`` messages per user per 24 h — the rest are marked ``digest`` and
   sent as ONE list at ``alerts.digest_hour`` (Tashkent);
+* an admin's unfiltered subscription is skipped here: services/admin_alerts.py already sends
+  every matching collected post;
 * ≤ ``alerts.per_second`` messages per second; Telegram "retry after" is waited; a user who
   blocked the bot (Forbidden) gets all subscriptions switched off.
 """
@@ -35,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from ayvona.config import Settings
 from ayvona.db.models import AlertDelivery, AlertStatus, Job, JobStatus, Subscription, User
 from ayvona.db.repositories import kv_repo
+from ayvona.services import admin_alerts
 from ayvona.services import search as search_svc
 from ayvona.services.search import SearchFilters
 from ayvona.timeutil import to_local, utcnow
@@ -163,6 +166,8 @@ async def plan_job(
     ).all()
     by_user: dict[int, Delivery] = {}
     for sub in subs:
+        if admin_alerts.is_unfiltered(sub, settings):
+            continue  # an admin's unfiltered subscription: services/admin_alerts.py sends it all
         if search_svc.job_matches(filters_of(sub), job, now, usd_rate):
             by_user.setdefault(sub.user_id, Delivery(sub.user_id, job)).subscriptions.append(sub)
     out: list[Delivery] = []

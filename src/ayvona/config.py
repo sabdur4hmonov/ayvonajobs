@@ -76,6 +76,10 @@ class EnvSettings(BaseSettings):
     # False (default): the admin gets ONLY the approval request of a new user ad; errors,
     # monitoring, backups, stats ... are written to the log. True = the old behaviour.
     admin_extra_notifications: bool = False
+    # True (default): an admin's (ADMIN_IDS) subscriptions are "unfiltered" — every collected post
+    # of every source that names the profession is sent, published or not (services/admin_alerts).
+    # False = the mode is off everywhere; admins get the normal filtered alerts like everyone.
+    admin_unfiltered_alerts: bool = True
 
     @field_validator(
         "api_id",
@@ -104,6 +108,12 @@ class EnvSettings(BaseSettings):
     def _blank_flag_is_off(cls, v: Any) -> Any:
         """``ADMIN_EXTRA_NOTIFICATIONS=`` (blank) means the default: off."""
         return False if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("admin_unfiltered_alerts", mode="before")
+    @classmethod
+    def _blank_flag_is_on(cls, v: Any) -> Any:
+        """``ADMIN_UNFILTERED_ALERTS=`` (blank) means the default: on."""
+        return True if isinstance(v, str) and not v.strip() else v
 
     @field_validator("admin_ids", mode="before")
     @classmethod
@@ -352,6 +362,24 @@ class AlertsConfig(BaseModel):
     poll_seconds: float = Field(default=30, gt=0)  # how often newly published jobs are checked
 
 
+class AdminAlertsConfig(BaseModel):
+    """🔓 The admin's unfiltered alerts (services/admin_alerts.py, runs in the worker).
+
+    Every collected post (any source, any status) whose text names a word of the admin's
+    subscription goes to the admin. Words: the profession's ``keywords`` from categories.yaml plus
+    ``keywords[<profession or category key>]`` here."""
+
+    poll_seconds: float = Field(default=15, gt=0)
+    # wait for the worker's decision (published / why not) at most this long after the post
+    # arrived; then the alert goes out anyway ("hali ko'rib chiqilmagan")
+    decision_wait_seconds: float = Field(default=120, ge=0)
+    max_per_hour: int = Field(default=30, ge=1)  # per admin; the rest -> one digest message
+    digest_minutes: int = Field(default=60, ge=1)  # the digest goes out this long after the first
+    send_delay_seconds: float = Field(default=1.0, ge=0)  # pause after every message
+    text_max_chars: int = Field(default=2500, ge=200, le=3500)  # the post text in an alert
+    keywords: dict[str, list[str]] = Field(default_factory=dict)
+
+
 class ExpiryConfig(BaseModel):
     """Job life time in search (services/expiry.py, a worker task). The channel post stays."""
 
@@ -485,6 +513,7 @@ class AppConfig(BaseModel):
     posting: PostingConfig = Field(default_factory=PostingConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     alerts: AlertsConfig = Field(default_factory=AlertsConfig)
+    admin_alerts: AdminAlertsConfig = Field(default_factory=AdminAlertsConfig)
     expiry: ExpiryConfig = Field(default_factory=ExpiryConfig)
     broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
     ai: AIConfig = Field(default_factory=AIConfig)

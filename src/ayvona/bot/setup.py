@@ -17,6 +17,7 @@ from ayvona.bot import moderation
 from ayvona.bot.filters import IsAdmin
 from ayvona.bot.handlers import (
     admin,
+    admin_alerts,
     admin_extra,
     admin_images,
     admin_sources,
@@ -62,6 +63,7 @@ ADMIN_COMMANDS = [
     BotCommand(command="unban", description="Blokdan chiqarish"),
     BotCommand(command="broadcast", description="Hammaga xabar"),
     BotCommand(command="ai", description="Gemini yordamchi"),
+    BotCommand(command="alerts", description="Filtrsiz obunalar (hamma kanallardan)"),
     BotCommand(command="cancel", description="Bekor qilish"),
     BotCommand(command="help", description="Admin yordami"),
 ]
@@ -100,6 +102,7 @@ def build_dispatcher(
             admin.router,
             admin_sources.router,
             admin_images.router,
+            admin_alerts.router,
             admin_extra.router,
             moderation.router,
         )
