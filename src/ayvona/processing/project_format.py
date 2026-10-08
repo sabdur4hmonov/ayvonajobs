@@ -21,7 +21,9 @@ from ayvona.processing.formatter import (
     esc,
     format_amount,
     format_phone,
+    full_info_url,
     truncate,
+    truncate_units,
     visible_len,
 )
 from ayvona.processing.normalize import fold
@@ -36,6 +38,7 @@ T_NEGOTIABLE = "Kelishiladi"
 B_CONTACT = "📩 Murojaat"
 B_SAVE = "⭐ Saqlash"
 B_MORE = "🧩 Boshqa loyihalar"
+B_FULL_INFO = "📖 To'liq ma'lumot"
 MAX_CAPTION = 1024  # Telegram: photo caption
 
 
@@ -74,6 +77,8 @@ class ProjectPost:
     username: str | None  # first @username -> the "📩 Murojaat" button
     bot_username: str
     tags: tuple[str, ...] = (PROJECT_TAG,)
+    # the bot's full card when the description was shortened ("📖 To'liq ma'lumot")
+    full_html: str | None = None
 
     def buttons(self, job_id: int) -> list[list[dict[str, str]]]:
         first = (
@@ -81,11 +86,16 @@ class ProjectPost:
             if self.username
             else []
         )
+        full = (
+            [{"text": B_FULL_INFO, "url": full_info_url(self.bot_username, job_id)}]
+            if self.full_html
+            else []
+        )
         second = [
             {"text": B_SAVE, "url": f"https://t.me/{self.bot_username}?start=save_{job_id}"},
             {"text": B_MORE, "url": f"https://t.me/{self.bot_username}?start=projects"},
         ]
-        return [row for row in (first, second) if row]
+        return [row for row in (first, full, second) if row]
 
 
 def format_project(
@@ -124,8 +134,14 @@ def format_project(
         return "\n\n".join("\n".join(x) for x in blocks if x)
 
     text = (description or "").strip()
-    caption = build(text or None)
-    if visible_len(caption) > MAX_CAPTION:  # shrink only the long free text, never the facts
+    caption = full = build(text or None)
+    shortened = visible_len(caption) > MAX_CAPTION
+    if shortened:  # shrink only the long free text (whole sentences), never the facts
         room = MAX_CAPTION - visible_len(build(None)) - 4
-        caption = build(truncate(text, max(room, 0)) or None)
-    return ProjectPost(html=caption, username=username, bot_username=b.bot_username)
+        caption = build(truncate_units(text, max(room, 0)) or None)
+    return ProjectPost(
+        html=caption,
+        username=username,
+        bot_username=b.bot_username,
+        full_html=full if shortened else None,
+    )

@@ -464,6 +464,7 @@ async def submit(
             active_days=days,
             **_scorer(settings).for_extraction(ex).fields(),
             formatted_text=out.html,
+            full_html=out.full_html,
             search_text=search_text(draft.title, draft.company, draft.city, draft.text()),
         )
     job.author_id = user.tg_id
@@ -504,6 +505,7 @@ def _project_row(
         priority_score=0,
         priority_reason="loyiha: reyting qo'llanmaydi (eng yangisi birinchi)",
         formatted_text=out.html,
+        full_html=out.full_html,
         search_text=search_text(draft.title, draft.description, draft.text()),
     )
 

@@ -47,9 +47,10 @@ from ayvona.processing.clean import CleanedText
 from ayvona.processing.contacts import canon_username, find_phones, find_usernames
 from ayvona.processing.extract import MULTI_TITLE, Extraction, TitleTranslator
 from ayvona.processing.keywords import KeywordSet
-from ayvona.processing.language import Language
+from ayvona.processing.language import Language, detect_language
 from ayvona.processing.normalize import fold, to_latin
-from ayvona.processing.salary import EUR, RUB, USD, UZS
+from ayvona.processing.salary import EUR, RUB, USD, UZS, SalaryBlock, SalaryParser
+from ayvona.processing.tone import Tone
 
 # --------------------------------------------------------------------------- texts
 T_TITLE = "💼"
@@ -64,8 +65,8 @@ T_TELEGRAM = "✉️ Telegram:"
 T_EMAIL = "📧 Email:"
 T_APPLY = "🔗 Ariza:"
 T_APPLY_LINK = "ariza topshirish"
-T_FULL_INFO = "📝 To'liq ma'lumot:"
-T_FULL_INFO_LINK = "asl e'londa"
+T_SALARY_NOTE = "💬 Maosh haqida:"
+T_ORIGINAL = "📄 <b>Asl matn:</b>"
 T_NEGOTIABLE = "Kelishiladi"
 T_REMOTE = "Masofaviy"
 T_FALLBACK_TITLE = "Yangi ish e'loni"
@@ -78,12 +79,37 @@ B_CONTACT = "📩 Murojaat"
 B_APPLY = "🔗 Ariza topshirish"
 B_SAVE = "⭐ Saqlash"
 B_MORE = "🔍 Boshqa ishlar"
+B_FULL_INFO = "📖 To'liq ma'lumot"
+# The bot's full card (a text message, at most 4096): room is left for the admin's review header
+# and the alert header that may come before it.
+FULL_CARD_LIMIT = 3600
+SALARY_TEXT_MAX = 60  # a salary in words longer than this is a sentence: normalized / moved
+# A salary text the parser did not accept is shown as written only if every number in it is at
+# least this (a day's pay "250 000"); "1 000 – 5 000 so'm" is surely not so'm -> "Kelishiladi".
+PLAUSIBLE_SOM = 100_000
+_PLAIN_NUMBER_RE = re.compile(r"\d+(?:[ .,]\d{3})*")
 
 CURRENCY_NAMES = {UZS: "so'm", USD: "$", EUR: "€", RUB: "rubl"}
 PERIOD_NAMES = {"day": "kunlik", "week": "haftalik", "hour": "soatbay"}
 TASHKENT_CITY = "toshkent_sh"  # its districts are "tuman"s: "Chilonzor tumani"
 
 MIN_REQUIREMENTS = 25  # shorter than this after shrinking -> the line is dropped
+MIN_FIELD_WORDS = 3  # a requirements field with fewer meaningful words is dropped
+# Words that name the salary, not whom it is for ("Administrator oyligi 3 mln" -> administrator).
+_SALARY_WORDS = frozenset(
+    fold(w)
+    for w in ("oylik", "oyligi", "oyligimiz", "maosh", "maoshi", "ish", "haqi", "uchun", "zarplata",
+              "oklad", "dan", "gacha", "har", "bir", "boshlang'ich", "fiks", "fiksa", "stavka",
+              "зарплата", "оклад", "для", "salary", "from", "for")
+)  # fmt: skip
+# Filler words that carry no requirement on their own ("Administrator uchun").
+_FILLER_WORDS = frozenset(
+    fold(w)
+    for w in ("uchun", "va", "ham", "bilan", "yoki", "kerak", "shart", "lozim", "bo'lishi",
+              "bo'lsin", "talab", "talablar", "nomzod", "nomzodga", "xodim", "xodimga", "и", "для",
+              "and", "for", "the", "with", "of", "to")
+)  # fmt: skip
+_FIELD_TOKEN_RE = re.compile(r"[^\W\d_]{2,}|\d+")
 _KPI_RE = re.compile(r"\bkpi\b")
 _BONUS_RE = re.compile(r"bonus|premiya|премия")
 _TAG_RE = re.compile(r"[^a-z0-9_]")
@@ -135,6 +161,77 @@ def truncate(text: str, limit: int) -> str:
     if " " in cut[len(cut) * 2 // 3 :]:  # don't break a word if a space is close
         cut = cut.rsplit(" ", 1)[0]
     return cut.rstrip(" \n,;:.-–—") + "…"
+
+
+_SENTENCE_END_RE = re.compile(r"(?<=[.!?;])\s+(?=\S)")
+_CLAUSE_END_RE = re.compile(r"(?<=[.!?;,])\s+(?=\S)")
+_HEADER_LINE_RE = re.compile(r":\s*$")
+
+
+def _units(text: str, splitter: re.Pattern[str]) -> list[str]:
+    """``text`` as pieces after which it may be cut: every line, long lines after ". ! ? ;"."""
+    out: list[str] = []
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        parts = splitter.split(line) if line.strip() else [line]
+        for j, part in enumerate(parts):
+            last_in_line = j == len(parts) - 1
+            out.append(part + ("" if not last_in_line else "\n" if i < len(lines) - 1 else ""))
+            if not last_in_line:
+                out[-1] += " "
+    return out
+
+
+def _dangling(line: str) -> bool:
+    """A header left without its content: "Talablar:", "🔎 NOMZODGA TALABLAR"."""
+    s = line.strip()
+    if not s:
+        return True
+    if _HEADER_LINE_RE.search(s):
+        return True
+    letters = [c for c in s if c.isalpha()]
+    return (
+        len(s) <= 40
+        and len(letters) >= 3
+        and all(c.isupper() for c in letters)
+        and not re.search(r"[.!?;]$", s)
+    )
+
+
+def truncate_units(text: str, limit: int) -> str:
+    """At most ``limit`` (Telegram) characters, cut only after a whole line / sentence / list item
+    (". ! ? ;"), never inside a word or a sentence; "…" follows a complete unit. A header left
+    without its content is dropped too. If not even the first sentence fits, clauses (",") are
+    tried; if nothing fits, ``""`` (the caller drops the field)."""
+    if tg_len(text) <= limit:
+        return text
+    for splitter in (_SENTENCE_END_RE, _CLAUSE_END_RE):
+        kept = ""
+        for unit in _units(text, splitter):
+            if tg_len(kept + unit) + 2 > limit:  # room for " …"
+                break
+            kept += unit
+        at_line_end = kept.endswith("\n")
+        lines = kept.rstrip().split("\n")
+        while lines and _dangling(lines[-1]):
+            lines.pop()
+            at_line_end = True
+        result = "\n".join(lines).rstrip(" \n,:-–—")
+        if result:
+            return result + ("\n…" if at_line_end else " …")
+    return ""
+
+
+def truncate_parts(text: str, limit: int, sep: str = ", ") -> str:
+    """Whole ``sep``-separated parts only ("Toshkent sh., Chilonzor tumani, ..."), no "…"."""
+    if tg_len(text) <= limit:
+        return text
+    kept: list[str] = []
+    for part in text.split(sep):
+        if tg_len(sep.join([*kept, part])) > limit:
+            break
+        kept.append(part)
+    return sep.join(kept)
 
 
 def esc(text: str) -> str:
@@ -289,23 +386,36 @@ class FormattedPost:
     apply_url: str | None = None
     bot_username: str = ""  # always given by Formatter (branding in settings.yaml)
     shortened: tuple[str, ...] = field(default=())  # what was cut to fit the limit
+    # The bot's full card (``jobs.full_html``): set when the caption lost something or the source
+    # is Russian / English. Then the post gets the "📖 To'liq ma'lumot" button (our bot, never the
+    # source channel).
+    full_html: str | None = None
 
     @property
     def length(self) -> int:
         return visible_len(self.html)
 
     def buttons(self, job_id: int | None = None) -> list[list[Button]]:
-        """Inline keyboard rows. "⭐ Saqlash" needs the job id (a bot deep link)."""
+        """Inline keyboard rows. "⭐ Saqlash" / "📖 To'liq ma'lumot" need the job id (bot deep
+        links)."""
         first: list[Button] = []
         if self.username:
             first.append(Button(B_CONTACT, f"https://t.me/{self.username.lstrip('@')}"))
         if self.apply_url:
             first.append(Button(B_APPLY, _http(self.apply_url)))
+        full: list[Button] = []
+        if self.full_html and job_id is not None:
+            full.append(Button(B_FULL_INFO, full_info_url(self.bot_username, job_id)))
         second: list[Button] = []
         if job_id is not None:
             second.append(Button(B_SAVE, f"https://t.me/{self.bot_username}?start=save_{job_id}"))
         second.append(Button(B_MORE, f"https://t.me/{self.bot_username}?start=search"))
-        return [row for row in (first, second) if row]
+        return [row for row in (first, full, second) if row]
+
+
+def full_info_url(bot_username: str, job_id: int) -> str:
+    """Our bot's full card of a job (``/start job_<id>``)."""
+    return f"https://t.me/{bot_username}?start=job_{job_id}"
 
 
 @dataclass(slots=True)
@@ -322,7 +432,10 @@ class _Parts:
     requirements: str | None = None
     body: str | None = None  # fallback: cleaned original text
     body_links: list[tuple[str, str]] = field(default_factory=list)
-    full_info: bool = False
+    # full card only: the long salary conditions; the Russian / English original text
+    salary_note: str | None = None
+    original: str | None = None
+    original_links: list[tuple[str, str]] = field(default_factory=list)
     phones: list[str] = field(default_factory=list)
     usernames: list[str] = field(default_factory=list)
     emails: list[str] = field(default_factory=list)
@@ -341,6 +454,8 @@ class Formatter:
         self.branding = settings.app.branding
         self.translator = TitleTranslator(settings.title_translations)
         self.negotiable = KeywordSet(settings.extract.salary_negotiable)
+        self.salary_parser = SalaryParser(settings.extract)
+        self.tone = Tone(settings.app.tone)
         self._region_names = {
             key: KeywordSet([reg.title, *reg.keywords])
             for key, reg in settings.regions.regions.items()
@@ -365,6 +480,19 @@ class Formatter:
 
     def _plain(self, text: str) -> str:
         return plain_hashtags(text, self._is_place)
+
+    @staticmethod
+    def meaningless(text: str, ex: Extraction) -> bool:
+        """A field that says nothing: fewer than 3 meaningful words once filler words and words of
+        the title are taken out ("Talablar: Administrator uchun"). Numbers count ("18–30 yosh")."""
+        title = {w for w in fold(f"{ex.title or ''} {ex.title_uz or ''}").split() if len(w) >= 4}
+        stems = {w[:5] for w in re.findall(r"[^\W\d_]+", " ".join(title))}
+        tokens = [
+            t
+            for t in _FIELD_TOKEN_RE.findall(fold(text))
+            if t not in _FILLER_WORDS and not (len(t) >= 4 and t[:5] in stems)
+        ]
+        return len(tokens) < MIN_FIELD_WORDS
 
     # ------------------------------------------------------------------ fields
     def _title(self, ex: Extraction, lang: Language | None) -> str:
@@ -393,16 +521,61 @@ class Formatter:
             return []
         return [_cap(self._plain(_latin(self.translator.exact(p) or p))) for p in ex.positions]
 
-    def _salary(self, ex: Extraction, lang: Language | None) -> str:
+    def _salary(self, ex: Extraction, lang: Language | None) -> tuple[str, str | None]:
+        """``(salary line, conditions for the full card)``. The line is never cut with "…": a long
+        sentence becomes its first sane amount ("3 000 000 so'm (administrator)") or
+        "Kelishiladi"; numbers the parser did not trust are never shown."""
         if ex.salary_min is None and ex.salary_max is None:
             text = (ex.salary_text or "").strip()
             if not text or self.negotiable.find(fold(text)):
-                return T_NEGOTIABLE
+                return T_NEGOTIABLE, None
             if lang in (Language.RU, Language.EN) and not _neutral(text):
-                return T_NEGOTIABLE
-            return truncate(self._plain(_latin(text)), 80)
-        cur = CURRENCY_NAMES.get(ex.currency or UZS, ex.currency or "")
-        lo, hi = ex.salary_min, ex.salary_max
+                return T_NEGOTIABLE, text
+            plain = self._plain(_latin(text))
+            has_digits = bool(re.search(r"\d", plain))
+            if not has_digits and tg_len(plain) <= SALARY_TEXT_MAX:
+                return _cap(plain), None  # "Suhbat asosida", "Fiksa + KPI + bonus"
+            numbers = [int(re.sub(r"\D", "", n)) for n in _PLAIN_NUMBER_RE.findall(plain)]
+            if (
+                numbers
+                and tg_len(plain) <= SALARY_TEXT_MAX
+                and all(n >= PLAUSIBLE_SOM for n in numbers)
+            ):
+                return plain, None  # "Maosh: 250 000" (a day's pay, period not written)
+            if short := self._salary_clause(plain):
+                return short, plain
+            return T_NEGOTIABLE, plain
+        return self._amount_text(
+            ex.salary_min, ex.salary_max, ex.currency, ex.salary_period, ex.salary_text
+        ), None
+
+    def _salary_clause(self, text: str) -> str | None:
+        """The first part of a salary sentence with a sane amount, with whom it is for:
+        ``"Administrator oyligi 3 mln so'm, O'qituvchilar uchun ..."`` ->
+        ``"3 000 000 so'm (administrator)"``."""
+        for clause in re.split(r"[,;|]|\s+(?:va|ва)\s+", text):
+            sal = self.salary_parser.parse([SalaryBlock(display=clause, folded=fold(clause))])
+            if not sal.has_numbers:
+                continue
+            out = self._amount_text(sal.min, sal.max, sal.currency, sal.period, clause)
+            head = re.split(r"\d", clause, maxsplit=1)[0]
+            who = [
+                w for w in re.findall(r"[^\W\d_][\w'ʻ’-]*", head) if fold(w) not in _SALARY_WORDS
+            ]
+            if 1 <= len(who) <= 3:
+                out += f" ({' '.join(who).lower()})"
+            return out
+        return None
+
+    def _amount_text(
+        self,
+        lo: int | None,
+        hi: int | None,
+        currency: str | None,
+        period: str | None,
+        salary_text: str | None,
+    ) -> str:
+        cur = CURRENCY_NAMES.get(currency or UZS, currency or "")
         glue = "" if cur == "so'm" else " "  # "4 000 000 so'mdan", "500 $ dan"
         if lo is not None and hi is not None and lo != hi:
             out = f"{format_amount(lo)} – {format_amount(hi)} {cur}"
@@ -413,9 +586,9 @@ class Formatter:
         else:
             assert hi is not None
             out = f"{format_amount(hi)} {cur}{glue}gacha"
-        if period := PERIOD_NAMES.get(ex.salary_period or ""):
+        if period := PERIOD_NAMES.get(period or ""):
             out += f" ({period})"
-        folded = fold(ex.salary_text or "")
+        folded = fold(salary_text or "")
         if _KPI_RE.search(folded):
             out += " + KPI"
         elif _BONUS_RE.search(folded):
@@ -445,7 +618,8 @@ class Formatter:
         extra: list[str] = []
         if ex.address and lang not in (Language.RU, Language.EN):
             address, extra = self._address_tags(_latin(ex.address))
-            address = truncate(tidy_address(address, self._city_titles), 120)
+            # whole parts only: "Toshkent sh., Shayxontohur tumani" (never "Shoahmad Shomahmud…")
+            address = truncate_parts(tidy_address(address, self._city_titles), 120)
         if address:
             # "Chilonzor 9-kvartal" -> "Toshkent sh., Chilonzor 9-kvartal";
             # "Toshkent, Yunusobod" (or "Navoiy viloyati") names the place already.
@@ -538,12 +712,11 @@ class Formatter:
             details.append(f"{T_SCHEDULE} {esc(p.schedule)}")
         if p.requirements:
             details.append(f"{T_REQUIREMENTS} {esc(p.requirements)}")
-        if p.full_info and source_url:
-            details.append(
-                f'{esc(T_FULL_INFO)} <a href="{html.escape(source_url)}">'
-                f"{esc(T_FULL_INFO_LINK)}</a>"
-            )
+        if p.salary_note:
+            details.append(f"{T_SALARY_NOTE} {esc(p.salary_note)}")
         blocks.append(details)
+        if p.original:
+            blocks.append([T_ORIGINAL, _link_body(p.original, p.original_links)])
 
         contacts = []
         if p.phones:
@@ -563,35 +736,42 @@ class Formatter:
         blocks.append(tail)
         return "\n\n".join("\n".join(b) for b in blocks if b)
 
-    def _fit(self, p: _Parts, source_url: str | None) -> tuple[str, list[str]]:
-        """Render, shrinking the less important parts until the caption fits."""
-        limit = self.cfg.max_caption_length
+    def _fit(self, p: _Parts, source_url: str | None, limit: int) -> tuple[str, list[str]]:
+        """Render, shrinking the less important parts until it fits ``limit``.
+
+        Texts are cut only after a whole line / sentence / list item (:func:`truncate_units`);
+        the title, salary, place and contacts are never cut; the company is dropped rather than
+        cut. Everything that lost something is listed (-> "📖 To'liq ma'lumot")."""
         shortened: list[str] = []
 
         def over() -> int:
             return visible_len(self._render(p, source_url)) - limit
 
-        if p.body is not None and (extra := over()) > 0:
-            budget = tg_len(p.body) - extra
-            p.body = truncate(p.body, max(budget, 0))
-            p.full_info = True  # the rest is in the original post
-            shortened.append("body")
-            while over() > 0 and p.body:  # "📝 To'liq ma'lumot" line took some room
-                p.body = truncate(p.body, max(tg_len(p.body) - over() - 1, 0))
+        for name in ("original", "body"):
+            text = getattr(p, name)
+            if text and (extra := over()) > 0:
+                setattr(p, name, truncate_units(text, max(tg_len(text) - extra, 0)) or None)
+                shortened.append(name)
+                while over() > 0 and getattr(p, name):
+                    text = getattr(p, name)
+                    setattr(p, name, truncate_units(text, tg_len(text) - over() - 2) or None)
+        if p.salary_note and over() > 0:
+            p.salary_note = None
+            shortened.append("salary")
         if p.requirements and (extra := over()) > 0:
-            budget = tg_len(p.requirements) - extra
-            p.requirements = (
-                truncate(p.requirements, budget) if budget >= MIN_REQUIREMENTS else None
-            )
+            cut = truncate_units(p.requirements, tg_len(p.requirements) - extra)
+            p.requirements = cut if tg_len(cut) >= MIN_REQUIREMENTS else None
             shortened.append("requirements")
         while p.positions and len(p.positions) > 2 and over() > 0:
             p.positions.pop()
             p.positions_hidden += 1
             shortened.append("positions")
-        for name, keep in (("schedule", 40), ("company", 40), ("place", 60)):
-            if getattr(p, name) and over() > 0:
-                setattr(p, name, truncate(getattr(p, name), keep))
-                shortened.append(name)
+        if p.schedule and over() > 0:
+            p.schedule = truncate_units(p.schedule, 40) or None
+            shortened.append("schedule")
+        if p.company and over() > 0:
+            p.company = None
+            shortened.append("company")
         if over() > 0 and p.schedule:
             p.schedule = None
             shortened.append("schedule")
@@ -601,6 +781,7 @@ class Formatter:
         if over() > 0 and len(p.positions) > 1:
             p.positions_hidden += len(p.positions) - 1
             p.positions = p.positions[:1]
+            shortened.append("positions")
         return self._render(p, source_url), list(dict.fromkeys(shortened))
 
     # ------------------------------------------------------------------ main
@@ -618,10 +799,54 @@ class Formatter:
         ``cleaned`` (clean.py) is the body of the fallback template; without it the full
         template is used whatever the confidence.
         """
+        fallback = ex.confidence < self.cfg.min_confidence and cleaned is not None
+        # Russian / English source: the caption has only Uzbek fields, the bot shows the original
+        # (also when the AI already translated the fields: ``ex.language`` is Uzbek then).
+        source_foreign = ex.language in (Language.RU, Language.EN) or (
+            cleaned is not None and detect_language(cleaned.text) in (Language.RU, Language.EN)
+        )
+        p, cut = self._parts(ex, cleaned, fallback, source_name, full=False)
+        caption, shortened = self._fit(p, source_url, self.cfg.max_caption_length)
+        shortened = list(dict.fromkeys([*cut, *shortened]))
+        full_html = None
+        if source_foreign or any(s != "tags" for s in shortened):
+            q, _ = self._parts(
+                ex,
+                cleaned,
+                fallback,
+                source_name,
+                full=True,
+                original=source_foreign and cleaned is not None,
+            )
+            full_html, _ = self._fit(q, source_url, FULL_CARD_LIMIT)
+        return FormattedPost(
+            html=caption,
+            fallback=fallback,
+            tags=tuple(p.tags),
+            username=ex.usernames[0] if ex.usernames else None,
+            apply_url=_http(ex.apply_url) if ex.apply_url else None,
+            bot_username=self.branding.bot_username,
+            shortened=tuple(shortened),
+            full_html=full_html,
+        )
+
+    def _parts(
+        self,
+        ex: Extraction,
+        cleaned: CleanedText | None,
+        fallback: bool,
+        source_name: str | None,
+        *,
+        full: bool,
+        original: bool = False,
+    ) -> tuple[_Parts, list[str]]:
+        """The caption's parts (``full=False``) or the bot's full card (``full=True``: nothing
+        shortened, the original text of a Russian / English post, the salary conditions).
+        Also returns what was left out already here (a long salary sentence, requirements)."""
         lang = ex.language
         foreign = lang in (Language.RU, Language.EN)
         n = self.cfg.max_contacts
-        fallback = ex.confidence < self.cfg.min_confidence and cleaned is not None
+        cut: list[str] = []
         p = _Parts(
             title=_cap(self._plain(self._title(ex, lang))),
             phones=list(ex.phones[:n]),
@@ -633,50 +858,66 @@ class Formatter:
         )
         if fallback:
             cat = self.settings.categories.get(ex.category)
-            p.title = (
-                f"{T_FALLBACK_TITLE} — {cat.title}"
-                if cat and ex.category != "boshqa"
-                else T_FALLBACK_TITLE
-            )
+            # A found title (checked by the extractor) says more than the generic headline.
+            if not ex.title:
+                p.title = (
+                    f"{T_FALLBACK_TITLE} — {cat.title}"
+                    if cat and ex.category != "boshqa"
+                    else T_FALLBACK_TITLE
+                )
             if foreign:
-                # The text itself is not shown, so a found title (even an unsure one) says
-                # more than the generic headline.
-                if ex.title:
-                    p.title = _cap(self._plain(self._title(ex, lang)))
-                p.salary = self._salary(ex, lang)
+                p.salary, note = self._salary(ex, lang)
+                if note and full:
+                    p.salary_note = note
                 p.place, _ = self._place(ex, lang)
-                p.full_info = True
             else:
                 assert cleaned is not None
                 p.body, p.body_links = _fallback_body(
                     cleaned, p.phones, p.usernames, is_place=self._is_place
                 )
+                p.body = self.tone.normalize(p.body)
         else:
-            if ex.company and not (ex.multi and ex.title_source == "positions"):
-                p.company = truncate(self._plain(_latin(ex.company)), 80)
+            if (
+                ex.company
+                and not (ex.multi and ex.title_source == "positions")
+                and (full or tg_len(ex.company) <= 80)
+            ):
+                p.company = self._plain(_latin(ex.company))
             p.positions = self._positions(ex, lang)
-            p.salary = self._salary(ex, lang)
+            p.salary, note = self._salary(ex, lang)
+            if note and full:
+                p.salary_note = note
+            elif note:
+                cut.append("salary")
             p.place, place_words = self._place(ex, lang)
-            schedule = _schedule_numbers(ex.schedule) if foreign and ex.schedule else ex.schedule
+            # the bot's full card shows a Russian / English field as written (not transliterated)
+            as_written = foreign and full
+            schedule = ex.schedule
+            if foreign and schedule and not as_written:
+                schedule = _schedule_numbers(schedule)
             if schedule:
-                p.schedule = truncate(self._plain(_latin(schedule)), 120)
+                schedule = self._plain(schedule if as_written else _latin(schedule))
+                schedule = self.tone.normalize(schedule) or ""
+                p.schedule = schedule if full else truncate_units(schedule, 120) or None
+                if p.schedule != schedule:
+                    cut.append("schedule")
             requirements = [_cap(", ".join(place_words))] if place_words and not foreign else []
-            if ex.requirements and not foreign:
-                requirements.append(self._plain(_latin(ex.requirements)))
+            if ex.requirements and (not foreign or (full and not original)):
+                req = self._plain(ex.requirements if as_written else _latin(ex.requirements))
+                req = self.tone.normalize(req) or ""
+                if req and not self.meaningless(req, ex):
+                    requirements.append(req)
             if requirements:
-                p.requirements = truncate("; ".join(requirements), 400)
-            p.full_info = foreign
-
-        caption, shortened = self._fit(p, source_url)
-        return FormattedPost(
-            html=caption,
-            fallback=fallback,
-            tags=tuple(p.tags),
-            username=ex.usernames[0] if ex.usernames else None,
-            apply_url=_http(ex.apply_url) if ex.apply_url else None,
-            bot_username=self.branding.bot_username,
-            shortened=tuple(shortened),
-        )
+                joined = "; ".join(requirements)
+                p.requirements = joined if full else truncate_units(joined, 400) or None
+                if p.requirements != joined:
+                    cut.append("requirements")
+        if original and cleaned is not None:
+            p.original, p.original_links = _fallback_body(
+                cleaned, p.phones, p.usernames, is_place=self._is_place, latin=False
+            )
+            p.body = None  # the original replaces the (transliterated) body
+        return p, cut
 
 
 def _contact_only(line: str, phones: set[str], users: set[str]) -> bool:
@@ -694,14 +935,17 @@ def _fallback_body(
     phones: Sequence[str] = (),
     usernames: Sequence[str] = (),
     is_place: Callable[[str], bool] | None = None,
+    *,
+    latin: bool = True,
 ) -> tuple[str, list[tuple[str, str]]]:
-    """Cleaned original text in Latin, without the source's hashtag lines and without lines that
+    """Cleaned original text in Latin (``latin=False``: as written — the bot's "Asl matn" of a
+    Russian / English post), without the source's hashtag lines and without lines that
     only repeat the contacts (they are listed under the text); hidden links kept. Hashtags left
     inside the lines become plain words (only our tag line has hashtags)."""
     shown_phones = set(phones)
     shown_users = {canon_username(u) for u in usernames}
     lines: list[str] = []
-    for ln in _latin(cleaned.text).split("\n"):
+    for ln in (_latin(cleaned.text) if latin else cleaned.text).split("\n"):
         if _TAG_LINE_RE.match(ln):
             continue
         if _contact_only(ln, shown_phones, shown_users):
@@ -714,7 +958,7 @@ def _fallback_body(
         lines.append(plain_hashtags(ln, is_place))
     body = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
     links = [
-        (plain_hashtags(_latin(lk.text), is_place), lk.url)
+        (plain_hashtags(_latin(lk.text) if latin else lk.text, is_place), lk.url)
         for lk in cleaned.links
         if not lk.button and lk.text
     ]

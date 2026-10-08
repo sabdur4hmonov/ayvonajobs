@@ -87,7 +87,7 @@ async def notify_review(
         reasons=html.escape("; ".join(reasons) or "—"),
         days=duration_label(job, settings),
         kind=T.BTN_KIND_PROJECT if job.kind == JobKind.PROJECT.value else T.BTN_KIND_JOB,
-    ) + (job.formatted_text or "")
+    ) + (job.full_html or job.formatted_text or "")  # the whole ad, not only the caption
     sent = 0
     for chat in review_targets(settings):
         try:

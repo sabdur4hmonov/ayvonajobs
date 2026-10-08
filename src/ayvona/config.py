@@ -380,6 +380,16 @@ class AdminAlertsConfig(BaseModel):
     keywords: dict[str, list[str]] = Field(default_factory=dict)
 
 
+class ToneConfig(BaseModel):
+    """Calm, polite post text (processing/tone.py): no shouting, insults or "!!!" spam."""
+
+    enabled: bool = True
+    rude_phrases: list[str] = Field(default_factory=list)  # a sentence with one is dropped
+    shout_min_letters: int = Field(default=12, ge=1)
+    shout_ratio: float = Field(default=0.7, gt=0, le=1)  # this share of upper case = shouting
+    keep_upper: list[str] = Field(default_factory=list)  # acronyms kept upper case
+
+
 class ExpiryConfig(BaseModel):
     """Job life time in search (services/expiry.py, a worker task). The channel post stays."""
 
@@ -514,6 +524,7 @@ class AppConfig(BaseModel):
     search: SearchConfig = Field(default_factory=SearchConfig)
     alerts: AlertsConfig = Field(default_factory=AlertsConfig)
     admin_alerts: AdminAlertsConfig = Field(default_factory=AdminAlertsConfig)
+    tone: ToneConfig = Field(default_factory=ToneConfig)
     expiry: ExpiryConfig = Field(default_factory=ExpiryConfig)
     broadcast: BroadcastConfig = Field(default_factory=BroadcastConfig)
     ai: AIConfig = Field(default_factory=AIConfig)

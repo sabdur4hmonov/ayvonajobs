@@ -267,6 +267,9 @@ class Job(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.0, server_default=sql_text("0"))
 
     formatted_text: Mapped[str | None] = mapped_column(Text)
+    # The bot's full card ("📖 To'liq ma'lumot"): the same template with nothing shortened, the
+    # original text of a Russian / English post. NULL = the caption already says everything.
+    full_html: Mapped[str | None] = mapped_column(Text)
     fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
     # Folded title + company + city + description (Cyrillic -> Latin, lowercase, no apostrophes):
     # the only column jobs_fts indexes (normalize.search_text); keyword queries are folded the same.

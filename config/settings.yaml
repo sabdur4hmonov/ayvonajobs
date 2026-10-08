@@ -142,6 +142,37 @@ formatter:
   max_feature_tags: 2                # #masofaviy #tajribasiz ... ko'pi bilan nechta
   max_contacts: 3                    # har turdagi aloqadan (telefon, @username) ko'pi bilan nechta
 
+# --- Post ohangi (processing/tone.py): baqiriq, haqorat va "!!!" o'rniga xotirjam matn ----------
+# Qo'pol ibora bor GAP butunlay olib tashlanadi, qolgan fakt qoladi:
+#   "FAQAT ERKAKLAR UCHUN ISH. AYOLLAR BEZOVTA QILMANG!" -> "Faqat erkaklar uchun ish."
+# Butunlay katta harf bilan yozilgan qator oddiy gap ko'rinishiga keltiriladi (keep_upper dagilar qoladi).
+# So'zlar lotin/kirill/ruscha farqsiz qidiriladi; oxiriga qo'shimcha kelsa ham topiladi.
+tone:
+  enabled: true
+  shout_min_letters: 12              # shundan kam harfli qator baqiriq hisoblanmaydi ("HR MENEJER")
+  shout_ratio: 0.7                   # harflarning shuncha qismi katta bo'lsa — baqiriq
+  rude_phrases:
+    - bezovta qilmang
+    - bezovta qilmanglar
+    - bezovta qilmasin
+    - bezovta qilinmasin
+    - безовта қилманг
+    - boshimni og'ritmang
+    - miyamni qotirmang
+    - vaqtimni olmang
+    - vaqtimizni olmang
+    - tekinxo'rlar
+    - dangasalar yozmasin
+    - lalaylar
+    - ahmoqlar
+    - aqlsizlar
+    - befahmlar
+    - bekorchilar yozmasin
+    - не беспокоить
+    - не беспокоите
+    - не беспокойте
+  keep_upper: [HR, IT, KPI, CRM, SMM, SEO, CEO, CFO, CMO, IELTS, CEFR, TOEFL, SAT, MCHJ, OOO, LLC, UX, UI, QA, B2B, B2C, PR, CV, USD, TTZ, AQSH, AI, ERP, SQL, PHP, BMW, GPS, VIP]
+
 # --- ⭐ E'lon ustuvorligi: qaysi e'lon kanalga va qidiruvda birinchi chiqadi (processing/priority.py) ---
 # 1-daraja = tepada (ofis / mutaxassis kasblari, aniq yuqori maosh), 2 = oddiy, 3 = pastda (oddiy ishchi
 # ishlari). Ball = eng kuchli "yuqori" qoida + eng yomon "past" qoida + maosh. Sabab: botda admin /why <id>.

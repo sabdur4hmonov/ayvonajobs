@@ -204,7 +204,8 @@ def create_app(settings: Settings, sf: async_sessionmaker[AsyncSession]) -> Fast
             for b in row
             if b.get("url") and "?start=" not in b["url"]
         ]
-        text = job.formatted_text or html.escape(job.title or "")
+        # the full card when the channel caption was shortened (the whole text stays on our site)
+        text = job.full_html or job.formatted_text or html.escape(job.title or "")
         ld = json_ld(job, base_url(request) + canonical) if markup_ok else None
         return render(
             request,
@@ -233,7 +234,9 @@ def create_app(settings: Settings, sf: async_sessionmaker[AsyncSession]) -> Fast
             "@context": "https://schema.org/",
             "@type": "JobPosting",
             "title": job.title or "Ish e'loni",
-            "description": html.escape(_plain(job.formatted_text)).replace("\n", "<br>"),
+            "description": html.escape(_plain(job.full_html or job.formatted_text)).replace(
+                "\n", "<br>"
+            ),
             "datePosted": (job.published_at or job.created_at).isoformat(),
             "hiringOrganization": {"@type": "Organization", "name": job.company or "—"},
             "url": url,

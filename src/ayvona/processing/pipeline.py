@@ -205,6 +205,7 @@ def job_fields(ex: Extraction, description: str, out: FormattedPost) -> dict[str
         ),
         "confidence": ex.confidence,
         "formatted_text": out.html,
+        "full_html": out.full_html,
         "search_text": search_text(
             ex.title_uz or ex.title, ex.company, ex.district or ex.address, description
         ),

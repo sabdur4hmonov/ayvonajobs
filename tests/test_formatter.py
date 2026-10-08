@@ -133,6 +133,11 @@ def test_user_post_has_no_source_line(fmt: Formatter) -> None:
         ({"salary_max": None, "salary_text": "4.000.000 Fix + KPI"}, "4 000 000 so'mdan + KPI"),
         ({"salary_min": None, "salary_max": None, "salary_text": "Suhbat asosida"}, "Kelishiladi"),
         ({"salary_min": None, "salary_max": None, "salary_text": "250 000"}, "250 000"),
+        # numbers that cannot be so'm are never shown (the full card keeps the text)
+        (
+            {"salary_min": None, "salary_max": None, "salary_text": "1 000 – 5 000 so'm"},
+            "Kelishiladi",
+        ),
     ],
 )
 def test_salary(fmt: Formatter, kw: dict[str, Any], expected: str) -> None:
@@ -183,13 +188,15 @@ def test_everything_is_html_escaped(fmt: Formatter) -> None:
 
 def test_long_requirements_are_shortened_to_fit_1024(fmt: Formatter) -> None:
     ex = job(
-        requirements="Juda uzun talab " * 200,
+        requirements="; ".join(f"{i}-talab: tajriba va mas'uliyat" for i in range(60)),
         schedule="Dushanba-shanba " * 5,
         phones=("+998901234567", "+998911234567", "+998931234567"),
     )
     out = fmt.format(ex, source_url=SRC)
     assert out.length <= 1024
-    assert "📋 Talablar: Juda uzun talab" in out.html and "…" in out.html
+    assert "📋 Talablar: 0-talab: tajriba va mas'uliyat; 1-talab" in out.html
+    assert re.search(r"mas'uliyat; …\n", out.html)  # "…" only after a whole item
+    assert out.full_html is not None and "59-talab" in out.full_html  # all of it in the bot
 
 
 def test_details_shrink_first_when_the_limit_is_tight(settings: Settings) -> None:
@@ -303,10 +310,10 @@ def test_only_the_tag_line_has_hashtags(fmt: Formatter) -> None:
 
 
 def test_non_place_hashtags_of_the_address_keep_their_meaning(fmt: Formatter) -> None:
-    ex = job(address="#Toshkent  #Ayollar #Erkaklar", district=None, requirements="Tajriba")
+    ex = job(address="#Toshkent  #Ayollar #Erkaklar", district=None, requirements="Tajriba 1 yil")
     out = fmt.format(ex).html
     assert "📍 Manzil: Toshkent\n" in out
-    assert "📋 Talablar: Ayollar, erkaklar; Tajriba" in out
+    assert "📋 Talablar: Ayollar, erkaklar; Tajriba 1 yil" in out
     assert "#Ayollar" not in out and "#Erkaklar" not in out
 
 
@@ -417,11 +424,17 @@ def test_russian_post_gets_uzbek_fields_only(fmt: Formatter) -> None:
         category="moliya",
         profession="buxgalter",
     )
-    out = fmt.format(ex, source_url=SRC).html
+    post = fmt.format(ex, source_url=SRC)
+    out = post.html
     assert "💼 <b>Buxgalter</b>" in out
     assert "Talablar" not in out and "Опыт" not in out and "Ish vaqti" not in out
-    assert f"📝 To'liq ma'lumot: <a href=\"{SRC}\">asl e'londa</a>" in out
+    assert "To'liq ma'lumot" not in out and "asl e'londa" not in out  # no link to the source
     assert not re.search(r"[Ѐ-ӿ]", out)
+    # the rest is in OUR bot: "📖 To'liq ma'lumot" -> /start job_<id>
+    assert post.full_html is not None and "Опыт работы от 3 лет" in post.full_html
+    assert ["📖 To'liq ma'lumot", "https://t.me/ayvona_jobs_bot?start=job_7"] in [
+        [b.text, b.url] for row in post.buttons(7) for b in row
+    ]
 
 
 def test_untranslated_russian_title_uses_the_profession(fmt: Formatter) -> None:
@@ -493,8 +506,9 @@ def test_foreign_fallback_has_fields_and_a_link_instead_of_text(fmt: Formatter) 
     out = fmt.format(ex, cleaned, source_url=SRC)
     assert out.fallback
     assert out.html.startswith("💼 <b>Rekruter yordamchisi</b>\n\n💰 Maosh: 4 000 000")
-    assert "We are hiring" not in out.html
-    assert f"📝 To'liq ma'lumot: <a href=\"{SRC}\">asl e'londa</a>" in out.html
+    assert "We are hiring" not in out.html and "asl e'londa" not in out.html
+    assert out.full_html is not None
+    assert "📄 <b>Asl matn:</b>\nWe are hiring! Great team" in out.full_html
 
 
 def test_fallback_body_does_not_repeat_the_contacts(fmt: Formatter) -> None:
@@ -511,11 +525,16 @@ def test_fallback_body_does_not_repeat_the_contacts(fmt: Formatter) -> None:
     )
 
 
-def test_fallback_long_body_is_cut_with_a_link_to_the_original(fmt: Formatter) -> None:
+def test_fallback_long_body_is_cut_at_a_sentence_and_kept_whole_in_the_bot(
+    fmt: Formatter,
+) -> None:
     cleaned = CleanedText(text="Ish haqida juda uzun matn. " * 100)
     out = fmt.format(job(confidence=0.3), cleaned, source_url=SRC)
     assert out.length <= 1024
-    assert "…" in out.html and "📝 To'liq ma'lumot" in out.html
+    assert "matn. …" in out.html  # after a whole sentence
+    assert "To'liq ma'lumot" not in out.html and "asl e'londa" not in out.html
+    assert out.full_html is not None and out.full_html.count("juda uzun matn.") == 100
+    assert any(b.text == "📖 To'liq ma'lumot" for row in out.buttons(3) for b in row)
 
 
 def test_buttons(fmt: Formatter) -> None:

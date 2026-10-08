@@ -107,6 +107,7 @@ def filters_summary(f: SearchFilters, settings: Settings) -> str:
 
 
 def full_card(job: Job, now: datetime) -> str:
-    """The channel caption (already HTML), marked when the job is closed."""
-    text = job.formatted_text or html.escape(job.title or "—")
+    """The job's full card ("📖 To'liq ma'lumot": nothing shortened, the original text of a Russian
+    / English post), else the channel caption (already HTML); marked when the job is closed."""
+    text = job.full_html or job.formatted_text or html.escape(job.title or "—")
     return (T.JOB_CLOSED_MARK + text) if not is_open(job, now) else text
