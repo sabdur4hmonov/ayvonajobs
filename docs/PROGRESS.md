@@ -1421,3 +1421,15 @@ Branch `fix/post-quality`. Hisobot: `STATUS.md`; deploy: `DEPLOY.md` 6b.
   `tests/test_full_info.py`.
 - Tekshiruv (offline, kompyuterdagi baza nusxasi, 1306 post): manba havolasi 186 -> 0, so'z/gap o'rtasida kesish 25 -> 0,
   buzuq sarlavha 19 -> 0, shubhali kompaniya 32 -> 0, baqiriq 11 -> 0, ko'p hudud tegi 19 -> 13, yangi dublikat +11.
+
+## 2026-10-08 — Rezyume postlari kanalga chiqmaydi
+
+Branch `fix/resume-posts`. Hisobot: `STATUS.md`; deploy: `DEPLOY.md` 6c.
+
+- Xato: @freelancer_Uzbek ning `#rezyume` posti ("Xodim: <ism>", "Portfolio:", "proyekt kerak") "Proyekt" nomli vakansiya
+  bo'lib chiqdi; kanalning reklama admini (@FreelancerUz_ads) aloqa sifatida olindi.
+- Tuzatish: `resume_markers` (heshteglar + aniq iboralar), `resume_line_markers`, `resume_structure` (shakl bo'yicha:
+  >= 3 profil yorlig'i + faqat ishlovchiga xos dalil + ish beruvchi belgisi yo'q), `ads_contact_phrases` (kanalning o'z
+  reklama qatori), `@freelancer_Uzbek` manba qoidalari. Migratsiya yo'q.
+- Tekshiruv (kompyuterdagi baza nusxasi, 1306 post): sinflash o'zgarmadi (rezyume 5 -> 5, ish 1134 -> 1134), yangi
+  markerlar 0 ta postga mos; 3 ta postdan kanal reklama admini aloqadan olib tashlandi.

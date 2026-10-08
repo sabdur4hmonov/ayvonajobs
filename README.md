@@ -134,6 +134,11 @@ Botda admin: `/ai` (holat, bugungi so'rovlar, yoqish/o'chirish).
   `default_title`), hudud tegi faqat manzildan, sarlavha tekshiruvi va so'z tartibi (`extract.yaml → title_role_words`),
   kompaniya faqat nomga o'xshasa (`company_reject_words`), shubhali maosh o'rniga "Kelishiladi", ma'nosiz maydonlar
   tashlanadi, baqiriq va qo'pol iboralar (`settings.yaml → tone:`), kanallararo dublikat (`settings.yaml → dedup:`).
+- **Rezyumelar (ish izlovchi postlari) kanalga chiqmaydi** (2026-10-08): `#rezyume` kabi heshteglar, "ish izlayman"
+  iboralari, "REZYUME" sarlavha qatori va SHAKL bo'yicha (kamida 3 ta profil yorlig'i + "Portfolio:" yoki "Xodim: <ism>" +
+  ish beruvchi belgisi yo'q) — `config/filters.yaml`. Yalang'och "rezyume" so'zi marker emas ("Rezyume yuboring" vakansiyada
+  bor). Kanalning o'z reklama aloqasi ("E'lon joylashtirish uchun: @admin") post aloqasi hisoblanmaydi
+  (`source_rules.yaml → ads_contact_phrases`).
 
 ## 6. Dasturchi uchun
 

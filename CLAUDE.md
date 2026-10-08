@@ -64,6 +64,12 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
     attribution in the signature stays. Texts are cut only with `formatter.truncate_units` (after a whole line /
     sentence / list item); title, salary, place and contacts are never cut; a doubtful field is dropped, not guessed
     (company slogans, salaries that cannot be so'm, meaningless requirements). All word lists live in config.
+17. **A job seeker's post (resume) is never published.** `Classifier` marks it `resume` by hashtag / exact phrase
+    (`filters.resume_markers`), a header line (`resume_line_markers`) or its shape (`resume_structure`: >= 3 profile
+    labels + seeker-only evidence + no employer label). Never add a BARE word as a marker ("rezyume", "ish kerak" appear
+    in normal vacancies: "Rezyume yuboring") - measure a new marker on the stored posts first. A line where an
+    advertising phrase (`source_rules.yaml defaults.ads_contact_phrases`) is directly followed by an account is the
+    CHANNEL's own contact: removed and never a post contact (`boilerplate.ad_contact_lines`).
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)

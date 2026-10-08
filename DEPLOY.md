@@ -277,6 +277,39 @@ sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # a4d2e7f1c
   `git reset --hard ff68d0f` → `uv sync --locked --no-dev --compile-bytecode` → servislarni qayta yoqing
   (`full_html` ustuni o'chadi; tugmasi bor postlar kanalda qoladi, ularning tugmasi botda kanal postini ko'rsatadi).
 
+### 6c. Yangilanish: rezyumelar kanalga chiqmaydi, kanalning o'z reklama aloqasi (2026-10-08)
+
+Nima o'zgardi: ish izlovchining posti (`#rezyume`, "Xodim: <ism>", "Portfolio:", "proyekt kerak") endi **rezyume** deb
+topiladi va kanalga chiqmaydi; "e'lon joylashtirish uchun / reklama uchun: @admin" qatoridagi hisob postning aloqasi
+bo'lmaydi. **Migratsiya yo'q, `.env` o'zgarmaydi** — faqat kod va `config/*.yaml`.
+
+```bash
+# 🐧 server (ubuntu)
+sudo bash /home/ayvona/ayvona/scripts/deploy.sh
+sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh
+```
+
+- Qoidalar config'da: `config/filters.yaml → resume_markers / resume_line_markers / resume_structure`,
+  `config/source_rules.yaml → defaults.ads_contact_phrases` va `@freelancer_Uzbek`. O'zgartirgach:
+  `sudo systemctl restart ayvona-worker`.
+- **Allaqachon navbatda turgan rezyumeni** (agar bor bo'lsa) ko'rish — faqat o'qiydi:
+
+  ```bash
+  # 🐧 server
+  sudo -u ayvona /home/ayvona/ayvona/.venv/bin/python - <<'EOF'
+  import sqlite3
+  c = sqlite3.connect("file:/home/ayvona/ayvona/data/ayvona.db?mode=ro", uri=True)
+  q = ("select j.id, j.status, j.title from jobs j join raw_posts r on r.id = j.raw_post_id "
+       "where j.status in ('queued','retry') and (lower(r.text) like '%#rezyume%' or lower(r.text) like '%#resume%')")
+  print(c.execute(q).fetchall())
+  EOF
+  ```
+
+  Chiqarmaslik uchun (ixtiyoriy, avval `data/backups` bor ekanini tekshiring):
+  `update jobs set status='rejected' where id in (...)` — `sudo -u ayvona` bilan.
+- Kanalga chiqib bo'lgan postlarga tegilmaydi.
+- **Orqaga qaytish:** `git reset --hard 6724db5` + servislarni qayta yoqing (baza o'zgarmagan).
+
 ## 7. Loglar
 
 ```bash
