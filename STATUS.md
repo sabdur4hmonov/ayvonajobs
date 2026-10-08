@@ -1,146 +1,112 @@
-# STATUS — Ayvona Jobs (2026-10-08): post sifati va «📖 To'liq ma'lumot»
+# STATUS — Ayvona Jobs (2026-10-08): rezyume postlari kanalga chiqmaydi
 
-Branch `fix/post-quality` → `main`. **Haqiqiy Telegram, sessiya, token va Gemini ishlatilmadi.** Hammasi soxta Bot API,
-offline formatter va bazaning nusxasida sinaldi. Namuna fayli (`data/channel_sample_2026-10-07.txt`) git'ga kirmadi.
-Testlarda faqat undan tiklangan **anonim** postlar bor (soxta telefon va username). Oldingi hisobot (tasdiqlash,
-ustuvorlik, Loyihalar, rasmlar, filtrsiz obuna) git tarixida: `git show ff68d0f:STATUS.md`.
+Branch `fix/resume-posts` → `main`. **Haqiqiy Telegram, sessiya, token va Gemini ishlatilmadi.** Hammasi testlar va kompyuterdagi
+bazaning nusxasida (offline) sinaldi. Migratsiya **yo'q**, `.env` o'zgarmaydi. Testlarda faqat anonim postlar (soxta ism, telefon,
+username).
 
 ## 1. Nima o'zgardi
 
-| Qism | Commit | Fayllar |
-|---|---|---|
-| A. «📖 To'liq ma'lumot» botda, kesish faqat gap/band oxirida | `66408c4`, `4d2f3f5` | `processing/formatter.py`, `processing/project_format.py`, `processing/pipeline.py`, `services/job_submission.py`, `bot/cards.py`, `bot/moderation.py`, `web/app.py`, `db/models.py`, migratsiya `a4d2e7f1c3b9` |
-| B.5 Dublikatlar | `fefdb28` | `processing/dedup.py`, `processing/pipeline.py`, `config.py`, `settings.yaml → dedup:` |
-| B.1–4, 6–8 Kategoriya, hudud, sarlavha, maosh, kompaniya, ma'nosiz maydon, ohang | `66408c4`, `017a9b1` | `processing/categorize.py`, `processing/extract.py`, `processing/salary.py`, `processing/tone.py` (yangi), `processing/formatter.py`, `config/categories.yaml`, `config/extract.yaml`, `config/title_translations.yaml`, `config/settings.yaml → tone:` |
-| Testlar | — | `tests/test_full_info.py`, `tests/test_post_quality.py`, `tests/sample_posts.py` (anonim), `tests/test_formatter.py`, snapshotlar |
-| Hujjatlar | `297c0ed` | `README.md` 5c, `DEPLOY.md` 6b, `CLAUDE.md` 16-qoida, `docs/PROGRESS.md` |
+**Xato.** @freelancer_Uzbek kanalidagi ish izlovchining posti (`#rezyume`, "Xodim: <ism>", "Portfolio:", "proyekt kerak" — ya'ni
+odam o'ziga LOYIHA qidiryapti) "Proyekt" nomli, "Maosh: Kelishiladi" vakansiya bo'lib kanalga chiqib ketdi. Qo'shimcha: kanalning
+o'z reklama admini (@FreelancerUz_ads) post aloqasi sifatida olindi.
 
-**A qismi.** Kanal postida endi "📝 To'liq ma'lumot: asl e'londa" (raqobatchi kanalga havola) **yo'q**. Uning o'rniga
-«📖 To'liq ma'lumot» tugmasi bor: u **bizning botda** `/start job_<id>` bilan to'liq kartochkani ochadi. Bu mavjud
-`?start=job_` oqimi, kartochka ham o'sha. Kartochka o'sha shablon, lekin hech narsa qisqartirilmagan:
-- to'liq talablar va ish vaqti;
-- maosh shartlari;
-- uzun postning butun matni (lotin yozuvida, tinch ohangda);
-- ruscha/inglizcha postda asl matn va AI bergan o'zbekcha tarjima.
+| Qism | Fayllar |
+|---|---|
+| Rezyume aniqlash: markerlar, sarlavha qatori, shakl bo'yicha | `config/filters.yaml` (`resume_markers`, `resume_line_markers`, `resume_structure`), `processing/classify.py`, `config.py` |
+| Kanalning o'z reklama aloqasi | `config/source_rules.yaml` (`defaults.ads_contact_phrases`), `processing/boilerplate.py`, `classify.py`, `extract.py`, `clean.py` |
+| `@freelancer_Uzbek` manba qoidalari | `config/source_rules.yaml` |
+| Testlar | `tests/test_resume.py` (31 ta, anonim) |
+| Hujjatlar | `README.md`, `DEPLOY.md` 6c, `CLAUDE.md` 17-qoida, `docs/PROGRESS.md` |
 
-Bu foydalanuvchi e'loni va loyihada ham ishlaydi. Pastdagi kichik «manba» yozuvi va boshqa tugmalar o'zgarmadi.
+Commitlar: `0bd757a` (tuzatish), `5941900` (hujjatlar).
 
-Kesish faqat to'liq qator, gap yoki ro'yxat bandidan keyin bo'ladi, "…" ham faqat shundan keyin qo'yiladi. Egasiz qolgan
-sarlavha ("🔎 TALABLAR") ham olib tashlanadi. Lavozim, maosh, manzil va aloqa hech qachon kesilmaydi. Manzil butun
-qismlar bilan qoladi, kompaniya esa kesilmaydi, butunlay tushiriladi.
+**Rezyume uch yo'l bilan topiladi** (hammasi `config/filters.yaml` da, kodda emas):
+1. **Marker.** Heshteglar (`#rezyume`, `#resume`, `#cv`, `#резюме`, `#ishizlayman` ...) va aniq iboralar ("ish izlayman",
+   "proyekt kerak", "ищу подработку", "open to work" ...).
+2. **Sarlavha qatori.** Qator FAQAT "REZYUME" / "CV" / "Ish kerak!" dan iborat bo'lsa.
+3. **Shakl.** Quyidagi UCHALASI birga bo'lsa: (a) kamida 3 ta har xil profil yorlig'i (Xodim, Yosh, Tajriba, Hudud, Ish turi,
+   Oylik, Portfolio, Qo'shimcha... qator boshida, ikki nuqta bilan); (b) ish izlovchiga xos dalil: "Portfolio:" kabi yorliq YOKI
+   "Xodim:/Ism:" maydonida odam ismi (2–4 ta bosh harfli so'z, kasb nomi emas); (c) ish beruvchi belgisi YO'Q (Talablar, Vazifalar,
+   Kompaniya, Vakansiya, "ishga taklif", "xodim kerak", `#vakansiya`...).
 
-**B qismi.**
-1. **Kategoriya va teglar:**
-   - `ignore_words` qo'shildi: "temir **banka**" bank emas, "texnologiyalar" texnolog emas.
-   - Sarlavhadagi qo'shtirnoqli nom kasb hisoblanmaydi: `"HUNTER"` endi #hr emas.
-   - Sarlavhasiz postda kasb nomi bor bosh qator hisobga olinadi.
-   - Yangi kasb: kiberxavfsizlik (IT). Marketing, SMM va kontent so'zlari kengaytirildi.
-   - Hudud tegi **faqat manzil maydonidan** olinadi (manzil bo'lsa).
-2. **Sarlavha:**
-   - "Talablar: ..." qatori endi sarlavha bo'lmaydi.
-   - "Mutaxassis bo'yicha marketing" → "Marketing mutaxassisi".
-   - "Erkak va ayollarini" kabi lavozimsiz parcha → kasb yoki kategoriya nomi.
-   - Yalang'och "Ishchi" → "Ombor ishchisi".
-   - "Kassir VA" → "va", "Sotuv Menejeri" → "Sotuv menejeri".
-   - "X at Company" → sarlavha va kompaniyaga ajratiladi.
-   - Trucking "Update" → "Yuk kuzatuvi mutaxassisi (Update)".
-3. **Maosh:**
-   - "3 –7 000 000" → "3 000 000 – 7 000 000 so'm".
-   - Postda "$" bo'lsa summalar dollar deb olinadi.
-   - So'm bo'la olmaydigan son ("1 000 – 5 000 so'm") → "Kelishiladi".
-   - Uzun maosh gapi → "3 000 000 so'm (administrator)", shartlar to'liq kartochkada.
-4. **Kompaniya:** shior, tavsif va gap kompaniya deb olinmaydi. Tiredan keyingi izoh olib tashlanadi, qo'shtirnoq juftlanadi.
-5. **Dublikat:** yangi qatlam bor. Bir xil telefon/@username, bir xil lavozim (umumiy so'zlarsiz) va o'xshash matn bo'lsa,
-   boshqa kanalda bo'lsa ham dublikat. "Begimqulov" va "Begimkulov" teng hisoblanadi. Filtrsiz admin obunasida bunday post
-   «kanalga chiqmadi: dublikat» bo'lib keladi (testlangan).
-6. **Ma'nosiz maydon:** "Talablar: Administrator uchun" kabi, 3 tadan kam ma'noli so'zli maydon tashlanadi.
-7. **Ohang:** "FAQAT ERKAKLAR UCHUN ISH. AYOLLAR BEZOVTA QILMANG!" → "Faqat erkaklar uchun ish.". Iboralar
-   `settings.yaml → tone:` da.
-8. **Boshqa topilganlar:**
-   - fallback sarlavhasi "Yangi ish e'loni — X" o'rniga topilgan lavozim;
-   - "Grafik Dizayner" → "Grafik dizayner";
-   - `RAINBOWSYSTEM” kompaniya` dagi ortiqcha qo'shtirnoq;
-   - ombor postida talablar qatori sarlavha bo'lib qolgani;
-   - "Kofe lady" → #barista.
+Tartib o'zgarmadi: yopilgan → rezyume → shubhali → ... Rezyume bazada `raw_posts.status = resume` bo'lib qoladi, kanalga chiqmaydi,
+**filtrsiz admin obunasi** uni "🚫 Kanalga chiqmadi: rezyume (ish izlovchi posti)" holati bilan ko'rsatadi (testlangan).
+
+**Reklama aloqasi.** Iboradan ("e'lon joylashtirish uchun", "e'lon va rezyume joylashtirish uchun", "reklama uchun", "reklama
+bo'yicha", "по рекламе", "for ads" ...) DARHOL keyin @username / t.me havola kelsa (yoki ibora qator oxirida bo'lib, hisob
+keyingi qatorda yolg'iz tursa), qator olib tashlanadi va undagi hisob post aloqasi bo'lmaydi: klassifikatorda, extractorda va
+cleaner'da (yashirin havola ham). Iboralar `source_rules.yaml → defaults.ads_contact_phrases` da. `@freelancer_Uzbek` uchun
+o'z hisoblari (`FreelancerUz_ads`, `freelancer_Uzbek`) va "Ish va xodim bir joyda!", "Kanalda e'lon va rezyume joylashtirish
+uchun..." qatorlari ham yozildi.
 
 ## 2. Qabul qilgan qarorlarim
 
-- **Yangi ustun `jobs.full_html`.** To'liq matn `description` da allaqachon bor edi. Lekin to'liq kartochka uchun maydonlar
-  ham kerak, ularni bot ichida qayta hisoblamaslik uchun shablon bir marta yasalib saqlanadi.
-- **Tugma qachon chiqadi:**
-  - caption nimanidir yo'qotganda;
-  - post ruscha yoki inglizcha bo'lganda;
-  - matn 500 belgidan uzun va captiondan 1,5 marta uzun bo'lganda.
+- **Yalang'och "rezyume" so'zi marker EMAS.** Kompyuterdagi 1306 postning **90 tasi** oddiy vakansiya bo'lib, ularda "Rezyume
+  yuborish uchun: ...", "Rezyume jo'nating", "To'liq rezyume (CV)" bor. Shuning uchun faqat `#rezyume` kabi heshteglar. Xuddi
+  shu sabab "ish kerak" ham yo'q (vakansiyada `"Ish kerak edi."` iqtibosi uchradi); u faqat alohida qator bo'lsa hisoblanadi.
+- **"Rezyume:" (ikki nuqta bilan) sarlavha emas:** vakansiyada bu aloqa qatorining boshi bo'lishi mumkin.
+- **Shakl qoidasi qasddan qattiq.** Yo'qolgan rezyume (kanalda keraksiz post) — arzon xato; yo'qolgan vakansiya — qimmat. "Xodim:
+  Sotuvchi" (bitta so'z) yoki "Xodim: Sotuv Menejeri" (kasb) ism emas. Ish beruvchi belgisi bo'lsa, qancha yorliq va ism
+  bo'lmasin, rezyume hisoblanmaydi.
+- **`*_ads` / `*reklama*` / `*admin*` nomlari ko'r-ko'rona olinmaydi:** faqat reklama iborasidan keyingi hisob olinadi. Bu o'zi
+  yetarli (nom andozasi qo'shimcha hech narsa bermas edi) va "Reklama bo'yicha menejer kerak. Murojaat: @Sales_Admin_Uz"
+  kabi haqiqiy aloqani yo'qotmaydi (testlangan).
+- Reklama qatori **butunlay olib tashlanadi** (matnda ham ko'rinmaydi), chunki cleaner aloqali qatorni "qaytarib qo'yadi".
+- `Classifier` endi ixtiyoriy 3-argument (`categories`) oladi: "Xodim: Sotuv menejeri" kabi kasb nomini ism deb olmaslik uchun.
+  Berilmasa avvalgidek ishlaydi.
+- Kanalga chiqib bo'lgan postlarga tegilmadi.
 
-  Bazadagi 683 e'londan 403 tasida tugma bor, chunki kanallardagi postlar odatda uzun.
-- Tugma alohida qatorda, «Murojaat/Ariza» va «Saqlash/Boshqa ishlar» orasida. Admin tekshiruvi xabari va sayt ham to'liq
-  kartochkani ko'rsatadi.
-- **Tarjima uchun yangi Gemini so'rovi yo'q.** AI baribir chaqirilgan bo'lsa (limit ichida, keshda), uning o'zbekcha
-  maydonlari ko'rsatiladi. Bo'lmasa faqat asl matn. Joylash hech qachon tarjimani kutmaydi.
-- **Maosh:**
-  - parser qabul qilmagan raqam faqat hammasi ≥ 100 000 bo'lsa ko'rsatiladi ("250 000" kunlik); qolgani "Kelishiladi";
-  - USD faqat postda $/USD/dollar belgisi bo'lsa, rol bo'yicha taxmin qilinmaydi.
-- **Hudud tegi:** manzil maydonida hudud topilsa, faqat shu. Tuman esa matndan olinadi, agar o'sha hudud bo'lsa.
-- **Dublikat:**
-  - oyna 14 kun (`dedup.window_days`);
-  - lavozim o'xshashligi ≥ 85, umumiy so'zlarsiz ("mutaxassis", "o'qituvchi"...);
-  - matn ≥ 75;
-  - ikki xil kompaniya hech qachon dublikat emas;
-  - faqat umumiy so'zdan iborat sarlavha ("O'qituvchi") bu qatlamda solishtirilmaydi.
+## 3. Haqiqiy 1306 postda (kompyuterdagi baza nusxasi, offline)
 
-  Birinchi variantda 17 ta mos kelishdan 6 tasi xato chiqqan edi, shuning uchun qattiqlashtirdim.
-- Ingliz sarlavhalari harf o'lchamini saqlaydi ("Digital Content Specialist"). Brend nomlari ("Uzum Tezkor") ham.
-- Kanalga chiqqan postlarga tegilmadi. Navbatdagilar worker yonganda o'zi qayta yasaladi.
-
-## 3. Namunadagi xatolar: oldin / keyin
-
-**a) Namunadagi 21 ta muammoli post** (anonim tiklangan; eski kod → yangi kod):
-
-| Xato | Oldin | Keyin |
+| | Oldin | Keyin |
 |---|---|---|
-| Captionda manba kanalga havola | 4 | 0 |
-| So'z/gap o'rtasida kesish | 2 | 0 |
-| Noto'g'ri kategoriya (moliya, ishlab_chiqarish, boshqa) | 9 | 0 |
-| Noto'g'ri hudud tegi (#qashqadaryo) | 1 | 0 |
-| Buzuq sarlavha | 7 | 0 |
-| Maosh xatosi | 3 | 0 |
-| Shior kompaniya / ortiqcha qo'shtirnoq | 3 / 1 | 0 / 0 |
-| Topilmagan dublikat (Begimqulov/Begimkulov) | 1 | 0 |
-| Ma'nosiz maydon | 1 | 0 |
-| Baqiriq / qo'pol ibora | 1 | 0 |
-| Sotuv menejeriga #hr | 1 | 0 |
+| Matni bor postlar | 1279 | 1279 |
+| Rezyume deb topilgan | 5 | 5 |
+| Vakansiya (`job`) | 1134 | 1134 |
+| Boshqa turlar (not_job / opportunity / closed / suspicious) | 140 | 140 |
 
-**b) Kompyuterdagi baza nusxasining hamma 1306 posti** (offline, chiqqan e'lonlar):
+**Hech bir post turi o'zgarmadi** — ya'ni yangi qoidalar bu bazadagi birorta haqiqiy vakansiyani yo'qotmadi (yolg'on mos kelish
+**0**). Bu nusxada ish izlovchi posti ham yo'q (manbalar vakansiya kanallari), shuning uchun "nechta rezyume topildi" o'sishi 0:
+qoidalarni **tiklangan haqiqiy post** bilan sinadim (pastda).
 
-| Xato | Oldin | Keyin |
+**Har bir yangi marker** 1306 postga qarshi sinaldi: `#rezyume`, `#resume`, `#cv`, `#rezume`, `#резюме`, `#ishizlayman`,
+`#ish_izlayman`, `#ishqidiraman`, `#ish_qidiraman`, `#ishkerak`, `#ish_kerak`, `#opentowork`, "ish izlayman", "ish qidiraman",
+"ish qidirayapman", "иш излайман", "proyekt kerak", "loyiha kerak", "buyurtma qidiryapman/izlayapman", "ищу подработку",
+"ищу вакансию", "ищу проект", "ищу заказы", "looking for a job", "looking for work", "seeking a job", "open to work",
+"available for hire" va sarlavha qatorlari (`rezyume`, `resume`, `cv`, `резюме`, `ish kerak`, `ish izlayman`) — **hammasi 0 ta
+postga mos keldi**, ya'ni namuna ko'rsatadigan narsa yo'q. Rad etilgan (ishlatilmagan) nomzodlar: yalang'och `rezyume` — 90 ta
+vakansiya ("Rezyume yuborish uchun: ...", "📞 Aloqa: Rezyume jo'nating", "@... - rezyume yuboring"), `ish kerak` — 1 ta
+(`"Ish kerak edi."`).
+
+**Shakl qoidasi.** 10 ta post 3 va undan ko'p profil yorlig'iga ega ("Yosh:", "Tajriba:", "Hudud:" ...) — **hammasi vakansiya**,
+10 tasida ham ish beruvchi yorlig'i bor (Talablar/Kompaniya...), 3 tasida ish beruvchi iborasi; shakl bo'yicha rezyume = 0.
+Ish izlovchiga xos dalil ("Portfolio:" yorlig'i yoki ism) 3 postda uchraydi, lekin ularda 3 tadan kam profil yorlig'i bor, shuning
+uchun ham rezyume deb olinmadi (ular vakansiya).
+
+**Boshqa "rezyumega o'xshash" postlar** (ish deb topilgani orasida): xizmat taklifi ("qilib beramiz", "xizmat ko'rsataman") — **0**,
+birinchi shaxsdan ish qidirish ("men ish izlayman", "ishga kirmoqchi") — **0**, ruscha "резюме" — 22 ta, hammasi "резюме
+отправляйте" (vakansiya). Ya'ni bu bazada bir xil xato boshqa postda yo'q.
+
+**Reklama aloqasi.** 3 ta postda kanalning o'z reklama admini avval aloqa bo'lib olinayotgan edi, endi olinmaydi:
+`@ish_kerak_edu_adminstratori` ("E'lon joylashtirish uchun:" ostida; vakansiyaning haqiqiy aloqasi `@HR_ish` qoldi) va
+`@manavakansiya_adminka` ("Vakansiya joylash uchun @... ga yozing", 2 post). Oxirgi ikkitasi kanalning o'z reklamasi
+("Xodim topolmay qiynalayapsizmi?") va boshqa aloqasi yo'q edi: avval admin akkaunti "Murojaat" tugmasi bilan chiqib ketardi, endi
+`no_contact` bo'lib chiqmaydi.
+
+**Tiklangan post (testda, anonim).** Eski kod → yangi kod:
+
+| Post | Oldin | Keyin |
 |---|---|---|
-| Captionda manba havolasi | 186 | 0 |
-| So'z/gap o'rtasida kesish | 25 | 0 |
-| To'liq gap/banddan keyin bo'lmagan kesish | 26 | 1 (vergulli bo'lak) |
-| Buzuq sarlavha | 19 | 0 |
-| Shubhali kompaniya | 32 | 0 |
-| Baqiriq qatori | 11 | 0 |
-| Ma'nosiz talablar | 4 | 1 |
-| Bir nechta hudud tegi | 19 | 13 |
-| "Yangi ish e'loni" sarlavhasi | 44 | 31 |
-| Dublikat (yangi qatlam) | — | +11 (barchasi qo'lda tekshirildi) |
-| `#boshqa` | 27 | 27 |
+| `#rezyume ... Xodim: <ism> ... Portfolio` | `job`, aloqalar: portfolio, poster, **reklama admini** | `resume`, aloqalar: portfolio, poster |
+| Shu post `#rezyume` va "proyekt kerak"siz (faqat shakl) | `job` | `resume` |
+| Ish beruvchi: "Xodim kerak: ... Yosh/Tajriba/Hudud/Oylik" | `job` | `job` |
+| Ish beruvchi: "Xodim: Sotuv menejeri ... Talablar:" | `job` | `job` |
 
-## 4. Migratsiya
+Testlar (31 ta) ham: `Rezyume yuboring`, `Rezyume:`, "Ish kerak bo'lsa", "Ish kerak edi", "Loyiha uchun dasturchi kerak" qatorli vakansiya `job`
+bo'lib qoladi; yopilgan post rezyumedan oldin `closed` bo'ladi; 7 xil reklama qatori (lotin, ruscha, inglizcha, t.me havola,
+keyingi qatordagi hisob) aloqadan chiqadi, post egasining aloqasi qoladi.
 
-`a4d2e7f1c3b9`: `jobs.full_html` — bitta bo'sh `TEXT` ustun. Faqat qo'shiladi, mavjud qatorlarga tegmaydi. Eski e'lonlarda
-bo'sh qoladi, ularning bot kartochkasi avvalgidek kanal posti bo'ladi. Kompyuterdagi baza nusxasida sinaldi: yuqoriga,
-pastga va yana yuqoriga. Hamma jadvallarning har bir qatori bir xil qoldi, `integrity_check` ok, `alembic check` toza.
-Obuna, foydalanuvchi va sevimli qatorlari yozilgan nusxada ham sinaldi.
-
-| jadval | oldin | keyin |
-|---|---|---|
-| sources / raw_posts / jobs | 20 / 1306 / 340 | 20 / 1306 / 340 |
-| images / kv_store / jobs_fts | 69 / 57 / 340 | 69 / 57 / 340 |
-
-⚠️ Bu kompyuterdagi **eski** nusxa, serverdagi jonli bazaga kira olmayman.
-
-## 5. Serverga qo'yish
+## 4. Serverga qo'yish
 
 ```bash
 sudo bash /home/ayvona/ayvona/scripts/deploy.sh
@@ -148,32 +114,36 @@ sudo bash /home/ayvona/ayvona/scripts/deploy.sh
 ```bash
 sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh
 ```
-```bash
-sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'
-```
-Oxirgi buyruq `a4d2e7f1c3b9 (head)` ko'rsatishi kerak. `deploy.sh` migratsiyani o'zi qiladi. `.env` ga hech narsa qo'shish
-shart emas. Orqaga qaytish DEPLOY.md 6b-bo'limda: `alembic downgrade f3c8a1d6e9b4` + `git reset --hard ff68d0f`.
+Migratsiya yo'q, `.env` ga hech narsa yozilmaydi. `deploy.sh` servislarni o'zi qayta yoqadi. Navbatda allaqachon turgan rezyumeni
+ko'rish va (xohlasangiz) chiqarmaslik buyruqlari DEPLOY.md 6c-bo'limida. Orqaga qaytish: `git reset --hard 6724db5`.
 
-## 6. Qo'lda tekshiring
+**Natijalar:** 1125 ta test o'tdi (oldin 1094; +31), `ruff` toza.
 
-1. Kanalda yangi uzun post chiqqach, «📖 To'liq ma'lumot» tugmasini bosing. Bot ochilishi va to'liq matnni ko'rsatishi
-   kerak (telefon va kompyuterda). Telegram'da `start=job_<id>` ishlashini haqiqiy akkauntda sinab ko'ring.
-2. Ruscha yoki inglizcha postdagi tugma: botda "📄 Asl matn" va o'zbekcha maydonlar chiqishi kerak.
-3. Uzun foydalanuvchi e'loni va uzun loyiha: tugma bo'lsin, botda yozilgan hamma narsa ko'rinsin.
-4. Admin tekshiruv xabari to'liq kartochka bilan keladi. Juda uzun e'londa xabar sig'ishini ko'ring (4096 belgi).
-5. Bir necha kun postlarni ko'zdan kechiring: kategoriya, sarlavha, "Kelishiladi" bo'lib qolgan maosh, tushib qolgan
-   kompaniya, dublikat.
+## 5. Qolgan risklar
 
-## 7. Qolgan risklar
+- **Haqiqiy @freelancer_Uzbek postlarida sinalmagan.** Kompyuterdagi nusxada bu kanal yo'q; qoidalar bitta haqiqiy postdan
+  tiklangan namunada va 1306 ta boshqa postda (yolg'on mos kelish 0) sinaldi. Deploydan keyin bir-ikki kun shu kanalning
+  chiqqan postlarini ko'zdan kechiring.
+- **Shakl qoidasi ehtiyotkor:** ism yozilmagan, "Portfolio" yo'q rezyume (faqat "Yosh/Tajriba/Hudud") rezyume deb topilmaydi.
+  Agar shunday post chiqib qolsa — shu postdagi aniq iborani `resume_markers` ga qo'shing (qo'shishdan oldin 1306 postga qarshi
+  tekshiring: `CLAUDE.md` 17-qoida).
+- **Navbatda turgan rezyume.** Deploydan oldin navbatga tushgan rezyume postlari (agar bo'lsa) o'zi qayta baholanmaydi. Ularni
+  DEPLOY.md 6c dagi so'rov bilan toping.
+- **Reklama iborasi + darhol hisob** — katta ehtimol bilan faqat kanal reklamasi. Bu qoida bilan ish beruvchining o'zi shunday
+  yozsa ("Reklama bo'yicha: @hr_menejer" deb o'z HR'ini ko'rsatsa), uning hisobi aloqadan chiqadi; telefon va boshqa hisoblari
+  qoladi. Aloqasi faqat shu bo'lgan post `no_contact` bo'ladi.
+- Ruscha/inglizcha markerlar (`ищу подработку`, `open to work`) haqiqiy postlarda sinalmagan (bazada ularga mos post yo'q).
 
-- **Haqiqiy Telegram'da sinalmagan:** tugma va deep link (soxta Bot API bilan sinaldi).
-- **Tugma ko'p postda** (~59%). Kerak bo'lsa `RICH_TEXT_MIN` / `RICH_TEXT_RATIO` (`processing/formatter.py`) ni oshiring.
-- **Dublikat qatlami:** bitta recruiter bir xil lavozimni ikki xil joyga, kompaniya nomini yozmasdan bersa, ular bitta e'lon
-  deb hisoblanishi mumkin. 11 ta topilgan holatning hammasini qo'lda tekshirdim, xato topmadim.
-- **Ehtiyotkor qoidalar ba'zan foydali ma'lumotni yashiradi:** "Kelishiladi" bo'lgan maosh, tushib qolgan kompaniya,
-  tashlangan qisqa talablar. Ular to'liq kartochkada qoladi.
-- **Faqat manzildan olingan hudud:** manzilida bitta shahar yozilgan, matnida bir nechta viloyat sanalgan e'lon endi
-  bitta hudud tegini oladi.
-- **Baqiriq tuzatish:** butunlay katta harfli qatordagi atoqli otlar ham kichik harfga o'tishi mumkin ("koreyada"); ro'yxatdagi
-  qisqartmalar (HR, KPI, IT...) qoladi.
-- **`#boshqa` 27 ta qoldi:** bularning asosiy sababi lavozimi umuman topilmagan e'lonlar.
+---
+
+## Oldingi yangilanish (2026-10-08, `6724db5`): post sifati va «📖 To'liq ma'lumot»
+
+Hamma narsa hanuz amalda; batafsil: `git show 6724db5:STATUS.md`.
+
+- Kanal postida manba kanalga havola yo'q; qisqargan/uzun/ruscha-inglizcha postda **«📖 To'liq ma'lumot»** tugmasi botda to'liq
+  kartochkani ochadi (`jobs.full_html`, migratsiya `a4d2e7f1c3b9`). Matn faqat gap/band oxirida kesiladi.
+- Kategoriya, hudud tegi, sarlavha, maosh, kompaniya, dublikat, baqiriq/qo'pol ibora, ma'nosiz maydon tuzatildi (qoidalar config'da:
+  `categories.yaml → ignore_words/default_title`, `extract.yaml → company_reject_words/title_role_words`, `settings.yaml → tone:/dedup:`).
+- Namunadagi 21 ta muammoli post: 0 xato qoldi; 1306 postda manba havolasi 186 → 0, so'z o'rtasida kesish 25 → 0, buzuq sarlavha 19 → 0.
+- Birinchi yangilanishlarning (tasdiqlash, ustuvorlik, Loyihalar, rasmlar, filtrsiz admin obuna) tavsifi: `git show ff68d0f:STATUS.md`.
+- Haqiqiy Telegram'da «📖» tugmasi va deep link hanuz qo'lda tekshirilmagan (DEPLOY.md 6b).
