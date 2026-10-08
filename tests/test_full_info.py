@@ -146,6 +146,35 @@ async def test_user_ad_with_long_text_gets_the_button_and_shows_all_of_it(
     assert "39-talab" in harness.texts()[-1]
 
 
+def test_russian_post_translated_by_the_ai_shows_both_in_the_bot() -> None:
+    """Gemini (within its daily cap, cached) gave Uzbek fields: the caption is Uzbek, the full
+    card has the Uzbek requirements (the translation) AND the Russian original as written."""
+    from ayvona.processing.clean import CleanedText
+    from ayvona.processing.extract import Extraction
+    from ayvona.processing.formatter import Formatter
+    from ayvona.processing.language import Language
+
+    original = "Требуется бухгалтер.\nОпыт работы от 3 лет, знание 1С.\nТел: +998 90 000 00 02"
+    ex = Extraction(
+        title="Buxgalter",
+        title_source="ai",
+        requirements="Kamida 3 yillik tajriba; 1C dasturini bilish",
+        phones=("+998900000002",),
+        category="moliya",
+        profession="buxgalter",
+        language=Language.UZ_LATIN,  # set by the AI merge
+        confidence=0.9,
+        ai_used=True,
+    )
+    out = Formatter(settings()).format(
+        ex, CleanedText(text=original), source_url="https://t.me/x/1"
+    )
+    assert "Kamida 3 yillik tajriba" in out.html and "Требуется" not in out.html
+    full = out.full_html or ""
+    assert "📋 Talablar: Kamida 3 yillik tajriba; 1C dasturini bilish" in full
+    assert "📄 <b>Asl matn:</b>\nТребуется бухгалтер." in full
+
+
 def test_project_with_long_description() -> None:
     st = settings()
     description = " ".join(f"{i}-bosqichda bot yangi funksiyani oladi." for i in range(60))

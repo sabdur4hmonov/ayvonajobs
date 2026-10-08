@@ -919,8 +919,13 @@ class Formatter:
                 if p.schedule != schedule:
                     cut.append("schedule")
             requirements = [_cap(", ".join(place_words))] if place_words and not foreign else []
-            # the full card with the whole text does not repeat the requirements
-            if ex.requirements and (not foreign or full) and not (full and original):
+            # Uzbek requirements are shown (in the full card too: of a Russian / English post they
+            # are the AI's Uzbek translation, the original follows); not repeated above the whole
+            # Uzbek text, nor in Russian above the Russian original
+            show = (not foreign and not (full and original and original_latin)) or (
+                foreign and full and not original
+            )
+            if ex.requirements and show:
                 req = self._plain(ex.requirements if as_written else _latin(ex.requirements))
                 req = self.tone.normalize(req) or ""
                 if req and not self.meaningless(req, ex):
