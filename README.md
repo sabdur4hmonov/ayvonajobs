@@ -116,6 +116,12 @@ Botda admin: `/ai` (holat, bugungi so'rovlar, yoqish/o'chirish).
   kanalda `#loyiha` bilan, botda «🧩 Loyihalar» menyusida.
 - **Rasmlar:** admin `/images review` — rasm o'rinlarini birma-bir ko'rib, taklifni tasdiqlaydi (eski rasm nusxasi
   saqlanadi). Manba: Pexels / Unsplash / Pixabay (kaliti `.env` da bo'lsa) yoki o'zimiz chizgan original rasm.
+- **🔓 Filtrsiz obuna (faqat admin, 2026-10-08):** admin kasbga obuna bo'lsa (masalan «Menejer»), hamma kanallardan
+  yig'ilgan, matnida shu kasb so'zi bor **har bir** post keladi — dublikat, eski, past daraja, ishlanmagan, kanalga
+  chiqmagan bo'lsa ham. Xabarda «✅ Kanalga chiqdi» yoki «🚫 Kanalga chiqmadi: sabab», «🔗 Asl post», «🔄 Holat».
+  Gemini ishlatilmaydi (faqat so'zlar, `config/settings.yaml → admin_alerts:`); bir post adminga ikki marta kelmaydi;
+  soatiga 30 tadan ortig'i bitta ro'yxat bo'lib keladi. Ko'rish/o'chirish: `/alerts`; butunlay o'chirish:
+  `.env` da `ADMIN_UNFILTERED_ALERTS=false`. Oddiy foydalanuvchilarning obunalari o'zgarmadi.
 
 ## 6. Dasturchi uchun
 

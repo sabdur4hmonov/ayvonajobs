@@ -187,11 +187,12 @@ sudo -iu ayvona git -C /home/ayvona/ayvona pull --ff-only
 sudo systemctl restart ayvona-collector ayvona-worker ayvona-bot
 ```
 
-### 6a. Yangilanish: tasdiqlash, ustuvorlik, Loyihalar, rasmlar (2026-10-07)
+### 6a. Yangilanish: tasdiqlash, ustuvorlik, Loyihalar, rasmlar, filtrsiz obuna (2026-10-07 / 08)
 
 Nima o'zgardi (qisqa): tasdiqlangan foydalanuvchi e'loni **darhol** kanalga chiqadi; admin faqat "yangi e'lon
 tasdiqlash" so'rovini oladi; e'lon uchun **muddat** (3/7/14/30 kun) so'raladi; e'lonlarga **ustuvorlik** (1/2/3-daraja);
-yangi bo'lim **🧩 Loyihalar**; admin uchun `/images review`, `/why <id>`.
+yangi bo'lim **🧩 Loyihalar**; admin uchun `/images review`, `/why <id>`; admin uchun **filtrsiz obuna** (`/alerts`):
+admin kasbga obuna bo'lsa, hamma kanallardan yig'ilgan mos postlar keladi — kanalga chiqmaganlari ham, sababi bilan.
 
 ```bash
 # 🐧 server (ubuntu) — bitta buyruq: git pull, baza zaxirasi, kutubxonalar, MIGRATSIYA, restart
@@ -199,12 +200,18 @@ sudo bash /home/ayvona/ayvona/scripts/deploy.sh
 sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh          # 1–2 daqiqadan keyin
 ```
 
-- **Migratsiya avtomatik:** `deploy.sh` 5-qadamda `alembic upgrade head` ni o'zi ishga tushiradi: 3 ta additiv
-  migratsiya (`c9e1a4b7d2f5` muddat, `d1f5b8c3a7e2` ustuvorlik, `e2a6c9d4b8f1` loyihalar). Mavjud e'lonlar o'zgarmaydi
-  (faqat yangi bo'sh ustunlar; `kind` hammasida `job`). Qo'lda: `sudo -iu ayvona` → `cd ~/ayvona` →
-  `.venv/bin/alembic upgrade head` → `.venv/bin/alembic current` (`e2a6c9d4b8f1 (head)` chiqsin).
+- **Migratsiya avtomatik:** `deploy.sh` 5-qadamda `alembic upgrade head` ni o'zi ishga tushiradi: 4 ta additiv
+  migratsiya (`c9e1a4b7d2f5` muddat, `d1f5b8c3a7e2` ustuvorlik, `e2a6c9d4b8f1` loyihalar, `f3c8a1d6e9b4` filtrsiz
+  obuna jadvali `admin_alert_deliveries`). Mavjud e'lonlar o'zgarmaydi (faqat yangi bo'sh ustunlar va bitta yangi
+  jadval; `kind` hammasida `job`). Qo'lda: `sudo -iu ayvona` → `cd ~/ayvona` → `.venv/bin/alembic upgrade head` →
+  `.venv/bin/alembic current` (`f3c8a1d6e9b4 (head)` chiqsin).
 - **`.env` ga hech narsa qo'shish shart emas.** Ixtiyoriy: `ADMIN_EXTRA_NOTIFICATIONS=true` (eski xabarlarni qaytaradi),
+  `ADMIN_UNFILTERED_ALERTS=false` (filtrsiz obunani butunlay o'chiradi; standart: yoqilgan),
   `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY` / `PIXABAY_API_KEY` (stok rasmlar; yo'q bo'lsa rasmlarni o'zimiz chizamiz).
+- **Filtrsiz obuna:** botda «🔔 Obunalar» → «➕ Yangi obuna» → soha → kasb (masalan Menejer). Siz admin bo'lganingiz
+  uchun obuna 🔓 filtrsiz bo'ladi. Xabarlar worker'dan keladi (post kelgach ~1–2 daqiqada, worker qarorini kutib),
+  soatiga 30 tadan ortig'i bitta ro'yxat bo'lib. Ro'yxat va o'chirish: `/alerts`. So'zlar va limitlar:
+  `config/settings.yaml` → `admin_alerts:`.
 - **Worker birinchi yonishda** mavjud e'lonlarga ustuvorlik beradi (logda: `Ustuvorlik hisoblandi: N ta e'lon ...`).
   Qo'lda: `sudo -iu ayvona` → `cd ~/ayvona && .venv/bin/python scripts/backfill_priority.py --dry-run` (keyin `--all` —
   `config/settings.yaml` dagi `priority:` ro'yxatlarini o'zgartirgach qayta baholash).
@@ -213,7 +220,12 @@ sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh          # 1–2 daqiqadan 
   `suspicious_only`). O'zgartirgach servislarni qayta yoqing.
 - **Birinchi tekshiruv** (telefonda): ikkinchi akkaunt bilan «📢 E'lon joylash» → Ish → ... → muddat → yuborish; admin
   «✅ Tasdiqlash» bossa e'lon **o'sha zahoti** kanalda; «🧩 Loyiha» ham shunday; «🧩 Loyihalar» tugmasi; admin: `/why <id>`,
-  `/queue` (daraja ko'rinadi). `/images review` faqat siz boshlasangiz ishlaydi.
+  `/queue` (daraja ko'rinadi). `/images review` faqat siz boshlasangiz ishlaydi. Filtrsiz obuna: «Menejer»ga obuna
+  bo'ling → bir necha soat ichida «🔓 Filtrsiz obuna» xabarlari kelishi kerak (holat qatori va «🔗 Asl post» bilan).
+
+**Faqat filtrsiz obunani qaytarish** (qolgan yangiliklar qoladi): `sudo -iu ayvona` → `cd ~/ayvona` →
+`.venv/bin/alembic downgrade e2a6c9d4b8f1` → `git reset --hard 1cc90a0` → servislarni qayta yoqing. Yoki kodni
+tegmasdan: `.env` ga `ADMIN_UNFILTERED_ALERTS=false` va `sudo systemctl restart ayvona-worker ayvona-bot`.
 
 **Orqaga qaytish (migratsiya bilan):** eski kod yangi bazada **ishga tushmaydi** ("Baza tayyor emas...", u eski
 migratsiyani kutadi), shuning uchun avval bazani ham qaytaring:

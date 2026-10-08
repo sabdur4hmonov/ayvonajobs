@@ -49,9 +49,15 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
     **Projects** (`jobs.kind = 'project'`, bot menu "🧩 Loyihalar") are not ranked and never appear in job search,
     alerts, the website or the priority backfill — every query over published jobs must filter `kind = 'job'`.
 13. **Migrations are additive and data preserving** (nullable / server-default columns); test each on a copy of the real DB.
-    The three `jobs` columns families added so far: `active_days`, `priority_*`, `kind` + project columns.
+    The three `jobs` columns families added so far: `active_days`, `priority_*`, `kind` + project columns; plus the new
+    table `admin_alert_deliveries`.
 14. **Pictures change only with the admin's explicit OK** (`/images review`, `services/image_review.py`): old file backed
     up to `data/images_backup/`, source + licence in `<name>.json`; stock APIs only with a key in `.env`; never scrape.
+15. **The one exception to rule 10: an admin's own subscriptions are unfiltered** (`services/admin_alerts.py`,
+    `ADMIN_UNFILTERED_ALERTS`, default on). They match `raw_posts` text (words only, no Gemini) BEFORE every pipeline
+    filter, so a post is delivered whether or not it is ever published, with a status line saying why. Deduplicated per
+    admin and post in `admin_alert_deliveries` (written before the send); hourly cap + digest. The normal alerts skip
+    these subscriptions; non-admin subscriptions are untouched. `/alerts` lists them.
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)

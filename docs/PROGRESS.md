@@ -1391,3 +1391,18 @@ Branch `feature/moderation-ranking-projects`. Batafsil hisobot: `STATUS.md`; ser
    birma-bir, faqat admin tasdiqlasa almashadi, eski nusxa `data/images_backup/`, manba/litsenziya `<rasm>.json` da.
 
 Migratsiyalar (additiv): `c9e1a4b7d2f5`, `d1f5b8c3a7e2`, `e2a6c9d4b8f1` — haqiqiy bazaning nusxasida yuqoriga va pastga sinaldi.
+
+## 2026-10-08 — 🔓 Admin uchun filtrsiz obuna
+
+Branch `feature/moderation-ranking-projects` (o'sha yangilanishning 7-qismi). Hisobot: `STATUS.md`; deploy: `DEPLOY.md` 6a.
+
+7. **Filtrsiz obuna.** `services/admin_alerts.py` (worker vazifasi): admin (ADMIN_IDS) obunasining so'zlari (kasbning
+   categories.yaml so'zlari + `settings.yaml → admin_alerts.keywords`) `raw_posts` matnida qidiriladi — har qanday filtr,
+   dublikat, 24 soat, daraja, AI xatosi va kanal qaroridan OLDIN. Worker qarorini ≤ 2 daqiqa kutadi, keyin holat qatori
+   bilan yuboradi («kanalga chiqdi» / «kanalga chiqmadi: sabab»), «🔗 Asl post», «🔄 Holat» (bot qayta hisoblaydi).
+   Yangi jadval `admin_alert_deliveries` (PK admin + post, yuborishdan OLDIN yoziladi) — restart va qayta yig'ishda ham
+   ikki marta kelmaydi. Soatiga ≤ 30, qolgani bitta dayjest; flood-wait kutiladi; tarmoq xatosi dayjestda qayta.
+   Oddiy obunalar o'zgarmadi (adminning filtrsiz obunasi ulardan chiqarilgan — ikki marta kelmasin). `/alerts`,
+   `ADMIN_UNFILTERED_ALERTS=false` — butunlay o'chiradi. Migratsiya `f3c8a1d6e9b4` (faqat yangi jadval).
+   Yo'l-yo'lakay: worker yuboradigan oddiy obuna xabarlari va «Uzaytirasizmi?» eslatmasi `parse_mode=HTML` siz ketardi
+   (`<b>` xom ko'rinardi) — tuzatildi.
