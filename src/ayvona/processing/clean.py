@@ -29,7 +29,7 @@ from typing import Any
 from loguru import logger
 
 from ayvona.config import SourceRule, SourceRulesConfig
-from ayvona.processing.boilerplate import BoilerplateRules, keep_mask
+from ayvona.processing.boilerplate import BoilerplateRules, ad_contact_usernames, keep_mask
 from ayvona.processing.contacts import (
     canon_username,
     clean_url,
@@ -120,6 +120,7 @@ class Cleaner:
         """Clean one post. ``only_defaults``: ignore the channel's rules (a bot-added source)."""
         rule, rules = self._rules_for(source, only_defaults)
         own = {canon_username(u) for u in self.own_usernames(source, own_usernames, only_defaults)}
+        own |= {canon_username(u) for u in ad_contact_usernames(text, rules)}
         raw = unify(text).split("\n")
         norm = normalize_lines(text)
         keep = keep_mask(norm, rules)

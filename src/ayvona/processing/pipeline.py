@@ -246,7 +246,7 @@ class Pipeline:
         self.ai = ai  # optional Gemini helper (ai/helper.py); None = regex only
         self.cfg = settings.app.worker
         self.publisher_cfg = settings.app.publisher
-        self.classifier = Classifier(settings.filters, settings.source_rules)
+        self.classifier = Classifier(settings.filters, settings.source_rules, settings.categories)
         self.extractor = Extractor(settings)
         self.cleaner = Cleaner(settings.source_rules)
         self.formatter = Formatter(settings)

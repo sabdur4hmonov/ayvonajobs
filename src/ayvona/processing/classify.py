@@ -6,6 +6,13 @@ Order of rules (docs/SOURCE_ANALYSIS.md §3):
     no_text -> closed -> resume -> suspicious -> unpaid internship -> channel hashtags ->
     vacancy list with apply links -> opportunity / not_job (only when job evidence is weak) -> job.
 
+A job SEEKER's post (``resume``) is recognised three ways: a marker word / hashtag
+(``filters.resume_markers``: "#rezyume", "ish qidiryapman" ...), a header line that is only a
+marker (``resume_line_markers``: "REZYUME"), or its shape (``resume_structure``: several profile
+labels "Xodim: / Yosh: / Tajriba: / Portfolio:" and nothing an employer writes) — see
+:meth:`Classifier._seeker_shape`. A bare word "rezyume" is NOT a marker: vacancies say "Rezyume
+yuborish uchun".
+
 Only ``job`` goes to our channel. The rest stay in the DB with their kind as status.
 A ``job`` without any contact gets ``has_contact=False``; the pipeline (Bosqich 7) turns it into
 ``no_contact`` instead of publishing.
@@ -20,12 +27,16 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
-from ayvona.config import FiltersConfig, SourceRulesConfig
-from ayvona.processing.boilerplate import BoilerplateRules, strip_boilerplate
+from ayvona.config import CategoryConfig, FiltersConfig, SourceRulesConfig
+from ayvona.processing.boilerplate import (
+    BoilerplateRules,
+    ad_contact_usernames,
+    strip_boilerplate,
+)
 from ayvona.processing.contacts import Contacts, find_contacts, linked_positions
 from ayvona.processing.keywords import KeywordSet
 from ayvona.processing.language import Language, detect_language
-from ayvona.processing.normalize import fold, normalize
+from ayvona.processing.normalize import fold, normalize, unify
 
 # Job evidence thresholds (distinct job_markers found).
 MIN_JOB_SCORE = 2
@@ -33,6 +44,20 @@ MIN_JOB_SCORE = 2
 STRONG_JOB_SCORE = 4
 # This many positions with their own apply links make a vacancy list (a job ad).
 MIN_LINKED_POSITIONS = 2
+_NAME_TOKEN_RE = re.compile(r"[^\W\d_](?:[^\W\d_]|['’ʻ-](?=[^\W\d_]))*")
+_MIN_NAME_WORDS, _MAX_NAME_WORDS = 2, 4
+# NOT ":" - a line "Rezyume:" opens a contact line of a vacancy, it is not a header
+_LINE_PUNCT = " \t.!•*-—–()[]«»\"'"
+
+
+def _label_regex(labels: Sequence[str], *, colon: bool) -> re.Pattern[str] | None:
+    """``^<label>:`` (``colon=False``: ``^<label>\\b``) on a folded line, bullets in front."""
+    words = sorted({fold(w) for w in labels if fold(w)}, key=len, reverse=True)
+    if not words:
+        return None
+    body = "|".join(re.escape(w).replace(r"\ ", r"\s+") for w in words)
+    tail = r"\s*[:：]" if colon else r"(?![\w'])"
+    return re.compile(rf"^[\W_]*(?P<label>{body}){tail}")
 
 
 class PostKind(StrEnum):
@@ -129,12 +154,36 @@ class _SourceRules:
 class Classifier:
     """Build once from config (compiles keyword lists), call :meth:`classify` per post."""
 
-    def __init__(self, filters: FiltersConfig, source_rules: SourceRulesConfig) -> None:
+    def __init__(
+        self,
+        filters: FiltersConfig,
+        source_rules: SourceRulesConfig,
+        categories: dict[str, CategoryConfig] | None = None,
+    ) -> None:
         self.source_rules = source_rules
         self.job = KeywordSet(filters.job_markers)
         self.not_job = KeywordSet(filters.not_job_markers)
         self.not_job_strong = KeywordSet(filters.not_job_strong_markers)
         self.resume = KeywordSet(filters.resume_markers)
+        self._resume_lines = {fold(m).strip(_LINE_PUNCT) for m in filters.resume_line_markers}
+        self._resume_lines.discard("")
+        rs = filters.resume_structure
+        self._rs = rs
+        self._seeker_re = _label_regex(rs.seeker_labels, colon=True)
+        self._seeker_only = {fold(w) for w in rs.seeker_only_labels}
+        self._seeker_only_re = _label_regex(rs.seeker_only_labels, colon=True)
+        self._name_re = _label_regex(rs.name_labels, colon=True)
+        self._employer_re = _label_regex(rs.employer_labels, colon=False)
+        self._employer = KeywordSet(rs.employer_markers)
+        # a name field holding a profession ("Xodim: Sotuv menejeri") is an employer's template
+        self._profession_words = frozenset(
+            fold(w)
+            for cat in (categories or {}).values()
+            for prof in cat.professions.values()
+            for phrase in (prof.title, *prof.keywords)
+            for w in phrase.split()
+            if len(fold(w)) >= 4
+        )
         self.closed = KeywordSet(filters.closed_markers)
         self.opportunity = KeywordSet(filters.opportunity_markers)
         self.opportunity_strong = KeywordSet(filters.opportunity_strong_markers)
@@ -165,7 +214,68 @@ class Classifier:
         ]
         if post.source:
             own.append(post.source)
+        own.extend(ad_contact_usernames(post.text, self._source(post.source).boilerplate))
         return own
+
+    def _resume_header(self, folded: str) -> str | None:
+        """A line that is only "REZYUME" / "Ish kerak!" ..."""
+        for line in folded.split("\n"):
+            if line.strip(_LINE_PUNCT) in self._resume_lines:
+                return f"resume:line:{line.strip(_LINE_PUNCT)}"
+        return None
+
+    def _is_person_name(self, value: str) -> bool:
+        """``Ali Valiyev`` / ``Dilnoza Karimova``: 2-4 capitalized words, no digits, no
+        profession. One word is not enough ("Xodim: Sotuvchi" is an employer's template)."""
+        value = re.sub(r"\([^)]*\)", " ", value)
+        if re.search(r"\d|[@#/:]", value):
+            return False
+        words = _NAME_TOKEN_RE.findall(value)
+        if not (_MIN_NAME_WORDS <= len(words) <= _MAX_NAME_WORDS):
+            return False
+        if not all(w[0].isupper() and len(w) >= 2 for w in words):
+            return False
+        return not any(self._is_profession_word(fold(w)) for w in words)
+
+    def _is_profession_word(self, folded: str) -> bool:
+        """``menejer`` / ``menejeri`` / ``montajchi`` — a whole word of a profession name (a name
+        like "Qahramon" must not match the keyword "qa")."""
+        return folded in self._profession_words or any(
+            len(w) >= 5 and folded.startswith(w) for w in self._profession_words
+        )
+
+    def _seeker_shape(self, original: str, folded: str) -> str | None:
+        """A resume by its shape: >= ``min_labels`` profile labels + seeker-only evidence (a
+        "Portfolio:" label, or a "Xodim:" field holding a person's name) + nothing an employer
+        writes (Talablar / Vazifalar / Kompaniya / Vakansiya / "ishga taklif" ...)."""
+        if self._seeker_re is None:
+            return None
+        if self._employer.find(folded):
+            return None
+        labels: set[str] = set()
+        evidence = ""
+        for line in unify(original).split("\n"):
+            fl = fold(line)
+            if not fl:
+                continue
+            if self._employer_re and self._employer_re.match(fl):
+                return None
+            m = self._seeker_re.match(fl)
+            if m is None and self._name_re:
+                m = self._name_re.match(fl)
+            if m is None:
+                continue
+            label = m.group("label")
+            labels.add(label)
+            if label in self._seeker_only:
+                evidence = evidence or f"label:{label}"
+            elif self._name_re and self._name_re.match(fl) and ":" in line:
+                value = line.split(":", 1)[1]
+                if self._is_person_name(value):
+                    evidence = evidence or f"name:{label}"
+        if len(labels) >= self._rs.min_labels and evidence:
+            return f"resume:shape:{evidence}+{len(labels)}labels"
+        return None
 
     def classify(self, post: PostInput, now: datetime) -> Classification:
         if not post.text.strip():
@@ -205,6 +315,8 @@ class Classifier:
         # 2. resume (job seeker's post)
         if hits := self.resume.find(folded):
             return result(PostKind.RESUME, *sorted(f"resume:{h}" for h in hits))
+        if why := self._resume_header(folded) or self._seeker_shape(post.text, folded):
+            return result(PostKind.RESUME, why)
 
         # 3. scam markers
         if hits := self.scam.find(self.scam_exceptions.remove(folded)):

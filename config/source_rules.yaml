@@ -46,8 +46,45 @@ defaults:
   # Bizning kanal va bot — hech qachon e'lon aloqasi emas (qaysi manbada uchrasa ham).
   # Eski "@ayvona" ham qoldirildi (zararsiz).
   extra_own_usernames: ["@ayvonajobs", "@ayvona_jobs_bot", "@ayvona"]
+  # KANALNING O'Z reklama aloqasi ("Kanalda e'lon va rezyume joylashtirish uchun: @admin"). Iboradan KEYIN
+  # darhol @username / t.me havola kelsa (yoki ibora qator oxirida, hisob keyingi qatorda) — bu qator butunlay
+  # olib tashlanadi va undagi hisoblar post aloqasi HISOBLANMAYDI (manba kanali ro'yxatda bo'lmasa ham).
+  # Iboralar o'zi qatorda bo'lib, yonida hisob bo'lmasa — hech narsa qilinmaydi ("Reklama bo'yicha menejer kerak").
+  ads_contact_phrases:
+    - e'lon joylashtirish uchun
+    - e'lon va rezyume joylashtirish uchun
+    - joylashtirish uchun
+    - joylash uchun
+    - e'lon berish uchun
+    - e'lon bermoqchi bo'lsangiz
+    - reklama uchun
+    - reklama bo'yicha
+    - reklama va hamkorlik
+    - reklama masalasida
+    - "reklama:"
+    - реклама учун
+    - по рекламе
+    - по вопросам рекламы
+    - для размещения рекламы
+    - для размещения объявлений
+    - "реклама:"
+    - for ads
+    - for advertising
+    - for advertisement
+    - to advertise
+    - "advertising:"
 
 sources:
+  "@freelancer_Uzbek":
+    extra_own_usernames: ["@FreelancerUz_ads", "@freelancer_Uzbek"]
+    strip_lines:
+      - "kanalda e'lon va rezyume joylashtirish uchun"
+      - "ish va xodim bir joyda"
+    notes: >
+      Frilanserlar kanali: ham vakansiya, ham ISH IZLOVCHI e'lonlari (#rezyume, 'Xodim: <ism>', 'Portfolio:',
+      'proyekt kerak' — frilanser LOYIHA qidiryapti). Rezyumelar chiqarilmaydi (PostKind.RESUME).
+      Oxirgi qatorlar kanalning o'z reklamasi: '@FreelancerUz_ads' — reklama admini, post aloqasi EMAS.
+
   "@ishtoparuz_kanal":
     strip_lines:
       - "instagramdan qaysidir ishni ko'rib"

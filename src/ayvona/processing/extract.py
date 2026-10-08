@@ -26,7 +26,7 @@ from dataclasses import dataclass, field, replace
 from functools import lru_cache
 
 from ayvona.config import DEFAULT_CONFIG_DIR, Settings, TitleTranslations, load_settings
-from ayvona.processing.boilerplate import BoilerplateRules, keep_mask
+from ayvona.processing.boilerplate import BoilerplateRules, ad_contact_usernames, keep_mask
 from ayvona.processing.categorize import Categorization, Categorizer
 from ayvona.processing.classify import PostInput
 from ayvona.processing.contacts import Contacts, find_contacts, linked_positions
@@ -368,6 +368,7 @@ class Extractor:
         own = [*post.own_usernames, *rule.extra_own_usernames, *rules.defaults.extra_own_usernames]
         if post.source:
             own.append(post.source)
+        own.extend(ad_contact_usernames(post.text, self._boilerplate(post.source)))
         return own
 
     def lines(self, post: PostInput) -> list[Line]:

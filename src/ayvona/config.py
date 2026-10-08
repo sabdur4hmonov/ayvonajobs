@@ -630,6 +630,23 @@ class TitleTranslations(BaseModel):
     words: dict[str, str] = Field(default_factory=dict)
 
 
+class ResumeStructure(BaseModel):
+    """A job seeker's post recognised by its shape (processing/classify.py), not by one word.
+
+    A post is a resume when it has at least ``min_labels`` different ``seeker_labels`` ("Yosh:",
+    "Tajriba:", "Hudud:" ... each with a colon at the start of a line) AND seeker-only evidence
+    (a ``seeker_only_labels`` label such as "Portfolio:", or a ``name_labels`` field whose value
+    is a person's name: "Xodim: Ali Valiyev") AND no employer evidence at all. Employers use the
+    same labels too ("Yosh: 20-30", "Tajriba: 1 yil"), that is why the two extra conditions."""
+
+    min_labels: int = Field(default=3, ge=2)
+    seeker_labels: list[str] = Field(default_factory=list)
+    seeker_only_labels: list[str] = Field(default_factory=list)
+    name_labels: list[str] = Field(default_factory=list)
+    employer_labels: list[str] = Field(default_factory=list)
+    employer_markers: list[str] = Field(default_factory=list)
+
+
 class FiltersConfig(BaseModel):
     ban: list[str] = Field(default_factory=list)
     spam: list[str] = Field(default_factory=list)
@@ -642,6 +659,10 @@ class FiltersConfig(BaseModel):
     # decisive ad markers (a course topic list) -> not_job whatever the job score
     not_job_strong_markers: list[str] = Field(default_factory=list)
     resume_markers: list[str] = Field(default_factory=list)
+    # whole-line markers: a line that is ONLY this word ("REZYUME", "Ish kerak!") is a resume
+    # header; the word inside a sentence ("Rezyume yuboring") is not
+    resume_line_markers: list[str] = Field(default_factory=list)
+    resume_structure: ResumeStructure = Field(default_factory=ResumeStructure)
     closed_markers: list[str] = Field(default_factory=list)
     opportunity_markers: list[str] = Field(default_factory=list)
     opportunity_strong_markers: list[str] = Field(default_factory=list)
@@ -690,6 +711,11 @@ class SourceRuleDefaults(BaseModel):
     strip_lines: list[str] = Field(default_factory=list)
     # Our own channel / bot: never a contact of a job, whatever the source
     extra_own_usernames: list[str] = Field(default_factory=list)
+    # "Kanalda e'lon va rezyume joylashtirish uchun: @admin" — the line holds the CHANNEL's own
+    # advertising contact. A line with one of these phrases directly followed by a @username /
+    # t.me link (or ending with the phrase, the account on the next line) is removed and its
+    # accounts are never contacts of the post.
+    ads_contact_phrases: list[str] = Field(default_factory=list)
 
 
 class SourceRulesConfig(BaseModel):

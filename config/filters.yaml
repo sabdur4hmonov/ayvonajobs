@@ -201,6 +201,124 @@ resume_markers:
   - malaka va tajriba
   - ищу работу
   - резюме соискателя
+  # 2026-10-08 (@freelancer_Uzbek: "#rezyume ... Xodim: <ism>, Portfolio: ..." vakansiya bo'lib chiqib ketdi).
+  # FAQAT heshteglar va aniq iboralar: yalang'och "rezyume" so'zi qo'yilMAGAN — 1306 postdan 90 tasi vakansiya
+  # ("Rezyume yuborish uchun: ...", "Rezyume jo'nating"); "ish kerak" ham yo'q ('Ish kerak edi.' iqtibosi).
+  - "#rezyume"
+  - "#rezume"
+  - "#resume"
+  - "#cv"
+  - "#резюме"
+  - "#ishizlayman"
+  - "#ish_izlayman"
+  - "#ishqidiraman"
+  - "#ish_qidiraman"
+  - "#ishkerak"
+  - "#ish_kerak"
+  - "#opentowork"
+  - "#ishizlayapman"
+  - "#ishqidiryapman"
+  - ish izlayman
+  - ish qidiraman
+  - ish qidirayapman
+  - иш излайман
+  - proyekt kerak            # frilanser: "Katta obyomdagi montajlar uchun proyekt kerak" (ISH BERUVCHI "loyiha uchun ... kerak" deydi)
+  - loyiha kerak
+  - buyurtma qidiryapman
+  - buyurtma izlayapman
+  - ищу подработку
+  - ищу вакансию
+  - ищу проект
+  - ищу заказы
+  - looking for a job
+  - looking for work
+  - seeking a job
+  - open to work
+  - available for hire
+
+# Faqat shu so'zning o'zidan iborat qator — rezyume sarlavhasi ("REZYUME", "Ish kerak!").
+# Gap ichidagi "Rezyume yuboring" bunga kirmaydi.
+resume_line_markers:
+  - rezyume
+  - resume
+  - cv
+  - резюме
+  - ish kerak
+  - ish izlayman
+
+# Rezyumeni SHAKLIDAN topish (hech bir heshteg/ibora bo'lmasa ham). Ish beruvchilar ham "Yosh:", "Tajriba:",
+# "Oylik:" yozadi — shuning uchun uchta shart BIRGA kerak:
+#   1) kamida min_labels ta har xil profil yorlig'i (qator boshida, ikki nuqta bilan);
+#   2) ish izlovchiga xos dalil: "Portfolio:" yorlig'i YOKI "Xodim:/Ism:" maydonida odam ismi (2-4 ta bosh harfli
+#      so'z, kasb nomi emas: "Xodim: Ali Valiyev" — ha, "Xodim: Sotuvchi" — yo'q);
+#   3) ish beruvchi belgisi YO'Q (Talablar, Vazifalar, Kompaniya, Vakansiya, "ishga taklif" ...).
+resume_structure:
+  min_labels: 3
+  seeker_labels:
+    - xodim
+    - ism
+    - familiya
+    - ism familiya
+    - ism-familiya
+    - fio
+    - yosh
+    - tug'ilgan yil
+    - tug'ilgan sana
+    - tajriba
+    - ish tajribasi
+    - ma'lumot
+    - til
+    - tillar
+    - hudud
+    - yashash joyi
+    - ish turi
+    - ish formati
+    - oylik
+    - kutilayotgan oylik
+    - portfolio
+    - qo'shimcha
+    - возраст
+    - опыт
+    - опыт работы
+    - портфолио
+    - регион
+  seeker_only_labels: [portfolio, портфолио, ism-familiya, kutilayotgan oylik, tug'ilgan yil, tug'ilgan sana]
+  name_labels: [xodim, ism, ism familiya, familiya, fio, фио, имя]
+  employer_labels:
+    - talablar
+    - talab
+    - nomzodga talablar
+    - vazifalar
+    - majburiyatlar
+    - kompaniya
+    - tashkilot
+    - ish beruvchi
+    - vakansiya
+    - biz taklif qilamiz
+    - biz kutamiz
+    - sizdan talab qilinadi
+    - требования
+    - обязанности
+    - вакансия
+    - компания
+    - requirements
+    - responsibilities
+    - company
+    - vacancy
+  employer_markers:
+    - ishga taklif
+    - ishga qabul
+    - ishga olamiz
+    - xodim kerak
+    - xodimlar kerak
+    - "kerak:"
+    - "#vakansiya"
+    - "#vacancy"
+    - "#вакансия"
+    - ищем
+    - требуется
+    - we are hiring
+    - we're hiring
 
 # YOPILGAN vakansiya — chiqarilmaydi
 closed_markers:
