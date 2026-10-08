@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from aiogram import Bot
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup
 from loguru import logger
 from sqlalchemy import select, update
@@ -131,7 +132,9 @@ class ExpiryService:
             if self.bot is not None and job.author_id is not None:
                 text, markup = self.render_reminder(self.settings, job)
                 try:
-                    await self.bot.send_message(job.author_id, text, reply_markup=markup)
+                    await self.bot.send_message(
+                        job.author_id, text, parse_mode=ParseMode.HTML, reply_markup=markup
+                    )
                     report.reminded += 1
                 except Exception as e:  # blocked the bot, ...
                     logger.info("expiry: {} ga eslatma yuborilmadi: {}", job.author_id, e)

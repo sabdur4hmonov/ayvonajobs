@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 
 from aiogram import Bot
+from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from aiogram.types import InlineKeyboardMarkup
 from loguru import logger
@@ -209,7 +210,9 @@ class AlertService:
         """One message, ≤ per_second. False if the user blocked the bot (subscriptions off)."""
         for _ in range(2):
             try:
-                await self.bot.send_message(user_id, text, reply_markup=markup)
+                await self.bot.send_message(
+                    user_id, text, parse_mode=ParseMode.HTML, reply_markup=markup
+                )
                 await asyncio.sleep(1 / self.cfg.per_second)
                 return True
             except TelegramRetryAfter as e:

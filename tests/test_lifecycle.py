@@ -81,6 +81,7 @@ async def test_expiry_backfill_remind_expire(session_factory: SF) -> None:
     assert (await get(sf, old)).status is JobStatus.EXPIRED  # 30 > 21 days
     [msg] = session.sent(SendMessage)
     assert msg.chat_id == USER and "Kassir" in msg.text and "Uzaytirasizmi" in msg.text
+    assert msg.parse_mode == "HTML"  # the worker's Bot has no default parse mode
     assert (await get(sf, soon)).reminded_at is not None
     assert (await get(sf, later)).reminded_at is None
 
