@@ -1406,3 +1406,18 @@ Branch `feature/moderation-ranking-projects` (o'sha yangilanishning 7-qismi). Hi
    `ADMIN_UNFILTERED_ALERTS=false` — butunlay o'chiradi. Migratsiya `f3c8a1d6e9b4` (faqat yangi jadval).
    Yo'l-yo'lakay: worker yuboradigan oddiy obuna xabarlari va «Uzaytirasizmi?» eslatmasi `parse_mode=HTML` siz ketardi
    (`<b>` xom ko'rinardi) — tuzatildi.
+
+## 2026-10-08 — Post sifati, «📖 To'liq ma'lumot» botda
+
+Branch `fix/post-quality`. Hisobot: `STATUS.md`; deploy: `DEPLOY.md` 6b.
+
+- **A.** Kanal postida manba kanalga havola yo'q. Qisqargan / uzun / ruscha-inglizcha postda «📖 To'liq ma'lumot» tugmasi
+  -> botda to'liq kartochka (`jobs.full_html`, migratsiya `a4d2e7f1c3b9`); foydalanuvchi e'loni va loyihada ham.
+  Kesish faqat gap/band oxirida (`formatter.truncate_units`).
+- **B.** Kategoriya (`ignore_words`, sarlavhadagi qo'shtirnoqli nom, sarlavhasiz postda bosh qator), hudud faqat manzildan,
+  sarlavha tekshiruvi / so'z tartibi / `default_title`, maosh ("3 –7 000 000", "$" belgisi, ishonchsiz son -> Kelishiladi),
+  kompaniya (shior/gap/qo'shtirnoq), dublikat (bir xil aloqa + lavozim + matn, `dedup:`), ma'nosiz maydon, ohang
+  (`processing/tone.py`, `tone:`). Regression testlar: `tests/sample_posts.py` (anonim), `tests/test_post_quality.py`,
+  `tests/test_full_info.py`.
+- Tekshiruv (offline, kompyuterdagi baza nusxasi, 1306 post): manba havolasi 186 -> 0, so'z/gap o'rtasida kesish 25 -> 0,
+  buzuq sarlavha 19 -> 0, shubhali kompaniya 32 -> 0, baqiriq 11 -> 0, ko'p hudud tegi 19 -> 13, yangi dublikat +11.

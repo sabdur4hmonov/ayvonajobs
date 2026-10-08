@@ -123,6 +123,18 @@ Botda admin: `/ai` (holat, bugungi so'rovlar, yoqish/o'chirish).
   soatiga 30 tadan ortig'i bitta ro'yxat bo'lib keladi. Ko'rish/o'chirish: `/alerts`; butunlay o'chirish:
   `.env` da `ADMIN_UNFILTERED_ALERTS=false`. Oddiy foydalanuvchilarning obunalari o'zgarmadi.
 
+## 5c. Post sifati (2026-10-08)
+
+- **«📖 To'liq ma'lumot» — bizning botda.** Post qisqargan, uzun yoki ruscha/inglizcha bo'lsa, kanal postida manba kanalga
+  havola emas, tugma bo'ladi: u botda `/start job_<id>` bilan to'liq kartochkani ochadi (hech narsa qisqartirilmagan;
+  ruscha/inglizcha postda asl matn + AI bergan o'zbekcha tarjima, faqat kunlik limit ichida, keshdan). Foydalanuvchi
+  e'loni va loyihalarda ham shunday. Saqlanadi: `jobs.full_html`.
+- **Kesish faqat gap/band oxirida**, "…" to'liq gapdan keyin; lavozim, maosh, manzil, aloqa hech qachon kesilmaydi.
+- **Sifat qoidalari** (hammasi config'da): kategoriya sarlavha va vazifalardan (`categories.yaml → ignore_words`,
+  `default_title`), hudud tegi faqat manzildan, sarlavha tekshiruvi va so'z tartibi (`extract.yaml → title_role_words`),
+  kompaniya faqat nomga o'xshasa (`company_reject_words`), shubhali maosh o'rniga "Kelishiladi", ma'nosiz maydonlar
+  tashlanadi, baqiriq va qo'pol iboralar (`settings.yaml → tone:`), kanallararo dublikat (`settings.yaml → dedup:`).
+
 ## 6. Dasturchi uchun
 
 ```powershell

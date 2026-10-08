@@ -253,6 +253,30 @@ sudo systemctl start ayvona-collector ayvona-worker ayvona-bot
 Yoki (ishonchliroq): kodni `git reset --hard 5e15946` qiling va bazani `data/backups/deploy/` dagi deploy oldidagi
 nusxadan tiklang (8-bo'lim) — migratsiya ham, ma'lumot ham deploy oldingi holatga qaytadi.
 
+### 6b. Yangilanish: post sifati va «📖 To'liq ma'lumot» (2026-10-08)
+
+Nima o'zgardi: kanal postida endi **manba kanalga havola yo'q** ("To'liq ma'lumot: asl e'londa" o'rniga) — qisqargan,
+uzun yoki ruscha/inglizcha postda **«📖 To'liq ma'lumot»** tugmasi bor, u **bizning botda** to'liq kartochkani ochadi.
+Matn faqat gap/band oxirida kesiladi. Kategoriya, hudud tegi, sarlavha, maosh, kompaniya, dublikat, baqiriq tuzatildi.
+
+```bash
+# 🐧 server (ubuntu) — o'sha bitta buyruq: pull, zaxira, kutubxonalar, MIGRATSIYA, restart
+sudo bash /home/ayvona/ayvona/scripts/deploy.sh
+sudo bash /home/ayvona/ayvona/scripts/healthcheck.sh
+sudo -iu ayvona bash -c 'cd ~/ayvona && .venv/bin/alembic current'   # a4d2e7f1c3b9 (head)
+```
+
+- **Migratsiya avtomatik** (`deploy.sh`): `a4d2e7f1c3b9` — `jobs.full_html` (bo'sh TEXT ustun, additiv). Eski e'lonlarda
+  bo'sh qoladi: ularning bot kartochkasi avvalgidek kanal posti. **Kanalga chiqqan postlarga tegilmaydi.**
+- **Navbatdagi e'lonlar** worker yonganda yangi formatter bilan qayta yasaladi (`reformat_queued_on_start`): yangi
+  matn, yangi tugma, to'liq kartochka. Logda: `Navbat hozirgi formatter bilan yangilandi: ...`.
+- `.env` ga hech narsa qo'shilmaydi. Yangi sozlamalar: `config/settings.yaml → tone:` (qo'pol iboralar, katta harf),
+  `dedup:` (dublikat oynasi va chegaralari), `config/categories.yaml → ignore_words:` va `default_title`,
+  `config/extract.yaml → company_reject_words`, `title_role_words`. O'zgartirgach: `sudo systemctl restart ayvona-worker`.
+- **Orqaga qaytish:** `sudo -iu ayvona` → `cd ~/ayvona` → `.venv/bin/alembic downgrade f3c8a1d6e9b4` →
+  `git reset --hard ff68d0f` → `uv sync --locked --no-dev --compile-bytecode` → servislarni qayta yoqing
+  (`full_html` ustuni o'chadi; tugmasi bor postlar kanalda qoladi, ularning tugmasi botda kanal postini ko'rsatadi).
+
 ## 7. Loglar
 
 ```bash

@@ -58,6 +58,12 @@ Sardor is a **beginner** developer on **Windows** (PowerShell, VS Code). Therefo
     filter, so a post is delivered whether or not it is ever published, with a status line saying why. Deduplicated per
     admin and post in `admin_alert_deliveries` (written before the send); hourly cap + digest. The normal alerts skip
     these subscriptions; non-admin subscriptions are untouched. `/alerts` lists them.
+16. **A channel post never links to the source channel for "more".** When the caption lost anything (or the text is
+    much longer than its fields, or the source is Russian / English) the post gets the "📖 To'liq ma'lumot" button ->
+    `/start job_<id>` -> the bot's full card (`jobs.full_html`, same template, nothing shortened). The small "manba"
+    attribution in the signature stays. Texts are cut only with `formatter.truncate_units` (after a whole line /
+    sentence / list item); title, salary, place and contacts are never cut; a doubtful field is dropped, not guessed
+    (company slogans, salaries that cannot be so'm, meaningless requirements). All word lists live in config.
 
 ## Stack
 - Python **3.12**, managed with **uv** (`uv sync`, `uv run ...`, `uv add ...`)
