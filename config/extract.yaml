@@ -156,3 +156,13 @@ salary_periods:
 
 # "Depozit 200$" — maosh EMAS (bunday qatordagi sonlar olinmaydi)
 salary_not_salary: [depozit, депозит, zalog, залог, ijara, аренда, arenda]
+
+# "🏢 Kompaniya:" faqat NOMga o'xshasa to'ldiriladi. Shu so'zlar bo'lsa — bu shior / tavsif
+# ("Zamonaviy va qulay ofis", "Shinam va qulay ish joyi"): maydon chiqmaydi, matn to'liq kartochkada qoladi.
+# (Bundan tashqari: 6 so'zdan uzun, "kerak/qabul qiladi/haqida" kabi gap belgilari, kichik harf bilan
+# boshlanishi, faqat "O'quv markaz"/"Ofis" kabi umumiy so'z — ham nom emas deb hisoblanadi.)
+company_reject_words: [zamonaviy, qulay, shinam, ish joyi, ish o'rni, sharoit, do'stona, katta jamoa, yosh jamoa, rivojlanayotgan, yetakchi kompaniya, ishonchli kompaniya, ofisimizga, жамоамизга, современный офис, уютный офис, комфортный, дружный коллектив]
+
+# Mashina tarjimasidagi teskari tartib: "Mutaxassis bo'yicha marketing" -> "Marketing mutaxassisi".
+# Lavozim so'zi BIRINCHI turib, keyin "bo'yicha" kelsa — joyi almashtiriladi ("Sotuv bo'yicha menejer" to'g'ri, tegilmaydi).
+title_role_words: [mutaxassis, direktor, menejer, muhandis, rahbar, boshliq, operator, konsultant, maslahatchi, koordinator, yordamchi, ekspert, tahlilchi, analitik, administrator, agent, inspektor, nazoratchi]

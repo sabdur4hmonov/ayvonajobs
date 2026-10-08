@@ -55,9 +55,10 @@ exact:
   "financist": "Moliyachi"
   "dispatcher": "Dispetcher"
   "dispatch specialist": "Dispetcher"
-  "update specialist": "Update mutaxassisi (logistika)"
-  "update manager": "Update menejeri (logistika)"
-  "safety specialist": "Safety mutaxassisi (logistika)"
+  # trucking (AQSH yuk tashish): "update" = yuk va haydovchini kuzatib, mijozga holatini yetkazish
+  "update specialist": "Yuk kuzatuvi mutaxassisi (Update)"
+  "update manager": "Yuk kuzatuvi menejeri (Update)"
+  "safety specialist": "Yo'l xavfsizligi mutaxassisi (Safety)"
   "fleet specialist": "Avtopark mutaxassisi"
   "fleet manager": "Avtopark menejeri"
   "trailer manager": "Treyler menejeri"

@@ -561,6 +561,8 @@ class CategoryConfig(BaseModel):
     image: str | None = None
     keywords: list[str] = Field(default_factory=list)
     professions: dict[str, ProfessionConfig] = Field(default_factory=dict)
+    # A clearer title than a bare "Ishchi" / "Xodim" for this field ("Ombor ishchisi").
+    default_title: str | None = None
 
 
 class FeatureTagConfig(BaseModel):
@@ -614,6 +616,11 @@ class ExtractConfig(BaseModel):
     salary_negotiable: list[str] = Field(default_factory=list)
     salary_periods: dict[str, list[str]] = Field(default_factory=dict)
     salary_not_salary: list[str] = Field(default_factory=list)
+    # "🏢 Kompaniya:" is filled only with something that looks like a name: these words mark a
+    # slogan / description ("Zamonaviy va qulay ofis") -> the field is left out.
+    company_reject_words: list[str] = Field(default_factory=list)
+    # "Mutaxassis bo'yicha marketing" (machine translation word order) -> "Marketing mutaxassisi"
+    title_role_words: list[str] = Field(default_factory=list)
 
 
 class TitleTranslations(BaseModel):
@@ -718,6 +725,8 @@ class Settings(BaseModel):
     categories: dict[str, CategoryConfig]
     feature_tags: dict[str, FeatureTagConfig] = Field(default_factory=dict)
     negation_words: list[str] = Field(default_factory=list)
+    # words that look like a keyword but are not ("banka" is a jar, not a bank)
+    ignore_words: list[str] = Field(default_factory=list)
     regions: RegionsConfig
     extract: ExtractConfig = Field(default_factory=ExtractConfig)
     title_translations: TitleTranslations = Field(default_factory=TitleTranslations)
@@ -795,6 +804,7 @@ def load_settings(
         categories=categories,
         feature_tags=feature_tags,
         negation_words=categories_yaml.get("negation_words") or [],
+        ignore_words=categories_yaml.get("ignore_words") or [],
         regions=regions,
         extract=ExtractConfig.model_validate(_read_yaml(config_dir / "extract.yaml")),
         title_translations=TitleTranslations.model_validate(

@@ -66,7 +66,8 @@ T_EMAIL = "📧 Email:"
 T_APPLY = "🔗 Ariza:"
 T_APPLY_LINK = "ariza topshirish"
 T_SALARY_NOTE = "💬 Maosh haqida:"
-T_ORIGINAL = "📄 <b>Asl matn:</b>"
+T_ORIGINAL = "📄 <b>Asl matn:</b>"  # a Russian / English post, as written
+T_FULL_TEXT = "📄 <b>To'liq matn:</b>"  # an Uzbek post whose caption shows only its fields
 T_NEGOTIABLE = "Kelishiladi"
 T_REMOTE = "Masofaviy"
 T_FALLBACK_TITLE = "Yangi ish e'loni"
@@ -84,6 +85,10 @@ B_FULL_INFO = "📖 To'liq ma'lumot"
 # and the alert header that may come before it.
 FULL_CARD_LIMIT = 3600
 SALARY_TEXT_MAX = 60  # a salary in words longer than this is a sentence: normalized / moved
+# A post whose cleaned text is this long, and clearly longer than its caption, keeps the whole
+# text in the bot's full card (the caption shows only the fields).
+RICH_TEXT_MIN = 500
+RICH_TEXT_RATIO = 1.5
 # A salary text the parser did not accept is shown as written only if every number in it is at
 # least this (a day's pay "250 000"); "1 000 – 5 000 so'm" is surely not so'm -> "Kelishiladi".
 PLAUSIBLE_SOM = 100_000
@@ -435,6 +440,7 @@ class _Parts:
     # full card only: the long salary conditions; the Russian / English original text
     salary_note: str | None = None
     original: str | None = None
+    original_label: str = T_ORIGINAL
     original_links: list[tuple[str, str]] = field(default_factory=list)
     phones: list[str] = field(default_factory=list)
     usernames: list[str] = field(default_factory=list)
@@ -716,7 +722,7 @@ class Formatter:
             details.append(f"{T_SALARY_NOTE} {esc(p.salary_note)}")
         blocks.append(details)
         if p.original:
-            blocks.append([T_ORIGINAL, _link_body(p.original, p.original_links)])
+            blocks.append([p.original_label, _link_body(p.original, p.original_links)])
 
         contacts = []
         if p.phones:
@@ -808,6 +814,15 @@ class Formatter:
         p, cut = self._parts(ex, cleaned, fallback, source_name, full=False)
         caption, shortened = self._fit(p, source_url, self.cfg.max_caption_length)
         shortened = list(dict.fromkeys([*cut, *shortened]))
+        # the fields of a long post leave most of its text out: the bot keeps all of it
+        rich = (
+            not fallback
+            and cleaned is not None
+            and (n := tg_len(cleaned.text.strip())) >= RICH_TEXT_MIN
+            and n > visible_len(caption) * RICH_TEXT_RATIO
+        )
+        if rich:
+            shortened.append("text")
         full_html = None
         if source_foreign or any(s != "tags" for s in shortened):
             q, _ = self._parts(
@@ -816,7 +831,8 @@ class Formatter:
                 fallback,
                 source_name,
                 full=True,
-                original=source_foreign and cleaned is not None,
+                original=cleaned is not None and (source_foreign or rich),
+                original_latin=not source_foreign,
             )
             full_html, _ = self._fit(q, source_url, FULL_CARD_LIMIT)
         return FormattedPost(
@@ -839,6 +855,7 @@ class Formatter:
         *,
         full: bool,
         original: bool = False,
+        original_latin: bool = False,
     ) -> tuple[_Parts, list[str]]:
         """The caption's parts (``full=False``) or the bot's full card (``full=True``: nothing
         shortened, the original text of a Russian / English post, the salary conditions).
@@ -902,7 +919,8 @@ class Formatter:
                 if p.schedule != schedule:
                     cut.append("schedule")
             requirements = [_cap(", ".join(place_words))] if place_words and not foreign else []
-            if ex.requirements and (not foreign or (full and not original)):
+            # the full card with the whole text does not repeat the requirements
+            if ex.requirements and (not foreign or full) and not (full and original):
                 req = self._plain(ex.requirements if as_written else _latin(ex.requirements))
                 req = self.tone.normalize(req) or ""
                 if req and not self.meaningless(req, ex):
@@ -914,9 +932,12 @@ class Formatter:
                     cut.append("requirements")
         if original and cleaned is not None:
             p.original, p.original_links = _fallback_body(
-                cleaned, p.phones, p.usernames, is_place=self._is_place, latin=False
+                cleaned, p.phones, p.usernames, is_place=self._is_place, latin=original_latin
             )
-            p.body = None  # the original replaces the (transliterated) body
+            if original_latin:  # an Uzbek post: Latin, calm, under "To'liq matn"
+                p.original = self.tone.normalize(p.original)
+                p.original_label = T_FULL_TEXT
+            p.body = None  # the full text replaces the (shortened) body
         return p, cut
 
 

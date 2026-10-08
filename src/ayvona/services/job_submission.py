@@ -179,7 +179,12 @@ def _tools(settings: Settings) -> tuple[Formatter, SalaryParser, Categorizer]:
             settings,
             Formatter(settings),
             SalaryParser(settings.extract),
-            Categorizer(settings.categories, settings.feature_tags, settings.negation_words),
+            Categorizer(
+                settings.categories,
+                settings.feature_tags,
+                settings.negation_words,
+                settings.ignore_words,
+            ),
         )
         _TOOLS[id(settings)] = cached
     return cached[1], cached[2], cached[3]

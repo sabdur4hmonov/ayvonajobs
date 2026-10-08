@@ -120,6 +120,11 @@ class _Amount:
     bound: str | None = None  # "from" | "to" | None
 
 
+def has_usd_hint(folded_text: str) -> bool:
+    """``$`` / ``usd`` / ``dollar`` / ``у.е.`` anywhere in the (folded) text."""
+    return bool(_USD_RE.search(folded_text))
+
+
 def looks_like_money(folded_line: str) -> bool:
     """A line without a salary label that still states an amount ("5–15 mln so'm", "$500")."""
     return bool(_MONEY_HINT_RE.search(folded_line))
@@ -182,6 +187,22 @@ def _amounts(text: str) -> list[_Amount]:
             a.factor = b.factor
             a.value *= b.factor
 
+    # "3 –7 000 000 so'm": a small lower bound written without its zeros takes the scale of
+    # the upper one (3 -> 3 000 000), only if that makes a sane range.
+    for a, b in zip(out, out[1:], strict=False):
+        between = text[a.end : b.start]
+        if (
+            a.factor == 1
+            and a.value < 1000
+            and b.value >= 100_000
+            and re.fullmatch(r"\s*[-–—]\s*", between)
+        ):
+            for scale in (1_000_000, 1_000):
+                if b.value / 20 <= a.value * scale <= b.value:
+                    a.value *= scale
+                    a.factor = scale
+                    break
+
     # A typo in one side of a range ("4 000 000-10 00 0000"): scale it next to its partner.
     for i, a in enumerate(out):
         if not a.malformed:
@@ -220,9 +241,12 @@ class SalaryParser:
                 return period
         return None
 
-    def parse(self, blocks: list[SalaryBlock], label_folded: str = "") -> Salary:
+    def parse(
+        self, blocks: list[SalaryBlock], label_folded: str = "", default_currency: str = UZS
+    ) -> Salary:
         """``blocks``: salary text pieces of one post; ``label_folded``: their labels
-        ("kunlik maosh") — they may carry the period."""
+        ("kunlik maosh") — they may carry the period. ``default_currency``: when the amounts name
+        none (a "$" elsewhere in the post -> USD)."""
         blocks = [b for b in blocks if b.folded.strip()]
         if not blocks:
             return Salary()
@@ -244,7 +268,7 @@ class SalaryParser:
         elif _RUB_RE.search(folded):
             currency = RUB
         else:
-            currency = UZS
+            currency = default_currency
         period = self._period(f"{label_folded} {folded}") or DEFAULT_PERIOD
 
         values = [a.value for a in amounts]

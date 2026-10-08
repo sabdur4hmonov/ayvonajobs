@@ -24,10 +24,11 @@ categories:
     hashtag: "sotuv"
     image: "sotuv.jpg"
     keywords: [savdo kompaniya, savdo do'kon, торговая компания, retail, chakana savdo]
+    default_title: "Savdo xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       sotuvchi:        {title: "Sotuvchi", keywords: [sotuvchi, savdo xodimi, savdo hodimi, sotuvchi-konsultant, konsultant, prodavets, продавец, продавец-консультант, консультант, salesperson]}
       kassir:          {title: "Kassir", keywords: [kassir, кассир, cashier]}
-      sotuv_menejeri:  {title: "Sotuv menejeri", keywords: [sotuv menejeri, sotuv menejer, sotuv bo'yicha mutaxassis, sotuv bo'yicha menejer, savdo menejeri, sales, sales manager, sales specialist, b2b, sales executive, account manager, менеджер по продажам, менеджера по продажам, b2b sotuv]}
+      sotuv_menejeri:  {title: "Sotuv menejeri", keywords: [sotuv menejeri, sotuv menejer, sotuv bo'yicha mutaxassis, sotuv bo'yicha menejer, savdo menejeri, sales, sales manager, sales specialist, sales executive, account manager, менеджер по продажам, менеджера по продажам, b2b sotuv]}
       savdo_agenti:    {title: "Savdo agenti", keywords: [savdo agenti, sotuv agenti, savdo vakili, agent, ta'minotchi, торговый представитель, торговый агент, supervayzer, супервайзер, diller]}
       promouter:       {title: "Promouter", keywords: [promouter, промоутер, promoter]}
 
@@ -44,10 +45,11 @@ categories:
     hashtag: "oshxona"
     image: "oshxona.jpg"
     keywords: [restoran, oshxona, kafe, choyxona, fast food, fastfood, somsa, lavash, ресторан, кафе, столовая]
+    default_title: "Oshxona xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       oshpaz:          {title: "Oshpaz", keywords: [oshpaz, povar, повар, cook, chef, shashlikchi, somsapaz, salatchi, oshpaz universal, oshpaz yordamchisi, kitchen, lavashchi, burgerchi, pitsachi, pizzamaker, пиццамейкер]}
       ofitsiant:       {title: "Ofitsiant", keywords: [ofitsiant, ofitsant, официант, waiter, waitress, barmen, бармен, bartender, xostes, хостес]}
-      barista:         {title: "Barista", keywords: [barista, бариста]}
+      barista:         {title: "Barista", keywords: [barista, бариста, kofe lady, coffee lady, кофе леди]}
       nonvoy:          {title: "Nonvoy / Qandolatchi", keywords: [nonvoy, xamirchi, pekar, пекарь, qandolatchi, konditer, кондитер, biskvit]}
       idish_yuvuvchi:  {title: "Idish yuvuvchi", keywords: [idish yuvuvchi, posudomoyka, посудомойщица, посудомойщик]}
 
@@ -56,6 +58,7 @@ categories:
     hashtag: "transport"
     image: "transport.jpg"
     keywords: []
+    default_title: "Haydovchi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       haydovchi:       {title: "Haydovchi", keywords: [haydovchi, shofyor, shofer, voditel, водитель, шофер, driver, damas, labo haydovchi]}
       kuryer:          {title: "Kuryer", keywords: [kuryer, kurer, курьер, courier, avtokuryer, velokuryer, peshiy kuryer, dostavka, dostavshchik, yetkazib beruvchi, доставщик, yandex eats, uzum tezkor, express24]}
@@ -65,6 +68,7 @@ categories:
     hashtag: "logistika"
     image: "logistika.jpg"
     keywords: []
+    default_title: "Logistika xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       dispetcher:      {title: "Dispetcher", keywords: [dispetcher, dispatcher, диспетчер, dispatch specialist, dispatch]}
       logist:          {title: "Logist", keywords: [logist, логист, logistics, logistika, логистика, logistics specialist, logistika mutaxassisi, freight forwarding, freight forwarder, ekspeditor, экспедитор, deklarant, декларант]}
@@ -75,6 +79,7 @@ categories:
     hashtag: "ombor"
     image: "ombor.jpg"
     keywords: [ombor, sklad, склад, warehouse]
+    default_title: "Ombor ishchisi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       omborchi:        {title: "Omborchi", keywords: [omborchi, ombor xodimi, ombor mudiri, kladovshik, кладовщик, yig'uvchi, sborshik, сборщик, warehouse, склад, komplektovshik, комплектовщик]}
       yuk_tashuvchi:   {title: "Yuk tashuvchi", keywords: [yuk tashuvchi, gruzchik, грузчик, yuk ortuvchi]}
@@ -85,6 +90,7 @@ categories:
     hashtag: "ishlab_chiqarish"
     image: "ishlab_chiqarish.jpg"
     keywords: [korxona, корхона, ishlab chiqarish korxonasi, производство, sut mahsulotlari]
+    default_title: "Ishlab chiqarish ishchisi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       tikuvchi:        {title: "Tikuvchi", keywords: [tikuvchi, швея, bichuvchi, dazmolchi, tikuv sexi, tikuv, tekstil, текстиль, overlokchi, оверлок]}
       sex_ishchisi:    {title: "Sex ishchisi", keywords: [sex ishchisi, sexga ishchi, stanokchi, stanok, fabrika, zavod, ishlab chiqarish, sex]}
@@ -96,6 +102,7 @@ categories:
     hashtag: "qurilish"
     image: "qurilish.jpg"
     keywords: []
+    default_title: "Qurilish ishchisi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       quruvchi:        {title: "Quruvchi", keywords: [quruvchi, строитель, qurilish ishchisi, suvoqchi, kafelchi, g'ishtchi, bo'yoqchi, malyar, маляр, prorab, прораб, qurilish muhandisi, arxitektor, архитектор, smetchik, сметчик]}
       elektrik:        {title: "Elektrik", keywords: [elektrik, elektromontajchi, электрик, электромонтажник]}
@@ -109,6 +116,7 @@ categories:
     hashtag: "tibbiyot"
     image: "tibbiyot.jpg"
     keywords: []
+    default_title: "Tibbiyot xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       shifokor:        {title: "Shifokor", keywords: [shifokor, vrach, врач, doktor, doctor, terapevt, pediatr, xirurg, nevrolog, kardiolog, ginekolog]}
       stomatolog:      {title: "Stomatolog", keywords: [stomatolog, стоматолог, tish shifokori, dentist]}
@@ -121,6 +129,7 @@ categories:
     hashtag: "talim"
     image: "talim.jpg"
     keywords: [o'quv markaz, o'quv markazi, учебный центр, ta'lim markazi]
+    default_title: "Ta'lim xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       oqituvchi:       {title: "O'qituvchi", keywords: [o'qituvchi, oqituvchi, ustoz, ustozlar, teacher, учитель, преподаватель, mentor, repetitor, репетитор, instructor, pedagog, педагог, tutor, logoped, логопед, defektolog, psixolog, психолог]}
       tarbiyachi:      {title: "Tarbiyachi", keywords: [tarbiyachi, воспитатель, bog'cha, detskiy sad]}
@@ -131,6 +140,7 @@ categories:
     hashtag: "moliya"
     image: "moliya.jpg"
     keywords: [moliya, moliyaviy, finance, financial, финанс, g'aznachilik, казначейство, treasury, bank, банк]
+    default_title: "Moliya xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       buxgalter:       {title: "Buxgalter", keywords: [buxgalter, buhgalter, бухгалтер, bosh buxgalter, accountant, accounting, bookkeeper, hisobchi, хисобчи, ҳисобчи, kassir-buxgalter]}
       moliyachi:       {title: "Moliyachi / Iqtisodchi", keywords: [moliyachi, moliyaviy menejer, moliyaviy tahlilchi, financist, finance manager, financial analyst, финансист, iqtisodchi, экономист, economist, kredit mutaxassisi, kredit menejeri, кредитный специалист]}
@@ -141,12 +151,14 @@ categories:
     hashtag: "it"
     image: "it.jpg"
     keywords: []
+    default_title: "IT mutaxassisi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       dasturchi:       {title: "Dasturchi", keywords: [dasturchi, tech lead, team lead, teamlead, developer, programmist, программист, разработчик, frontend, front-end, backend, back-end, fullstack, full stack, full-stack, mobile developer, android, ios, python, java, golang, flutter, php, laravel, 1c dasturchi, software engineer]}
       tester:          {title: "Tester (QA)", keywords: [tester, qa, тестировщик, qa engineer, qa muhandis]}
       devops:          {title: "DevOps / Tizim administratori", keywords: [devops, sysadmin, tizim administratori, системный администратор, network engineer, tarmoq administratori, sre engineer, site reliability, dba, ma'lumotlar bazasi administratori, it support, texnik yordam, helpdesk]}
       data:            {title: "Data / AI mutaxassisi", keywords: [data analyst, data scientist, data engineer, ml engineer, ai engineer, ml researcher, ma'lumotlar tahlilchisi, analitik, аналитик, tizim tahlilchisi, system analyst, системный аналитик]}
       it_menejer:      {title: "IT menejer", keywords: [product manager, project manager, loyiha menejeri, mahsulot menejeri, business analyst, biznes tahlilchi, biznes-tahlilchi, scrum master, product owner]}
+      kiberxavfsizlik: {title: "Kiberxavfsizlik mutaxassisi", keywords: [kiberxavfsizlik, kiber xavfsizlik, axborot xavfsizligi, xavfsizlik muhandisi, xavfsizlik muhandisligi, cybersecurity, cyber security, information security, security engineer, infosec, soc analyst, pentester, pentest, кибербезопасность, информационная безопасность, информационной безопасности, siem]}
 
   dizayn_media:
     title: "Dizayn va media"
@@ -163,9 +175,10 @@ categories:
     hashtag: "marketing"
     image: "marketing.jpg"
     keywords: []
+    default_title: "Marketing mutaxassisi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
-      smm:             {title: "SMM menejer", keywords: [smm, smm menejer, smm-menejer, smm mutaxassisi, brand face, brandface, social media manager, kontent meyker, content maker, kontent prodyuser, kopirayter, copywriter, копирайтер]}
-      marketolog:      {title: "Marketolog", keywords: [marketolog, маркетолог, marketing manager, marketing menejeri, marketing mutaxassisi, brand manager, growth manager]}
+      smm:             {title: "SMM menejer", keywords: [smm, smm menejer, smm-menejer, smm mutaxassisi, brand face, brandface, social media manager, kontent meyker, content maker, kontent prodyuser, kopirayter, copywriter, копирайтер, kontent menejer, kontent menejeri, kontent mutaxassisi, content manager, content specialist, digital content, контент-менеджер, контент менеджер]}
+      marketolog:      {title: "Marketolog", keywords: [marketolog, маркетолог, marketing manager, marketing menejeri, marketing mutaxassisi, brand manager, growth manager, marketing, маркетинг, marketing direktori, marketing bo'limi boshlig'i, head of marketing, marketing director, marketing lead, marketing-lid, growth marketing, digital marketing, cmo, директор по маркетингу, специалист по маркетингу, маркетинг директори]}
       targetolog:      {title: "Targetolog", keywords: [targetolog, таргетолог, meta ads, facebook ads]}
       pr:              {title: "PR menejer", keywords: [pr menejer, pr manager, pr-менеджер]}
 
@@ -174,6 +187,7 @@ categories:
     hashtag: "ofis"
     image: "ofis.jpg"
     keywords: []
+    default_title: "Ofis xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       administrator:   {title: "Administrator", keywords: [administrator, администратор, resepshen, resepshn, reception, receptionist, ресепшн, qabulxona]}
       hr:              {title: "HR / Rekruter", keywords: [hr, recruiter, recruitment, rekruter, hunter, xanter, hanter, headhunter, рекрутер, hr menejer, hr specialist, hr mutaxassisi, kadrlar bo'limi, кадровик, trening mutaxassisi, biznes trener, korporativ trener]}
@@ -196,6 +210,7 @@ categories:
     hashtag: "xizmat"
     image: "xizmat.jpg"
     keywords: []
+    default_title: "Xizmat ko'rsatish xodimi"          # yalang'och "Ishchi"/"Xodim" o'rniga
     professions:
       tozalik:         {title: "Farrosh / Tozalovchi", keywords: [farrosh, tozalovchi, tozalik bekasi, uborshitsa, уборщица, cleaner, tozalik xodimi, klining, клининг]}
       qoriqchi:        {title: "Qo'riqchi", keywords: [qo'riqchi, qoriqchi, oxrana, охрана, охранник, security, storoj, сторож, qorovul]}
@@ -238,3 +253,8 @@ feature_tags:
 
 # Kalit so'zdan keyin (3 so'z ichida) shu so'zlar kelsa — belgi-teg INKOR qilingan ("yotoqxona yo'q").
 negation_words: ["yo'q", "mavjud emas", "berilmaydi", "qabul qilinmaydi", "olinmaydi", "kerak emas", "bezovta qilmasin", "нет", "не предоставляется", "йўқ"]
+
+# Kalit so'zga o'xshaydi, lekin u emas: kategoriya hisoblashdan oldin matndan olib tashlanadi.
+#   "Temir BANKA ishlab chiqarish" — banka (idish), bank emas (#moliya bo'lib qolardi);
+#   "yangi TEXNOLOGIYALAR" — texnolog (kasb) emas (kiberxavfsizlik posti #texnolog bo'lib qolardi).
+ignore_words: [banka, bankalar, bankasi, texnologiya, texnologik, texnologiyalar, технология, технологии]

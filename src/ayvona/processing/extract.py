@@ -22,7 +22,7 @@ Fields:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 
 from ayvona.config import DEFAULT_CONFIG_DIR, Settings, TitleTranslations, load_settings
@@ -34,7 +34,14 @@ from ayvona.processing.keywords import KeywordSet
 from ayvona.processing.language import Language, detect_language
 from ayvona.processing.location import Location, LocationFinder
 from ayvona.processing.normalize import display, fold, normalize_lines
-from ayvona.processing.salary import Salary, SalaryBlock, SalaryParser, looks_like_money
+from ayvona.processing.salary import (
+    USD,
+    Salary,
+    SalaryBlock,
+    SalaryParser,
+    has_usd_hint,
+    looks_like_money,
+)
 
 MULTI_TITLE = "Bir nechta vakansiya"
 MAX_TITLE_LEN = 90
@@ -102,6 +109,42 @@ _COMPANY_TEAM_RE = re.compile(
     r"((?:[A-ZА-ЯЎҚҒҲ][\w&.'’-]*\s+){0,2}[A-ZА-ЯЎҚҒҲ][\w&.'’-]*)\s+"
     r"(?:jamoasi|jamoasiga|jamoamiz|jamoasini|жамоаси|жамоасига|team)\b"
 )
+# Words that only say who (gender, "xodim") — a title made of them names no position.
+_PEOPLE_WORDS = frozenset(
+    fold(w)
+    for w in ("erkak", "ayol", "yigit", "qiz", "xodim", "odam", "kishi", "inson", "nomzod",
+              "talaba", "student", "mutaxassis")
+)  # fmt: skip
+_PEOPLE_SUFFIX_RE = re.compile(r"(?:larini|larni|lari|lar|ini|ning|ni|ga|i)$")
+# An English job title keeps its own case ("Digital Content Specialist").
+_ENGLISH_TITLE_WORDS = frozenset(
+    ("manager", "specialist", "engineer", "developer", "designer", "assistant", "teacher",
+     "analyst", "intern", "driver", "lead", "head", "senior", "junior", "middle", "digital",
+     "director", "officer", "executive", "coordinator", "researcher", "consultant", "of", "and")
+)  # fmt: skip
+# A bare generic title: replaced by the category's ``default_title`` ("Ombor ishchisi").
+_BARE_TITLES = frozenset(
+    fold(w) for w in ("ishchi", "ishchilar", "xodim", "xodimlar", "ishchi xodim", "ishchi xodimlar")
+)
+# Words of a company field that make it a sentence, not a name ("... xodim qabul qiladi").
+_COMPANY_SENTENCE_RE = re.compile(
+    r"(?:^|\s)(?:kerak|qiladi|qilinadi|qabul|taklif|haqida|bilan|uchun|nafar|bo'yicha)(?:\s|$)"
+    r"|\w{3,}(?:moqda|yapti|lanadi|iladi|beradi|oladi|ingiz|amiz|lash|lish)(?:\s|$)"
+    r"|\w{5,}ga(?:\s|$)|\w{4,}ning(?:\s|$)"
+)
+# A company field that is only a kind of place, not a name.
+_GENERIC_COMPANY = frozenset(
+    fold(w)
+    for w in ("o'quv markaz", "o'quv markazi", "ofis", "bosh ofis", "filial", "kompaniya", "firma",
+              "korxona", "do'kon", "restoran", "kafe", "sex", "sexi", "zavod", "maktab")
+)  # fmt: skip
+_COMPANY_INTRO_RE = re.compile(
+    r"^(?:kompaniya haqida|biz haqimizda|about (?:us|the company)|о компании)\s*[:\-—–]\s*",
+    re.IGNORECASE,
+)
+_EN_AT_RE = re.compile(r"^(?P<title>.{3,60}?)\s+at\s+(?P<company>[A-Z][\w&.' -]{1,40})$")
+
+
 _COMPANY_SUFFIX_RE = re.compile(
     r"((?:[A-ZА-Я][\w&.'’-]*\s+){0,3}[A-ZА-Я][\w&.'’-]*)\s+(?:LLC|MChJ|OOO|Inc\.?|Ltd\.?|ООО|МЧЖ)\b"
 )
@@ -277,7 +320,10 @@ class Extractor:
         self.salary = SalaryParser(cfg)
         self.location = LocationFinder(settings.regions)
         self.categorizer = Categorizer(
-            settings.categories, settings.feature_tags, settings.negation_words
+            settings.categories,
+            settings.feature_tags,
+            settings.negation_words,
+            settings.ignore_words,
         )
         self._professions = {
             p: prof.title for c in settings.categories.values() for p, prof in c.professions.items()
@@ -287,6 +333,26 @@ class Extractor:
         )
         self.translator = TitleTranslator(settings.title_translations)
         self._rules: dict[str, BoilerplateRules] = {}
+        self._company_reject = KeywordSet(cfg.company_reject_words)
+        roles = "|".join(re.escape(fold(w)) for w in cfg.title_role_words if fold(w))
+        # "Mutaxassis bo'yicha marketing" -> "Marketing mutaxassisi"
+        self._role_first = (
+            re.compile(rf"^(?P<role>{roles})\s+bo'?yicha\s+(?P<field>[^\d,;:()]{{2,40}})$")
+            if roles
+            else None
+        )
+        # role words of the profession names (+ title_role_words): "Sotuv Menejeri" ->
+        # "Sotuv menejeri"; a brand ("Uzum Tezkor") is not among them
+        self._vocab = tuple(
+            {
+                w
+                for c in settings.categories.values()
+                for prof in c.professions.values()
+                for w in re.findall(r"[^\W\d_][\w'ʻ’-]*", fold(prof.title))
+                if len(w) >= 5
+            }
+            | {fold(w) for w in cfg.title_role_words if len(fold(w)) >= 5}
+        )
 
     # ------------------------------------------------------------------ helpers
     def _boilerplate(self, source: str | None) -> BoilerplateRules:
@@ -368,6 +434,9 @@ class Extractor:
     def _title_from_phrase(self, line: Line) -> tuple[str | None, str | None]:
         """``("title", "company or None")`` from "X kerak" / "ищет X" / "looking for X"."""
         if _BULLET_START_RE.match(line.display):
+            return None, None
+        # "Talablar: ... bo'lmasligi kerak" is a field, not a headline
+        if any(self._label(n, line) for n in ("requirements", "schedule", "salary", "location")):
             return None, None
         body = line.body
         offset = len(line.folded) - len(body)
@@ -466,11 +535,32 @@ class Extractor:
             return title, "first_line", None
         return None, None, None
 
+    def _clean_company(self, value: str | None) -> str | None:
+        """A real name or ``None``: slogans / descriptions / sentences are left out
+        ("Zamonaviy va qulay ofis", "... choy-kofe damlash uchun xodim kerak"), an explanation after
+        a dash goes ("CITY HOUSE — bino fabrikasi" -> "CITY HOUSE"), quotes are balanced."""
+        v = _COMPANY_INTRO_RE.sub("", (value or "").strip())
+        v = re.split(r"\s+[—–-]\s+", v, maxsplit=1)[0]
+        v = _clean_company(v)
+        if not v:
+            return None
+        folded = fold(v)
+        words = v.split()
+        if (
+            len(words) > 6
+            or folded.strip(" .") in _GENERIC_COMPANY
+            or (self._company_reject and self._company_reject.find(folded))
+            or _COMPANY_SENTENCE_RE.search(folded)
+            or (v[:1].islower() and "." not in v)
+        ):
+            return None
+        return v
+
     def _company(self, lines: list[Line], hint: str | None) -> str | None:
         labeled = [
             v
             for ln in lines
-            if (lab := self._label("company", ln)) and (v := _clean_company(lab[1]))
+            if (lab := self._label("company", ln)) and (v := self._clean_company(lab[1]))
         ]
         if labeled:
             # Several different employers in one post (3 schools) -> no single company.
@@ -479,16 +569,16 @@ class Extractor:
             if (m := _COMPANY_WORD_RE.match(ln.body)) and ":" not in ln.body:
                 rest = ln.display_from(len(ln.folded) - len(ln.body) + m.end())
                 name = re.split(r"\s[-—–]\s|[.,;]", rest)[0]
-                if name[:1].isupper() and (value := _clean_company(name)):
+                if name[:1].isupper() and (value := self._clean_company(name)):
                     return value
         if hint:
-            return _clean_company(hint)
+            return self._clean_company(hint)
         for ln in lines:
             if ln.raw.lstrip().startswith("🏢") and not self._any_label(ln):
-                return _clean_company(ln.display)
+                return self._clean_company(ln.display)
         for rx in (_COMPANY_ORG_RE, _COMPANY_SUFFIX_RE, _COMPANY_TEAM_RE):
             for ln in lines:
-                if (m := rx.search(ln.display)) and (value := _clean_company(m.group(1))):
+                if (m := rx.search(ln.display)) and (value := self._clean_company(m.group(1))):
                     return value
         return None
 
@@ -585,7 +675,18 @@ class Extractor:
             if looks_like_money(ln.folded) and not _TIME_RE.fullmatch(ln.folded.strip())
         ]
         loose = self.salary.parse(money)
-        return loose if loose.has_numbers else labeled
+        if loose.has_numbers:
+            return loose
+        # "Maosh: 1 000 – 5 000" with "$" / "USD" somewhere else in the post: those are dollars
+        if (
+            labeled.text
+            and re.search(r"\d", labeled.text)
+            and has_usd_hint("\n".join(ln.folded for ln in lines))
+        ):
+            in_usd = self.salary.parse(blocks, " ".join(labels), default_currency=USD)
+            if in_usd.has_numbers:
+                return in_usd
+        return labeled
 
     def _text_field(self, name: str, lines: list[Line], limit: int) -> str | None:
         for i, ln in enumerate(lines):
@@ -594,6 +695,61 @@ class Extractor:
                 if values:
                     return "; ".join(v.strip(" ;,.[]") for v in values)[:500]
         return None
+
+    def fix_title(self, title: str | None) -> str | None:
+        """Word order, case and a sanity check of a found title; ``None`` = not a position.
+
+        "Mutaxassis bo'yicha marketing" -> "Marketing mutaxassisi"; "Kassir VA vitrinachi" ->
+        "Kassir va vitrinachi"; "Sotuv Menejeri" -> "Sotuv menejeri"; "Erkak va ayollarini"
+        (a fragment that names no position) -> ``None``."""
+        if not title:
+            return None
+        words = title.split()
+        english = any(fold(w).strip(".,/()") in _ENGLISH_TITLE_WORDS for w in words)
+        out = [words[0]]
+        for w in words[1:]:
+            f = fold(w)
+            if f in _CONJUNCTIONS and not english:
+                out.append(f)  # "VA" -> "va"
+            elif (
+                not english
+                and w[:1].isupper()
+                and w[1:].islower()
+                and self._role_word(f.strip(".,"))
+            ):
+                out.append(w.lower())  # "Sotuv Menejeri": a profession word, not a name
+            else:
+                out.append(w)
+        title = " ".join(out)
+        if re.search(r"\bbo'?yicha$", fold(title)):
+            return None  # "Kiberxavfsizlik bo'yicha": the position word was lost
+        if self._role_first and (m := self._role_first.match(fold(title))):
+            role_display = title.split()[0]
+            field = title[len(title) - len(m.group("field")) :].strip()
+            role = role_display.lower()
+            title = f"{field[:1].upper()}{field[1:]} {_possessive(role)}"
+        rest = _trim_dative(title).split()
+        if rest and all(
+            fold(w).strip(".,!") in _CONJUNCTIONS
+            or _PEOPLE_SUFFIX_RE.sub("", fold(w).strip(".,!")) in _PEOPLE_WORDS
+            for w in rest
+        ):
+            return None
+        return title
+
+    def _role_word(self, folded: str) -> bool:
+        """``menejer`` / ``menejeri`` / ``Dizayner``: a word of a profession name (any ending)."""
+        return any(
+            folded.startswith(v) or (len(folded) >= 5 and v.startswith(folded)) for v in self._vocab
+        )
+
+    def _specific_title(self, title: str | None, category: str) -> str | None:
+        """A bare "Ishchi" / "Xodim" -> the category's ``default_title`` ("Ombor ishchisi")."""
+        if title and fold(title).strip(" .") in _BARE_TITLES:
+            cat = self.settings.categories.get(category)
+            if cat is not None and cat.default_title:
+                return cat.default_title
+        return title
 
     def translate_title(self, title: str | None, language: Language | None) -> str | None:
         """Russian / English title -> Uzbek (config/title_translations.yaml: exact, then words)."""
@@ -616,22 +772,37 @@ class Extractor:
         )
 
         title, source, company_hint = self._title(lines)
+        if title and language is Language.EN and (m := _EN_AT_RE.match(title)):
+            title, company_hint = m.group("title"), company_hint or m.group("company")
+        title = self.fix_title(title)
         positions = self._positions(lines, post)
         company = self._company(lines, company_hint)
         full_text = "\n".join(ln.folded for ln in lines)
+        # no title found: the post's headline line still says more about the job than generic
+        # words further down ("Temir banka ishlab chiqarish sehiga ..." -> ishlab_chiqarish)
+        headline = None if title or positions else _headline(lines)
+        if headline and not self.categorizer.has_profession(headline):
+            headline = None  # "🔥 YANGI VAKANSIYA" / "Video darsliklar" say nothing of the job
         cat: Categorization = self.categorizer.categorize(
-            " | ".join(positions) if positions else title, full_text
+            " | ".join(positions) if positions else (title or headline), full_text
         )
         if positions and source != "label":
             title, source = company or MULTI_TITLE, "positions"
         if not title and cat.profession:
             title, source = self._professions[cat.profession], "profession"
+        title = self._specific_title(title, cat.category)
 
         salary = self._salary(lines)
-        loc: Location = self.location.find([ln.folded for ln in lines])
         schedule = self._text_field("schedule", lines, limit=3)
         requirements = self._text_field("requirements", lines, limit=MAX_BLOCK_LINES)
         address = self._text_field("location", lines, limit=2)
+        loc: Location = self.location.find([ln.folded for ln in lines])
+        # the region tags come from the address field when the post has one ("Qarshi" in a
+        # sentence is not where the job is)
+        if address and (at := self.location.find([fold(address)])).region:
+            # the district may be named elsewhere in the text ("Mirobod tumanidagi ofis")
+            district = at.district or (loc.district if loc.region == at.region else None)
+            loc = replace(at, is_remote=loc.is_remote, district=district)
 
         has_contact = bool(contacts)
         confidence = 0.0
@@ -747,12 +918,42 @@ def _trim_dative(title: str) -> str:
 
 
 def _clean_company(value: str | None) -> str | None:
+    """Trim spaces / punctuation; a quote is removed only if it has no partner, so
+    '"Testismus school" xususiy maktabi' keeps both quotes (and never shows a stray one)."""
     if not value:
         return None
-    v = re.sub(r"^[\s«\"“„'‘`,]+|[\s»\"”'’`.,;:!]+$", "", value).strip()
+    v = re.sub(r"^[\s,]+|[\s.,;:!]+$", "", value).strip()
+    for left, right in (("«", "»"), ("“", "”"), ("„", "“")):
+        if v.count(left) != v.count(right):
+            v = v.replace(left, "").replace(right, "")
+    if v.count('"') % 2:
+        v = v.replace('"', "")
+    if v.count("'") == 1 and (v.startswith("'") or v.endswith("'")):  # a lone edge quote
+        v = v.strip("'")
+    v = re.sub(r"\s{2,}", " ", v).strip()
     if fold(v) in EMPTY_VALUES or len(v) < 2 or fold(v).split()[0] in _NOT_COMPANY_WORDS:
         return None
     return v[:80]
+
+
+def _possessive(word: str) -> str:
+    """Uzbek 3rd person possessive: mutaxassis -> mutaxassisi, boshliq -> boshlig'i,
+    menejer -> menejeri, rahbar -> rahbari, xodima -> xodimasi."""
+    if word[-1:] in "aeiouAEIOU":
+        return word + "si"
+    if word.endswith("q"):
+        return word[:-1] + "g'i"
+    if word.endswith("k"):
+        return word[:-1] + "gi"
+    return word + "i"
+
+
+def _headline(lines: list[Line]) -> str | None:
+    """The first real line of a post (for the category when no title was found)."""
+    for ln in lines[:3]:
+        if ln.display and not _HASHTAG_LINE_RE.match(ln.folded) and len(ln.display) <= 120:
+            return ln.display
+    return None
 
 
 def _clean_positions(items: list[str]) -> list[str]:

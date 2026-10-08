@@ -9,6 +9,10 @@ Scoring (all on folded text, keyword at a word start, suffixes allowed):
   position). Profession = best profession of that category, if any. Nothing found -> ``boshqa``.
 
 Feature tags (masofaviy, tajribasiz, ...) respect negations: "yotoqxona yo'q" gives no tag.
+
+Before matching, ``ignore_words`` (categories.yaml) are blanked out — words that look like a keyword
+but are not ("temir banka" is a jar, not a bank; "texnologiyalar" is not a "texnolog") — and a
+name in quotes in the title is not a position ('"HUNTER" sotuv menejeri' is a sales manager).
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ _RIGHT_BOUNDARY = r"(?![^\W_])"
 SHORT_KEYWORD = 2  # keywords this short must match a whole word ("qa", "hr", "it")
 # How far after a feature keyword a negation word may stand ("yotoqxona mavjud emas").
 _NEGATION_WINDOW = 25
+_QUOTED_RE = re.compile(r"[«\"“„][^»\"”“]{1,40}[»\"”]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,8 +58,10 @@ class Categorizer:
         categories: dict[str, CategoryConfig],
         feature_tags: dict[str, FeatureTagConfig] | None = None,
         negation_words: list[str] | None = None,
+        ignore_words: list[str] | None = None,
     ) -> None:
         self.categories = categories
+        self._ignore = KeywordSet(ignore_words or [])
         kws: list[_Kw] = []
 
         def add(words: list[str], cat: str, prof: str | None) -> None:
@@ -92,13 +99,18 @@ class Categorizer:
                 out.append((m.start(), kw))
         return out
 
+    def _prepare(self, text: str) -> str:
+        folded = fold(text)
+        return self._ignore.remove(folded) if self._ignore else folded
+
     def has_profession(self, text: str) -> bool:
         """Does ``text`` name a profession ("Call operator", "TAJRIBALI OSHPAZ")?"""
-        return any(kw.profession for _, kw in self._matches(fold(text)))
+        return any(kw.profession for _, kw in self._matches(self._prepare(text)))
 
     def categorize(self, title: str | None, text: str) -> Categorization:
         """``title`` (or the list of positions) and the whole post ``text`` — raw or folded."""
-        title_f, text_f = fold(title or ""), fold(text)
+        title_f = self._prepare(_QUOTED_RE.sub(" ", title or ""))
+        text_f = self._prepare(text)
         prof_score: dict[tuple[str, str], int] = {}
         cat_own: dict[str, int] = {}
         first_seen: dict[str, float] = {}
